@@ -7,12 +7,12 @@
  *   const owl = new OwlStack({ apiKey: process.env.OWLSTACK_API_KEY! });
  *
  *   const accounts = await owl.accounts.list({ workspaceId: '9b2f6c1e-…' });
- *   await owl.posts.create({
+ *   const post = await owl.posts.create({
  *     workspaceId: '9b2f6c1e-…',
- *     status: 'publish',
- *     content: [{ text: 'Hello from the SDK', position: 0 }],
- *     accounts: accounts.map((a) => ({ id: a.id })),
+ *     content: [{ text: 'Hello from the SDK' }],
+ *     accounts: accounts.map((a) => a.id),
  *   });
+ *   await owl.posts.publish(post.id);
  */
 
 import { HttpClient, OwlStackError, type HttpClientOptions } from './client.js';
@@ -57,6 +57,11 @@ export class OwlStack {
 
 // ─── Resources ─────────────────────────────────────────────────────
 
+/** The API takes bare account ids; accept the { id } form too. */
+function accountIds(accounts: Array<string | { id: string }>): string[] {
+  return accounts.map((a) => (typeof a === 'string' ? a : a.id));
+}
+
 class PostsResource {
   constructor(private http: HttpClient) {}
 
@@ -79,7 +84,7 @@ class PostsResource {
       status: input.status ?? 'draft',
       content: input.content,
       schedule_at: input.scheduleAt,
-      accounts: input.accounts,
+      accounts: accountIds(input.accounts),
       labels: input.labels,
       title: input.title,
     });
@@ -90,7 +95,7 @@ class PostsResource {
     if (input.status !== undefined) body.status = input.status;
     if (input.content !== undefined) body.content = input.content;
     if (input.scheduleAt !== undefined) body.schedule_at = input.scheduleAt;
-    if (input.accounts !== undefined) body.accounts = input.accounts;
+    if (input.accounts !== undefined) body.accounts = accountIds(input.accounts);
     if (input.labels !== undefined) body.labels = input.labels;
     if (input.title !== undefined) body.title = input.title;
     return this.http.put<Post>(`/api/v1/posts/${id}`, body);

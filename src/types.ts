@@ -88,10 +88,13 @@ export type Post = {
 
 export type CreatePostInput = {
   workspaceId: string;
-  status?: 'draft' | 'scheduled' | 'publish';
+  /** To publish immediately, create the post then call posts.publish(id). */
+  status?: 'draft' | 'scheduled';
   content: ContentBlock[];
+  /** Required when status is 'scheduled'. ISO 8601. */
   scheduleAt?: string;
-  accounts: Array<{ id: string }>;
+  /** Account ids. Objects of the form { id } are accepted too. */
+  accounts: Array<string | { id: string }>;
   labels?: string[];
   /** Article title / email subject on platforms that take one (Hashnode, WordPress, ...) */
   title?: string;

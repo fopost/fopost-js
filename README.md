@@ -21,21 +21,21 @@ const owl = new OwlStack({ apiKey: process.env.OWLSTACK_API_KEY! });
 // List your accounts
 const accounts = await owl.accounts.list({ workspaceId: '9b2f6c1e-…' });
 
-// Publish a post immediately
-await owl.posts.create({
+// Create a post, then publish it immediately
+const post = await owl.posts.create({
   workspaceId: '9b2f6c1e-…',
-  status: 'publish',
-  content: [{ text: 'Hello from the SDK', position: 0 }],
-  accounts: accounts.map((a) => ({ id: a.id })),
+  content: [{ text: 'Hello from the SDK' }],
+  accounts: accounts.map((a) => a.id),
 });
+await owl.posts.publish(post.id);
 
 // Schedule for later
 await owl.posts.create({
   workspaceId: '9b2f6c1e-…',
   status: 'scheduled',
   scheduleAt: '2026-06-01T10:00:00Z',
-  content: [{ text: 'Scheduled with the SDK 🦉', position: 0 }],
-  accounts: [{ id: accounts[0].id }],
+  content: [{ text: 'Scheduled with the SDK 🦉' }],
+  accounts: [accounts[0].id],
 });
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "@owlstackapp/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Official TypeScript SDK for the OwlStack API. Schedule and publish to 31 social platforms from your code.",
   "license": "MIT",
   "type": "module",
