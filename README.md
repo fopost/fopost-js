@@ -1,6 +1,6 @@
 # @owlstackapp/sdk
 
-Official TypeScript / Node.js SDK for the [OwlStack](https://owlstack.app) API. Publish to 17+ social platforms from your code.
+Official TypeScript / Node.js SDK for the [OwlStack](https://owlstack.app) API. Schedule and publish to 31 social platforms from your code.
 
 ```bash
 npm install @owlstackapp/sdk
