@@ -181,6 +181,7 @@ class AiResource {
       platforms: input.platforms,
       char_limit: input.charLimit,
       workspace_id: input.workspaceId,
+      instructions: input.instructions,
     });
   }
 

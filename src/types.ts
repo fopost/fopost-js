@@ -132,6 +132,11 @@ export type GenerateCaptionInput = {
   platforms?: Platform[];
   charLimit?: number;
   workspaceId?: string;
+  /**
+   * What to do with the draft, in your own words: a language to write in, a
+   * tone to take. Bounded at 500 characters by the API.
+   */
+  instructions?: string;
 };
 
 export type RewriteInput = {
