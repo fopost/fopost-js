@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/npm/l/%40fopost%2Fsdk.svg)](https://github.com/fopost/fopost-js/blob/main/LICENSE)
 [![release](https://img.shields.io/github/actions/workflow/status/fopost/fopost-js/release.yml?label=release)](https://github.com/fopost/fopost-js/actions/workflows/release.yml)
 
-Official TypeScript / Node.js SDK for the [FoPost](https://fopost.com) API. Schedule and publish to 29 social platforms from your code.
+Official TypeScript / Node.js SDK for the [FoPost](https://fopost.com) API. Schedule and publish to +30 social platforms from your code.
 
 ```bash
 npm install @fopost/sdk
