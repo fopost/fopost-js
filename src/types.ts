@@ -1,7 +1,7 @@
 /**
- * Public DTOs returned by the OwlStack API. These mirror the server's
+ * Public DTOs returned by the FoPost API. These mirror the server's
  * response shapes for the most common endpoints. Inlined (not imported
- * from @owlstack/shared) so the SDK is standalone for npm consumers.
+ * from the server's shared package) so the SDK is standalone for npm consumers.
  */
 
 export type Platform =
