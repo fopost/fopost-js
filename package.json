@@ -1,7 +1,7 @@
 {
-  "name": "@owlstackapp/sdk",
+  "name": "@fopost/sdk",
   "version": "0.2.1",
-  "description": "Official TypeScript SDK for the OwlStack API. Schedule and publish to 29 social platforms from your code.",
+  "description": "Official TypeScript SDK for the FoPost API. Schedule and publish to 29 social platforms from your code.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -26,11 +26,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/owlstacks/owlstack-js.git"
+    "url": "git+https://github.com/fopost/fopost-js.git"
   },
-  "homepage": "https://owlstack.app",
+  "homepage": "https://fopost.com",
   "bugs": {
-    "url": "https://github.com/owlstacks/owlstack-js/issues"
+    "url": "https://github.com/fopost/fopost-js/issues"
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
@@ -49,7 +49,7 @@
     "access": "public"
   },
   "keywords": [
-    "owlstack",
+    "fopost",
     "social-media",
     "publishing",
     "scheduling",
