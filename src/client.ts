@@ -3,7 +3,7 @@
  * the {data: ...} envelope unwrap, and a typed error class.
  */
 
-export class OwlStackError extends Error {
+export class FoPostError extends Error {
   status: number;
   code?: string;
   body?: unknown;
@@ -12,7 +12,7 @@ export class OwlStackError extends Error {
     this.status = status;
     this.code = code;
     this.body = body;
-    this.name = 'OwlStackError';
+    this.name = 'FoPostError';
   }
 }
 
@@ -23,7 +23,7 @@ export type HttpClientOptions = {
   fetch?: typeof fetch;
 };
 
-export const DEFAULT_BASE_URL = 'https://api.owlstack.app';
+export const DEFAULT_BASE_URL = 'https://api.fopost.com';
 
 export class HttpClient {
   private readonly apiKey: string;
@@ -32,7 +32,7 @@ export class HttpClient {
 
   constructor(opts: HttpClientOptions) {
     if (!opts.apiKey) {
-      throw new Error('OwlStack: apiKey is required');
+      throw new Error('FoPost: apiKey is required');
     }
     this.apiKey = opts.apiKey;
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
@@ -57,7 +57,7 @@ export class HttpClient {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': this.apiKey,
-        'User-Agent': '@owlstackapp/sdk',
+        'User-Agent': '@fopost/sdk',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -66,9 +66,9 @@ export class HttpClient {
     if (!contentType.includes('application/json')) {
       if (!res.ok) {
         const text = await res.text();
-        throw new OwlStackError(text || `HTTP ${res.status}`, res.status);
+        throw new FoPostError(text || `HTTP ${res.status}`, res.status);
       }
-      throw new OwlStackError(`Unexpected response: ${contentType}`, res.status);
+      throw new FoPostError(`Unexpected response: ${contentType}`, res.status);
     }
 
     const json = (await res.json()) as Record<string, unknown>;
@@ -78,7 +78,7 @@ export class HttpClient {
         (typeof json.message === 'string' && json.message) ||
         (typeof json.error === 'string' && json.error) ||
         `HTTP ${res.status}`;
-      throw new OwlStackError(message, res.status, json.error as string | undefined, json);
+      throw new FoPostError(message, res.status, json.error as string | undefined, json);
     }
 
     if (json && typeof json === 'object' && 'data' in json && Object.keys(json).length === 1) {

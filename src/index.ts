@@ -1,21 +1,21 @@
 /**
- * @owlstackapp/sdk — Official TypeScript/Node.js SDK for the OwlStack API.
+ * @fopost/sdk — Official TypeScript/Node.js SDK for the FoPost API.
  *
  * Quick start:
  *
- *   import { OwlStack } from '@owlstackapp/sdk';
- *   const owl = new OwlStack({ apiKey: process.env.OWLSTACK_API_KEY! });
+ *   import { FoPost } from '@fopost/sdk';
+ *   const fopost = new FoPost({ apiKey: process.env.FOPOST_API_KEY! });
  *
- *   const accounts = await owl.accounts.list({ workspaceId: '9b2f6c1e-…' });
- *   const post = await owl.posts.create({
+ *   const accounts = await fopost.accounts.list({ workspaceId: '9b2f6c1e-…' });
+ *   const post = await fopost.posts.create({
  *     workspaceId: '9b2f6c1e-…',
  *     content: [{ text: 'Hello from the SDK' }],
  *     accounts: accounts.map((a) => a.id),
  *   });
- *   await owl.posts.publish(post.id);
+ *   await fopost.posts.publish(post.id);
  */
 
-import { HttpClient, OwlStackError, type HttpClientOptions } from './client.js';
+import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
   AiCreditBalance,
@@ -30,12 +30,12 @@ import type {
   Workspace,
 } from './types.js';
 
-export { OwlStackError };
+export { FoPostError };
 export * from './types.js';
 
-export type OwlStackOptions = HttpClientOptions;
+export type FoPostOptions = HttpClientOptions;
 
-export class OwlStack {
+export class FoPost {
   private readonly http: HttpClient;
 
   // Resource namespaces — bound below in constructor.
@@ -45,7 +45,7 @@ export class OwlStack {
   readonly labels: LabelsResource;
   readonly ai: AiResource;
 
-  constructor(opts: OwlStackOptions) {
+  constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
     this.posts = new PostsResource(this.http);
     this.accounts = new AccountsResource(this.http);

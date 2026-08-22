@@ -46,13 +46,13 @@ jobs:
           mkdir -p /tmp/smoke && cd /tmp/smoke && npm init -y >/dev/null
           npm i "/tmp/$TARBALL"
           node --input-type=module -e "
-            import { OwlStack } from '@owlstackapp/sdk';
-            if (!new OwlStack({ apiKey: 'x' }).posts) throw new Error('ESM export broken');
+            import { FoPost } from '@fopost/sdk';
+            if (!new FoPost({ apiKey: 'x' }).posts) throw new Error('ESM export broken');
             console.log('ESM ok');
           "
           node --input-type=commonjs -e "
-            const { OwlStack } = require('@owlstackapp/sdk');
-            if (!new OwlStack({ apiKey: 'x' }).posts) throw new Error('CJS export broken');
+            const { FoPost } = require('@fopost/sdk');
+            if (!new FoPost({ apiKey: 'x' }).posts) throw new Error('CJS export broken');
             console.log('CJS ok');
           "
 
@@ -66,8 +66,8 @@ jobs:
             exit 1
           fi
           VERSION=$(node -p "require('./package.json').version")
-          if npm view "@owlstackapp/sdk@$VERSION" version >/dev/null 2>&1; then
-            echo "@owlstackapp/sdk@$VERSION already published, skipping"
+          if npm view "@fopost/sdk@$VERSION" version >/dev/null 2>&1; then
+            echo "@fopost/sdk@$VERSION already published, skipping"
           else
             npm publish --access public --provenance
           fi
