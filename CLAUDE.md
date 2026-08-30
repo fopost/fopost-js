@@ -39,11 +39,11 @@ CHANGELOG when this package is released.
 
 Three files, no build-time codegen:
 
-| File | Contents |
-| :--- | :--- |
-| `src/client.ts` | `HttpClient` (fetch wrapper), `FoPostError`, `DEFAULT_BASE_URL` |
-| `src/index.ts` | `FoPost` class plus every resource class, all in one file |
-| `src/types.ts` | Public DTOs (`Post`, `Account`, `Workspace`, `Label`, inputs, `Platform`) |
+| File            | Contents                                                                  |
+| :-------------- | :------------------------------------------------------------------------ |
+| `src/client.ts` | `HttpClient` (fetch wrapper), `FoPostError`, `DEFAULT_BASE_URL`           |
+| `src/index.ts`  | `FoPost` class plus every resource class, all in one file                 |
+| `src/types.ts`  | Public DTOs (`Post`, `Account`, `Workspace`, `Label`, inputs, `Platform`) |
 
 Request flow: a resource method (e.g. `posts.create`) maps its camelCase input onto the
 API's snake_case wire body, then calls `http.post('/v1/posts', body)` →
