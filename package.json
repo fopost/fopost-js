@@ -1,6 +1,6 @@
 {
   "name": "@fopost/sdk",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Official TypeScript SDK for the FoPost API. Schedule and publish to +30 social platforms from your code.",
   "license": "MIT",
   "type": "module",
@@ -37,13 +37,16 @@
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
     "lint": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^20",
     "prettier": "^3.4.2",
     "tsup": "^8.4.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   },
   "publishConfig": {
     "access": "public"
