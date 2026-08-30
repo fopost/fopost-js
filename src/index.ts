@@ -66,7 +66,7 @@ class PostsResource {
   constructor(private http: HttpClient) {}
 
   list(params: ListPostsParams): Promise<Post[]> {
-    return this.http.get<Post[]>('/api/v1/posts', {
+    return this.http.get<Post[]>('/v1/posts', {
       workspace_id: params.workspaceId,
       status: params.status,
       limit: params.limit,
@@ -75,11 +75,11 @@ class PostsResource {
   }
 
   get(id: string): Promise<Post> {
-    return this.http.get<Post>(`/api/v1/posts/${id}`);
+    return this.http.get<Post>(`/v1/posts/${id}`);
   }
 
   create(input: CreatePostInput): Promise<Post> {
-    return this.http.post<Post>('/api/v1/posts', {
+    return this.http.post<Post>('/v1/posts', {
       workspace_id: input.workspaceId,
       status: input.status ?? 'draft',
       content: input.content,
@@ -98,31 +98,31 @@ class PostsResource {
     if (input.accounts !== undefined) body.accounts = accountIds(input.accounts);
     if (input.labels !== undefined) body.labels = input.labels;
     if (input.title !== undefined) body.title = input.title;
-    return this.http.put<Post>(`/api/v1/posts/${id}`, body);
+    return this.http.put<Post>(`/v1/posts/${id}`, body);
   }
 
   delete(id: string): Promise<void> {
-    return this.http.delete(`/api/v1/posts/${id}`);
+    return this.http.delete(`/v1/posts/${id}`);
   }
 
   publish(id: string): Promise<unknown> {
-    return this.http.post(`/api/v1/posts/${id}/publish`);
+    return this.http.post(`/v1/posts/${id}/publish`);
   }
 
   cancel(id: string): Promise<unknown> {
-    return this.http.post(`/api/v1/posts/${id}/cancel`);
+    return this.http.post(`/v1/posts/${id}/cancel`);
   }
 
   retry(id: string): Promise<unknown> {
-    return this.http.post(`/api/v1/posts/${id}/retry`);
+    return this.http.post(`/v1/posts/${id}/retry`);
   }
 
   preflight(id: string): Promise<unknown> {
-    return this.http.post(`/api/v1/posts/${id}/preflight`);
+    return this.http.post(`/v1/posts/${id}/preflight`);
   }
 
   deliveries(id: string): Promise<unknown[]> {
-    return this.http.get<unknown[]>(`/api/v1/posts/${id}/deliveries`);
+    return this.http.get<unknown[]>(`/v1/posts/${id}/deliveries`);
   }
 }
 
@@ -130,17 +130,17 @@ class AccountsResource {
   constructor(private http: HttpClient) {}
 
   list(params: { workspaceId: string }): Promise<Account[]> {
-    return this.http.get<Account[]>('/api/v1/accounts', {
+    return this.http.get<Account[]>('/v1/accounts', {
       workspace_id: params.workspaceId,
     });
   }
 
   get(id: string): Promise<Account> {
-    return this.http.get<Account>(`/api/v1/accounts/${id}`);
+    return this.http.get<Account>(`/v1/accounts/${id}`);
   }
 
   health(id: string): Promise<unknown> {
-    return this.http.get(`/api/v1/accounts/${id}/health`);
+    return this.http.get(`/v1/accounts/${id}/health`);
   }
 }
 
@@ -148,11 +148,11 @@ class WorkspacesResource {
   constructor(private http: HttpClient) {}
 
   list(): Promise<Workspace[]> {
-    return this.http.get<Workspace[]>('/api/v1/workspaces');
+    return this.http.get<Workspace[]>('/v1/workspaces');
   }
 
   get(id: string): Promise<Workspace> {
-    return this.http.get<Workspace>(`/api/v1/workspaces/${id}`);
+    return this.http.get<Workspace>(`/v1/workspaces/${id}`);
   }
 }
 
@@ -160,7 +160,7 @@ class LabelsResource {
   constructor(private http: HttpClient) {}
 
   list(params: { workspaceId: string }): Promise<Label[]> {
-    return this.http.get<Label[]>('/api/v1/labels', { workspace_id: params.workspaceId });
+    return this.http.get<Label[]>('/v1/labels', { workspace_id: params.workspaceId });
   }
 }
 
@@ -168,14 +168,14 @@ class AiResource {
   constructor(private http: HttpClient) {}
 
   credits(): Promise<AiCreditBalance> {
-    return this.http.get<AiCreditBalance>('/api/v1/ai/credits');
+    return this.http.get<AiCreditBalance>('/v1/ai/credits');
   }
 
   generateCaption(input: GenerateCaptionInput): Promise<{
     caption: string;
     credits?: { charged: number; remaining: number };
   }> {
-    return this.http.post('/api/v1/ai/generate-caption', {
+    return this.http.post('/v1/ai/generate-caption', {
       current_caption: input.currentCaption,
       image_urls: input.imageUrls,
       platforms: input.platforms,
@@ -189,7 +189,7 @@ class AiResource {
     results: Array<{ platform: string; content: string; credits: number }>;
     credits: { charged: number; remaining: number };
   }> {
-    return this.http.post('/api/v1/ai/rewrite', input);
+    return this.http.post('/v1/ai/rewrite', input);
   }
 
   repurposeUrl(input: RepurposeUrlInput): Promise<{
@@ -198,6 +198,6 @@ class AiResource {
     posts: Record<string, string>;
     credits: { charged: number; remaining: number };
   }> {
-    return this.http.post('/api/v1/ai/repurpose-url', input);
+    return this.http.post('/v1/ai/repurpose-url', input);
   }
 }
