@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 ## What This Is
 
 `@fopost/sdk` on npm — the official TypeScript/Node.js client for the FoPost REST API
-(`fopost.com`). Current version `0.2.2`. It wraps the API's HTTP surface in a namespaced
+(`fopost.com`). Current version `0.2.3`. It wraps the API's HTTP surface in a namespaced
 client (`posts`, `accounts`, `workspaces`, `labels`, `ai`) with hand-written DTOs.
 
 Requires Node >= 18 (`globalThis.fetch`). Source is ESM TypeScript; `tsup` emits ESM +
@@ -46,7 +46,7 @@ Three files, no build-time codegen:
 | `src/types.ts` | Public DTOs (`Post`, `Account`, `Workspace`, `Label`, inputs, `Platform`) |
 
 Request flow: a resource method (e.g. `posts.create`) maps its camelCase input onto the
-API's snake_case wire body, then calls `http.post('/api/v1/posts', body)` →
+API's snake_case wire body, then calls `http.post('/v1/posts', body)` →
 `HttpClient.request()` → `fetch` → JSON decode → envelope unwrap → typed return.
 
 Resource classes are declared in `src/index.ts` below the `FoPost` class and are **not
@@ -58,9 +58,12 @@ is already public and is the right thing to expose.
 
 ## API Contract
 
-- Base URL: `https://api.fopost.com` (`DEFAULT_BASE_URL`), overridable via
+- Base URL: `https://api.fopost.com` (`DEFAULT_BASE_URL`), host-only, overridable via
   `new FoPost({ baseUrl })`. **The version prefix lives in the paths**, which are written
-  `/api/v1/...` — not in the base URL. No `FOPOST_BASE_URL` env read.
+  `/v1/...` — not in the base URL. No `FOPOST_BASE_URL` env read.
+- **The path prefix is `/v1`, never `/api/v1`.** The API serves its routes at `/v1` on the
+  bare host and nothing rewrites the path, so an `/api/v1` request 404s — that was the
+  0.2.2 bug. `src/api-path.test.ts` pins every path and fails if the prefix drifts back.
 - Auth: header `X-API-Key: <key>`. `apiKey` is required in the constructor and throws when
   empty. **No `FOPOST_API_KEY` env fallback** — the caller passes `process.env.FOPOST_API_KEY`.
 - Headers sent: `Content-Type: application/json`, `X-API-Key`, `User-Agent: @fopost/sdk`
@@ -92,14 +95,15 @@ npm install
 npm run build          # tsup src/index.ts --format esm,cjs --dts --clean
 npm run dev            # same, watch mode
 npm run lint           # tsc --noEmit (there is no ESLint in this repo)
+npm test               # vitest run
+npm run test:watch     # vitest
 npm run format         # prettier --write .
 npm run format:check   # prettier --check .
 ```
 
-**There is no `test` script and no test suite.** There is also no `ci.yml` — the only
-workflow is `release.yml`, which runs on tags and `workflow_dispatch`, so nothing checks a
-pull request automatically. Run `npm run lint` and `npm run format:check` by hand before
-committing.
+`.github/workflows/ci.yml` runs `lint`, `test`, and `build` on every push to `main` and
+every pull request. `release.yml` runs the same checks on a tag before publishing. Run
+`npm run format:check` by hand before committing — CI does not check formatting.
 
 ## Conventions
 
@@ -116,19 +120,23 @@ committing.
 
 ## Testing
 
-There are no tests today. Any test added here **must stub the transport and must never
-reach the live API.** `HttpClientOptions.fetch` exists for exactly this: pass a fake
-`fetch` to `new FoPost({ apiKey: 'test', fetch: stub })` and assert on the `Request` it
-receives. At minimum cover: the `X-API-Key` header is sent, the `{data}` unwrap only fires
-on a sole-key body, and a non-2xx becomes a `FoPostError` with the right `status`/`code`.
+Vitest, one suite so far: `src/api-path.test.ts`, which drives every resource method and
+asserts the request path starts with `/v1/` and never contains `/api/v1/`.
+
+Any test added here **must stub the transport and must never reach the live API.**
+`HttpClientOptions.fetch` exists for exactly this: pass a fake `fetch` to
+`new FoPost({ apiKey: 'test', fetch: stub })` and assert on the request it receives. Worth
+covering next: the `X-API-Key` header is sent, the `{data}` unwrap only fires on a sole-key
+body, and a non-2xx becomes a `FoPostError` with the right `status`/`code`.
 
 ## Releasing
 
 Tag `v<version>` matching `package.json`; `.github/workflows/release.yml` publishes to npm.
-The workflow verifies the tag equals `package.json` version, runs `lint` and `build`, then
-packs the tarball and smoke-tests both the ESM and CJS entry points out of a scratch
-project (this catches an `exports` map that builds but is unreachable). It skips publishing
-if the version is already on npm, and publishes with `--provenance` (`id-token: write`).
+The workflow verifies the tag equals `package.json` version, runs `lint`, `test`, and
+`build`, then packs the tarball and smoke-tests both the ESM and CJS entry points out of a
+scratch project (this catches an `exports` map that builds but is unreachable). It skips
+publishing if the version is already on npm, and publishes with `--provenance`
+(`id-token: write`).
 
 Requires repo secret `NPM_TOKEN`. The workflow fails loudly if it is unset.
 
