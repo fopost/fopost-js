@@ -116,6 +116,95 @@ export type TelegramBotCommands = {
   commands: TelegramBotCommand[];
 };
 
+// ─── Blogs, articles and products on a connected site ──────────────
+//
+// Content the connected site already owns, addressed by the platform's own id
+// rather than a FoPost id. WordPress and Shopify answer these; products are
+// Shopify only.
+
+export type RemoteArticleStatus = 'published' | 'draft' | 'pending' | 'scheduled';
+
+export type RemoteProductStatus = 'active' | 'draft' | 'archived';
+
+export type RemoteBlog = {
+  /** The blog id on the platform. WordPress reports its one blog as `default`. */
+  id: string;
+  title: string;
+  handle: string | null;
+  url: string | null;
+};
+
+export type RemoteArticle = {
+  /** The article id on the platform. */
+  id: string;
+  blog_id: string | null;
+  title: string;
+  body_html: string | null;
+  excerpt: string | null;
+  status: RemoteArticleStatus;
+  author_name: string | null;
+  tags: string[];
+  image_url: string | null;
+  url: string | null;
+  published_at: string | null;
+  updated_at: string | null;
+};
+
+export type RemoteProduct = {
+  /** The product id on the platform. */
+  id: string;
+  title: string;
+  handle: string | null;
+  status: RemoteProductStatus;
+  description: string | null;
+  vendor: string | null;
+  product_type: string | null;
+  tags: string[];
+  image_url: string | null;
+  url: string | null;
+  /** Lowest variant price, as a decimal string. */
+  price: string | null;
+  currency: string | null;
+  updated_at: string | null;
+};
+
+export type ListRemoteArticlesParams = {
+  /** 1 to 50; defaults to 20. */
+  limit?: number;
+  status?: RemoteArticleStatus;
+  /** Match the article title. */
+  q?: string;
+};
+
+export type CreateRemoteArticleInput = {
+  title: string;
+  /** FoPost body markup; the platform's own format is rendered from it. */
+  body: string;
+  excerpt?: string;
+  status?: RemoteArticleStatus;
+  tags?: string[];
+  authorName?: string;
+  imageUrl?: string;
+};
+
+/** Every field optional, at least one required. Omitted fields keep their value. */
+export type UpdateRemoteArticleInput = Partial<CreateRemoteArticleInput>;
+
+export type ListRemoteProductsParams = {
+  limit?: number;
+  status?: RemoteProductStatus;
+  q?: string;
+};
+
+export type UpdateRemoteProductInput = {
+  title?: string;
+  description?: string;
+  status?: RemoteProductStatus;
+  tags?: string[];
+  productType?: string;
+  vendor?: string;
+};
+
 export type SlackChannel = {
   /** Slack channel id. */
   id: string;

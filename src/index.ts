@@ -44,8 +44,15 @@ import type {
   LeadsFeedPage,
   LeadsFeedParams,
   NetworkAd,
+  ListRemoteArticlesParams,
+  ListRemoteProductsParams,
   ReachEstimate,
   ReachEstimateInput,
+  RemoteArticle,
+  RemoteBlog,
+  RemoteProduct,
+  UpdateRemoteArticleInput,
+  UpdateRemoteProductInput,
   UpdateAdCampaignInput,
   UpdateAdSetInput,
   UpdateAudienceInput,
@@ -57,6 +64,7 @@ import type {
   BoostPostInput,
   BoostablePost,
   CreateAccountGroupInput,
+  CreateRemoteArticleInput,
   CreateAdInput,
   CreateAudienceInput,
   CreateLeadFormInput,
@@ -132,6 +140,7 @@ export class FoPost {
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly blogs: BlogsResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -145,6 +154,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.blogs = new BlogsResource(this.http);
   }
 }
 
@@ -302,6 +312,113 @@ class AccountsResource {
     if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
     return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
   }
+}
+
+/**
+ * Blogs, articles and products that already live on a connected site.
+ *
+ * Every id here is the platform's own, never a FoPost id: `blogId` comes from
+ * `listBlogs`, `articleId` and `productId` from the platform. Reads need the
+ * `posts` scope; everything that changes the site needs `publish` as well.
+ */
+class BlogsResource {
+  constructor(private http: HttpClient) {}
+
+  /** A Shopify store reports every blog; WordPress reports one, id `default`. */
+  listBlogs(accountId: string): Promise<RemoteBlog[]> {
+    return this.http.get<RemoteBlog[]>(`/v1/accounts/${accountId}/blogs`);
+  }
+
+  /** Newest first, drafts included, whoever wrote them. */
+  listArticles(
+    accountId: string,
+    blogId: string,
+    params: ListRemoteArticlesParams = {},
+  ): Promise<RemoteArticle[]> {
+    return this.http.get<RemoteArticle[]>(`/v1/accounts/${accountId}/blogs/${blogId}/articles`, {
+      limit: params.limit,
+      status: params.status,
+      q: params.q,
+    });
+  }
+
+  getArticle(accountId: string, blogId: string, articleId: string): Promise<RemoteArticle> {
+    return this.http.get<RemoteArticle>(
+      `/v1/accounts/${accountId}/blogs/${blogId}/articles/${articleId}`,
+    );
+  }
+
+  createArticle(
+    accountId: string,
+    blogId: string,
+    input: CreateRemoteArticleInput,
+  ): Promise<RemoteArticle> {
+    return this.http.post<RemoteArticle>(
+      `/v1/accounts/${accountId}/blogs/${blogId}/articles`,
+      articleBody(input),
+    );
+  }
+
+  /**
+   * Changes the live article in place. Only the fields you pass are touched,
+   * and the article is addressed by its own id, so this never creates a second
+   * post on the site.
+   */
+  updateArticle(
+    accountId: string,
+    blogId: string,
+    articleId: string,
+    input: UpdateRemoteArticleInput,
+  ): Promise<RemoteArticle> {
+    return this.http.patch<RemoteArticle>(
+      `/v1/accounts/${accountId}/blogs/${blogId}/articles/${articleId}`,
+      articleBody(input),
+    );
+  }
+
+  /** Removes the article from the site. This cannot be undone. */
+  deleteArticle(accountId: string, blogId: string, articleId: string): Promise<void> {
+    return this.http.delete<void>(
+      `/v1/accounts/${accountId}/blogs/${blogId}/articles/${articleId}`,
+    );
+  }
+
+  listProducts(accountId: string, params: ListRemoteProductsParams = {}): Promise<RemoteProduct[]> {
+    return this.http.get<RemoteProduct[]>(`/v1/accounts/${accountId}/products`, {
+      limit: params.limit,
+      status: params.status,
+      q: params.q,
+    });
+  }
+
+  /** Only the fields you pass change; the rest of the product stays as it is. */
+  updateProduct(
+    accountId: string,
+    productId: string,
+    input: UpdateRemoteProductInput,
+  ): Promise<RemoteProduct> {
+    const body: Record<string, unknown> = {};
+    if (input.title !== undefined) body.title = input.title;
+    if (input.description !== undefined) body.description = input.description;
+    if (input.status !== undefined) body.status = input.status;
+    if (input.tags !== undefined) body.tags = input.tags;
+    if (input.productType !== undefined) body.product_type = input.productType;
+    if (input.vendor !== undefined) body.vendor = input.vendor;
+    return this.http.patch<RemoteProduct>(`/v1/accounts/${accountId}/products/${productId}`, body);
+  }
+}
+
+/** Only what the caller set travels, so an update never blanks a field. */
+function articleBody(input: UpdateRemoteArticleInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (input.title !== undefined) body.title = input.title;
+  if (input.body !== undefined) body.body = input.body;
+  if (input.excerpt !== undefined) body.excerpt = input.excerpt;
+  if (input.status !== undefined) body.status = input.status;
+  if (input.tags !== undefined) body.tags = input.tags;
+  if (input.authorName !== undefined) body.author_name = input.authorName;
+  if (input.imageUrl !== undefined) body.image_url = input.imageUrl;
+  return body;
 }
 
 class AccountGroupsResource {

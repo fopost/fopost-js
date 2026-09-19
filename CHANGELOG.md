@@ -10,6 +10,11 @@ All notable changes to `@fopost/sdk` are documented here.
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- `blogs` reaches content a connected site already owns, by the platform's own ids:
+  `listBlogs`, `listArticles`, `getArticle`, `createArticle`, `updateArticle`,
+  `deleteArticle`, plus `listProducts` and `updateProduct` for a Shopify store.
+  `updateArticle` changes the live article in place and never creates a second post.
+  Reads need the `posts` scope; the writes need `publish` as well.
 
 ## 0.6.0
 
