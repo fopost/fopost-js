@@ -111,6 +111,7 @@ try {
 | `inbox`      | `list`, `threads`, `conversations`, `unreadCount`, `accounts`, `platforms`, `markThreadRead`, `refresh`, `update`, `reply`, `hide`, `unhide`, `delete`, `listApprovals`, `approveReply`, `rejectReply`                                        |
 | `media`      | `presign`, `complete`, `uploadDirect`                                                                                                                                                                                                         |
 | `ads`        | `list`, `external`, `boostable`, `connections`, `sources`, `authorizeMeta`, `deleteConnection`, `boost`, `create`, `refresh`, `setStatus`, `delete`, `audiences`, `createAudience`, `searchTargeting`, `leadForms`, `createLeadForm`, `leads` |
+| `validate`   | `post`, `length`, `media`                                                                                                                                                                                                                     |
 
 ## Contributing
 

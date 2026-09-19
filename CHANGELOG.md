@@ -2,6 +2,15 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
+## Unreleased
+
+### Added
+
+- `fopost.validate`: the preflight checks for content that is not a post yet.
+  `post` (issues and signals per platform), `length` (counted length against
+  each platform limit) and `media` (the upload checks on a file by URL, without
+  storing it). Needs the `posts` scope.
+
 ## 0.3.0
 
 ### Added
