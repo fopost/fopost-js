@@ -82,6 +82,40 @@ export type MovedAccount = {
   workspace_id: string;
 };
 
+/** Telegram connect codes come back in the API's snake_case shape. */
+export type TelegramConnectCode = {
+  /** One-time code, valid for 15 minutes. */
+  code: string;
+  /** What to send in the chat: `/connect <code>`. */
+  command: string;
+  /** The publishing bot, without the @. */
+  bot_username: string | null;
+  /** Opens a private chat with the bot, code included. */
+  deep_link: string | null;
+  /** Adds the bot to a group, code included. */
+  group_link: string | null;
+  expires_at: string;
+};
+
+export type TelegramConnectStatus = {
+  status: 'pending' | 'connected' | 'failed' | 'expired';
+  /** The connected account, once `connected`. */
+  account_id: string | null;
+  /** Why the connection failed, when `failed`. */
+  reason: 'card_required' | 'slot_taken' | 'workspace_unavailable' | null;
+};
+
+export type TelegramBotCommand = {
+  /** 1-32 lowercase letters, digits or underscores. */
+  command: string;
+  /** 1-256 characters. */
+  description: string;
+};
+
+export type TelegramBotCommands = {
+  commands: TelegramBotCommand[];
+};
+
 /** Account groups come back in the API's snake_case shape. */
 export type AccountGroup = {
   /** Public account group id (uuid). */
