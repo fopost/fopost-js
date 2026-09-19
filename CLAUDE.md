@@ -83,7 +83,7 @@ is already public and is the right thing to expose.
 - Rate-limit headers (`X-RateLimit-*`) are **not surfaced**. Only the Go SDK reads them.
 
 Resource coverage is a subset of the API: posts (list/get/create/update/delete/publish/
-cancel/retry/preflight/deliveries), accounts (list/get/health/update/move), accountGroups
+cancel/retry/preflight/deliveries), accounts (list/get/health/update/move, Telegram connect code and bot commands), accountGroups
 (list/get/create/update/delete/setMembers), workspaces (list/get),
 labels (list), ai (credits/generateCaption/rewrite/repurposeUrl), inbox (the `/v1/inbox`
 family except the X Chat routes), ads (the `/v1/ads` family), validate (post/length/media). `communities`, `webhooks`,
