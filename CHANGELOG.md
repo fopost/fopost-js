@@ -2,7 +2,7 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
-## Unreleased
+## 0.3.0
 
 ### Added
 
