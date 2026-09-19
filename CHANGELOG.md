@@ -2,10 +2,13 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
-## Unreleased
+## 0.4.0
 
 ### Added
 
+- `fopost.media`: direct uploads. `presign` signs a PUT for one file, `complete`
+  turns the staged object into a library item, and `uploadDirect` does all
+  three steps. Needs the `posts` scope.
 - `fopost.validate`: the preflight checks for content that is not a post yet.
   `post` (issues and signals per platform), `length` (counted length against
   each platform limit) and `media` (the upload checks on a file by URL, without
