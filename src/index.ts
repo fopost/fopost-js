@@ -30,6 +30,7 @@ import type {
   CreateAudienceInput,
   CreateLeadFormInput,
   CreatePostInput,
+  DirectUploadInput,
   ExternalAd,
   GenerateCaptionInput,
   InboxAccount,
@@ -50,12 +51,15 @@ import type {
   ListPostsParams,
   MarkInboxThreadReadInput,
   Post,
+  PresignUploadInput,
+  PresignedUpload,
   RepurposeUrlInput,
   RewriteInput,
   TargetingOption,
   TargetingSearchType,
   UpdateInboxItemInput,
   UpdatePostInput,
+  UploadedMedia,
   Workspace,
 } from './types.js';
 
@@ -75,6 +79,7 @@ export class FoPost {
   readonly ai: AiResource;
   readonly inbox: InboxResource;
   readonly ads: AdsResource;
+  readonly media: MediaResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -85,6 +90,7 @@ export class FoPost {
     this.ai = new AiResource(this.http);
     this.inbox = new InboxResource(this.http);
     this.ads = new AdsResource(this.http);
+    this.media = new MediaResource(this.http);
   }
 }
 
@@ -481,5 +487,38 @@ class AdsResource {
       page_id: params.pageId,
       after: params.after,
     });
+  }
+}
+
+class MediaResource {
+  constructor(private http: HttpClient) {}
+
+  presign(input: PresignUploadInput): Promise<PresignedUpload> {
+    return this.http.post<PresignedUpload>('/v1/media/presign', input);
+  }
+
+  complete(uploadId: string): Promise<UploadedMedia> {
+    return this.http.post<UploadedMedia>(`/v1/media/presign/${uploadId}/complete`);
+  }
+
+  /** Presign, PUT the bytes to storage, then complete. */
+  async uploadDirect(input: DirectUploadInput): Promise<UploadedMedia> {
+    const size = input.data instanceof Blob ? input.data.size : input.data.byteLength;
+    const presigned = await this.presign({
+      workspaceId: input.workspaceId,
+      filename: input.filename,
+      mimeType: input.mimeType,
+      size,
+    });
+    const res = await this.http.fetchImpl(presigned.uploadUrl, {
+      method: presigned.method,
+      headers: { ...presigned.headers, 'Content-Length': String(size) },
+      body: input.data,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new FoPostError(text || `Upload failed: HTTP ${res.status}`, res.status);
+    }
+    return this.complete(presigned.uploadId);
   }
 }
