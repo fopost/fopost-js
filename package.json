@@ -1,6 +1,6 @@
 {
   "name": "@fopost/sdk",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Official TypeScript SDK for the FoPost API. Schedule and publish to +30 social platforms from your code.",
   "license": "MIT",
   "type": "module",
