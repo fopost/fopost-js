@@ -10,6 +10,17 @@ All notable changes to `@fopost/sdk` are documented here.
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- `accounts.listRedditSubreddits`, `listRedditSubredditRules`, `listRedditFlairs` and
+  `setRedditDefaultSubreddit` cover a Reddit account's destinations: the subreddits it
+  is in, a subreddit's rules and post flairs, and where posts go when one names no
+  subreddit. They need the `accounts` scope, and an account connected before those
+  permissions were asked for answers `409 reconnect_required`.
+- `validate.subreddit` asks whether a subreddit exists and takes a post from an
+  account, before a post exists. Needs the `posts` scope.
+- `inbox.vote` votes an item up or down where the network ranks by votes (Reddit), or
+  takes an earlier vote back with `none`. Needs `inbox` and `publish`.
+- `Account.reconnectRequired` and the inbox item's `vote` and `canVote` are new on the
+  existing shapes.
 
 ## 0.6.0
 

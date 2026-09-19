@@ -95,6 +95,12 @@ import type {
   RewriteInput,
   SlackChannel,
   SlackIdentity,
+  RedditSubreddit,
+  RedditSubredditRules,
+  RedditFlairs,
+  RedditDefaultSubreddit,
+  RedditVoteDirection,
+  SubredditCheck,
   SlackMember,
   TargetingOption,
   TelegramBotCommand,
@@ -278,6 +284,30 @@ class AccountsResource {
 
   deleteTelegramBotCommands(id: string): Promise<TelegramBotCommands> {
     return this.http.delete<TelegramBotCommands>(`/v1/accounts/${id}/telegram/commands`);
+  }
+
+  /** Subreddits the account is in, busiest first, plus its own profile page. */
+  listRedditSubreddits(id: string): Promise<RedditSubreddit[]> {
+    return this.http.get<RedditSubreddit[]>(`/v1/accounts/${id}/reddit/subreddits`);
+  }
+
+  /** The rules a subreddit publishes, in its own order. */
+  listRedditSubredditRules(id: string, subreddit: string): Promise<RedditSubredditRules> {
+    return this.http.get<RedditSubredditRules>(
+      `/v1/accounts/${id}/reddit/subreddits/${encodeURIComponent(subreddit)}/rules`,
+    );
+  }
+
+  /** Post flairs one subreddit offers; a flair id is valid only there. */
+  listRedditFlairs(id: string, subreddit: string): Promise<RedditFlairs> {
+    return this.http.get<RedditFlairs>(`/v1/accounts/${id}/reddit/flairs`, { subreddit });
+  }
+
+  /** Where posts go when a post names no subreddit; null falls back to the profile page. */
+  setRedditDefaultSubreddit(id: string, subreddit: string | null): Promise<RedditDefaultSubreddit> {
+    return this.http.put<RedditDefaultSubreddit>(`/v1/accounts/${id}/reddit/default-subreddit`, {
+      subreddit,
+    });
   }
 
   /** Public channels, plus private ones the app was invited to. */
@@ -522,6 +552,15 @@ class InboxResource {
 
   unlike(id: string): Promise<InboxItem> {
     return this.http.post<InboxItem>(`/v1/inbox/${id}/unlike`);
+  }
+
+  /**
+   * Votes the item up or down where the network ranks by votes (Reddit), or
+   * takes an earlier vote back with `none`. An upvote is the same call a like
+   * makes, so `liked` moves with it. Needs `publish`.
+   */
+  vote(id: string, direction: RedditVoteDirection): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/vote`, { direction });
   }
 
   /** Pins our own comment. Needs `publish`. */
@@ -970,6 +1009,17 @@ class ValidateResource {
   /** Fetches the file and runs the upload checks on it; nothing is stored. */
   media(input: { url: string }): Promise<ValidateMediaResult> {
     return this.http.post<ValidateMediaResult>('/v1/validate/media', input);
+  }
+
+  /**
+   * Whether a subreddit exists and takes a post from this account. The check
+   * runs with the account's own token, so `accountId` is required.
+   */
+  subreddit(input: { accountId: string; name: string }): Promise<SubredditCheck> {
+    return this.http.get<SubredditCheck>('/v1/validate/subreddit', {
+      account_id: input.accountId,
+      name: input.name,
+    });
   }
 }
 
