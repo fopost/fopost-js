@@ -94,6 +94,10 @@ import type {
   RepurposeUrlInput,
   RewriteInput,
   TargetingOption,
+  TelegramBotCommand,
+  TelegramBotCommands,
+  TelegramConnectCode,
+  TelegramConnectStatus,
   TargetingSearchType,
   UpdateInboxItemInput,
   UpdatePostInput,
@@ -242,6 +246,34 @@ class AccountsResource {
     return this.http.post<MovedAccount>(`/v1/accounts/${id}/move`, {
       workspace_id: input.workspaceId,
     });
+  }
+
+  /** Mints a one-time code; send `/connect <code>` to the bot in a chat to connect it. */
+  createTelegramConnectCode(input: { workspaceId?: string } = {}): Promise<TelegramConnectCode> {
+    return this.http.post<TelegramConnectCode>('/v1/accounts/telegram/connect-code', {
+      workspaceId: input.workspaceId,
+    });
+  }
+
+  getTelegramConnectStatus(code: string): Promise<TelegramConnectStatus> {
+    return this.http.get<TelegramConnectStatus>('/v1/accounts/telegram/connect-code/status', {
+      code,
+    });
+  }
+
+  getTelegramBotCommands(id: string): Promise<TelegramBotCommands> {
+    return this.http.get<TelegramBotCommands>(`/v1/accounts/${id}/telegram/commands`);
+  }
+
+  /** Replaces the bot's command menu for this chat. */
+  setTelegramBotCommands(id: string, commands: TelegramBotCommand[]): Promise<TelegramBotCommands> {
+    return this.http.put<TelegramBotCommands>(`/v1/accounts/${id}/telegram/commands`, {
+      commands,
+    });
+  }
+
+  deleteTelegramBotCommands(id: string): Promise<TelegramBotCommands> {
+    return this.http.delete<TelegramBotCommands>(`/v1/accounts/${id}/telegram/commands`);
   }
 }
 

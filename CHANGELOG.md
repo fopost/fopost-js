@@ -19,6 +19,12 @@ All notable changes to `@fopost/sdk` are documented here.
   (pass `nextCursor` back as `cursor`), `leadPages`, `subscribeLeadPage`,
   `unsubscribeLeadPage`.
 - `ads.create` takes `urlTags`; `Ad.creative` carries it.
+- `accounts.createTelegramConnectCode` mints a one-time code; sending
+  `/connect <code>` to the bot in a chat connects that chat.
+  `accounts.getTelegramConnectStatus` reports the outcome.
+- `accounts.getTelegramBotCommands`, `setTelegramBotCommands` and
+  `deleteTelegramBotCommands` manage the bot's command menu in a connected chat.
+  All need the `accounts` scope.
 
 ## 0.5.0
 

@@ -34,6 +34,11 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.health('a1');
   await fopost.accounts.update('a1', { displayName: 'x' });
   await fopost.accounts.move('a1', { workspaceId: 'ws2' });
+  await fopost.accounts.createTelegramConnectCode({ workspaceId: 'ws' });
+  await fopost.accounts.getTelegramConnectStatus('c1');
+  await fopost.accounts.getTelegramBotCommands('a1');
+  await fopost.accounts.setTelegramBotCommands('a1', [{ command: 'start', description: 'Start' }]);
+  await fopost.accounts.deleteTelegramBotCommands('a1');
   await fopost.accountGroups.list({ workspaceId: 'ws' });
   await fopost.accountGroups.get('g1');
   await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
@@ -74,7 +79,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(39);
+    expect(urls.length).toBe(44);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
