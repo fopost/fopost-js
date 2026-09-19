@@ -20,8 +20,37 @@ import type {
   Account,
   AccountGroup,
   Ad,
+  AdAccountTree,
+  AdCampaign,
   AdConnection,
+  AdCreative,
+  AdCreativesResult,
+  AdInsightsParams,
+  AdInsightsReport,
+  AdObjectMutationParams,
+  AdObjectParams,
+  AdSet,
   AdSource,
+  BulkAdStatusInput,
+  BulkAdStatusResult,
+  CreateAdCampaignInput,
+  CreateAdCreativeInput,
+  CreateAdSetInput,
+  CreateNetworkAdInput,
+  FoPostAdInsightsParams,
+  LeadFormDetail,
+  LeadPage,
+  LeadPageInput,
+  LeadsFeedPage,
+  LeadsFeedParams,
+  NetworkAd,
+  ReachEstimate,
+  ReachEstimateInput,
+  UpdateAdCampaignInput,
+  UpdateAdSetInput,
+  UpdateAudienceInput,
+  UpdateNetworkAdInput,
+  Audience,
   AiCreditBalance,
   AudiencesResult,
   AuthorizeMetaAdsInput,
@@ -612,6 +641,255 @@ class AdsResource {
       after: params.after,
     });
   }
+
+  /** Campaigns, ad sets and ads on one ad account, read live from Meta. */
+  accountTree(adAccountId: string, params: AdObjectParams): Promise<AdAccountTree> {
+    return this.http.get<AdAccountTree>(`/v1/ads/accounts/${adAccountId}/tree`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
+  createCampaign(input: CreateAdCampaignInput): Promise<AdCampaign> {
+    return this.http.post<AdCampaign>('/v1/ads/campaigns', input);
+  }
+
+  getCampaign(id: string, params: AdObjectParams): Promise<AdCampaign> {
+    return this.http.get<AdCampaign>(`/v1/ads/campaigns/${id}`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateCampaign(
+    id: string,
+    params: AdObjectMutationParams,
+    input: UpdateAdCampaignInput,
+  ): Promise<AdCampaign> {
+    return this.http.request<AdCampaign>(
+      'PATCH',
+      `/v1/ads/campaigns/${id}`,
+      input,
+      metaQuery(params),
+    );
+  }
+
+  /** Deletes it and everything beneath it on Meta. Needs the `publish` scope as well as `ads`. */
+  deleteCampaign(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/campaigns/${id}`, undefined, metaQuery(params));
+  }
+
+  /** Copies it with everything beneath it, paused unless `paused` is false. Needs `publish`. */
+  duplicateCampaign(
+    id: string,
+    params: AdObjectMutationParams,
+    options: { paused?: boolean } = {},
+  ): Promise<{ id: string }> {
+    return this.http.request(
+      'POST',
+      `/v1/ads/campaigns/${id}/duplicate`,
+      options,
+      metaQuery(params),
+    );
+  }
+
+  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
+  createAdSet(input: CreateAdSetInput): Promise<AdSet> {
+    return this.http.post<AdSet>('/v1/ads/ad-sets', input);
+  }
+
+  getAdSet(id: string, params: AdObjectParams): Promise<AdSet> {
+    return this.http.get<AdSet>(`/v1/ads/ad-sets/${id}`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateAdSet(id: string, params: AdObjectMutationParams, input: UpdateAdSetInput): Promise<AdSet> {
+    return this.http.request<AdSet>('PATCH', `/v1/ads/ad-sets/${id}`, input, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteAdSet(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/ad-sets/${id}`, undefined, metaQuery(params));
+  }
+
+  /** Copies it with its ads, paused unless `paused` is false. Needs `publish`. */
+  duplicateAdSet(
+    id: string,
+    params: AdObjectMutationParams,
+    options: { paused?: boolean } = {},
+  ): Promise<{ id: string }> {
+    return this.http.request('POST', `/v1/ads/ad-sets/${id}/duplicate`, options, metaQuery(params));
+  }
+
+  /** An ad inside an ad set. Needs `publish` as well as `ads`. Starts paused unless `paused` is false. */
+  createNetworkAd(input: CreateNetworkAdInput): Promise<NetworkAd> {
+    return this.http.post<NetworkAd>('/v1/ads/ads', input);
+  }
+
+  getNetworkAd(id: string, params: AdObjectParams): Promise<NetworkAd> {
+    return this.http.get<NetworkAd>(`/v1/ads/ads/${id}`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateNetworkAd(
+    id: string,
+    params: AdObjectMutationParams,
+    input: UpdateNetworkAdInput,
+  ): Promise<NetworkAd> {
+    return this.http.request<NetworkAd>('PATCH', `/v1/ads/ads/${id}`, input, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteNetworkAd(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/ads/${id}`, undefined, metaQuery(params));
+  }
+
+  /** Paused unless `paused` is false. Needs the `publish` scope as well as `ads`. */
+  duplicateNetworkAd(
+    id: string,
+    params: AdObjectMutationParams,
+    options: { paused?: boolean } = {},
+  ): Promise<{ id: string }> {
+    return this.http.request('POST', `/v1/ads/ads/${id}/duplicate`, options, metaQuery(params));
+  }
+
+  /** Pauses or resumes up to 50 objects; each reports its own outcome. Needs `publish`. */
+  bulkSetStatus(input: BulkAdStatusInput): Promise<BulkAdStatusResult[]> {
+    return this.http.post<BulkAdStatusResult[]>('/v1/ads/status', input);
+  }
+
+  creatives(params: AdObjectParams & { adAccountId: string }): Promise<AdCreativesResult> {
+    return this.http.get<AdCreativesResult>('/v1/ads/creatives', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Nothing runs until an ad uses it. */
+  createCreative(input: CreateAdCreativeInput): Promise<AdCreative> {
+    return this.http.post<AdCreative>('/v1/ads/creatives', input);
+  }
+
+  getCreative(id: string, params: AdObjectParams): Promise<AdCreative> {
+    return this.http.get<AdCreative>(`/v1/ads/creatives/${id}`, metaQuery(params));
+  }
+
+  deleteCreative(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/creatives/${id}`, undefined, metaQuery(params));
+  }
+
+  getAudience(id: string, params: AdObjectParams): Promise<Audience> {
+    return this.http.get<Audience>(`/v1/ads/audiences/${id}`, metaQuery(params));
+  }
+
+  updateAudience(
+    id: string,
+    params: AdObjectMutationParams,
+    input: UpdateAudienceInput,
+  ): Promise<Audience> {
+    return this.http.request<Audience>(
+      'PATCH',
+      `/v1/ads/audiences/${id}`,
+      input,
+      metaQuery(params),
+    );
+  }
+
+  deleteAudience(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/audiences/${id}`, undefined, metaQuery(params));
+  }
+
+  /** Emails are hashed before they leave the API. */
+  addAudienceUsers(
+    id: string,
+    params: AdObjectMutationParams,
+    emails: string[],
+  ): Promise<{ added: number }> {
+    return this.http.request(
+      'POST',
+      `/v1/ads/audiences/${id}/users`,
+      { emails },
+      metaQuery(params),
+    );
+  }
+
+  estimateReach(input: ReachEstimateInput): Promise<ReachEstimate> {
+    return this.http.post<ReachEstimate>('/v1/ads/reach-estimate', input);
+  }
+
+  /** Insights for any Meta campaign, ad set or ad on a connection. */
+  insights(params: AdInsightsParams): Promise<AdInsightsReport> {
+    return this.http.get<AdInsightsReport>('/v1/ads/insights', {
+      ...metaQuery(params),
+      object_id: params.objectId,
+      ...insightsRange(params),
+    });
+  }
+
+  /** Insights for an ad created through FoPost, by its uuid. */
+  adInsights(id: string, params: FoPostAdInsightsParams): Promise<AdInsightsReport> {
+    return this.http.get<AdInsightsReport>(`/v1/ads/${id}/insights`, {
+      workspace_id: params.workspaceId,
+      ...insightsRange(params),
+    });
+  }
+
+  getLeadForm(
+    formId: string,
+    params: AdObjectParams & { pageId: string },
+  ): Promise<LeadFormDetail> {
+    return this.http.get<LeadFormDetail>(`/v1/ads/lead-forms/${formId}`, {
+      ...metaQuery(params),
+      page_id: params.pageId,
+    });
+  }
+
+  archiveLeadForm(formId: string, input: LeadPageInput): Promise<LeadFormDetail> {
+    return this.http.post<LeadFormDetail>(`/v1/ads/lead-forms/${formId}/archive`, input);
+  }
+
+  /** Leads stored from subscribed Pages; pass `nextCursor` back as `cursor` for the next page. */
+  leadsFeed(params: LeadsFeedParams = {}): Promise<LeadsFeedPage> {
+    return this.http.get<LeadsFeedPage>('/v1/ads/leads', {
+      workspace_id: params.workspaceId,
+      form_id: params.formId,
+      page_id: params.pageId,
+      cursor: params.cursor,
+      limit: params.limit,
+    });
+  }
+
+  leadPages(params: { workspaceId?: string } = {}): Promise<LeadPage[]> {
+    return this.http.get<LeadPage[]>('/v1/ads/lead-pages', { workspace_id: params.workspaceId });
+  }
+
+  /** Turns on new-lead notifications for the Page and backfills its recent leads. */
+  subscribeLeadPage(input: LeadPageInput): Promise<{ pageId: string; backfilled: number }> {
+    return this.http.post('/v1/ads/lead-pages', input);
+  }
+
+  unsubscribeLeadPage(pageId: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/lead-pages/${pageId}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+}
+
+function metaQuery(params: { workspaceId?: string; connectionId: string }) {
+  return { workspace_id: params.workspaceId, connection_id: params.connectionId };
+}
+
+function insightsRange(params: {
+  since: string;
+  until: string;
+  breakdown?: string;
+  daily?: boolean;
+}) {
+  return {
+    since: params.since,
+    until: params.until,
+    breakdown: params.breakdown,
+    daily: params.daily,
+  };
 }
 
 class ValidateResource {
