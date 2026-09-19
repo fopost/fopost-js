@@ -18,14 +18,43 @@
 import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
+  Ad,
+  AdConnection,
+  AdSource,
   AiCreditBalance,
+  AudiencesResult,
+  AuthorizeMetaAdsInput,
+  BoostPostInput,
+  BoostablePost,
+  CreateAdInput,
+  CreateAudienceInput,
+  CreateLeadFormInput,
   CreatePostInput,
+  ExternalAd,
   GenerateCaptionInput,
+  InboxAccount,
+  InboxApproval,
+  InboxConversation,
+  InboxItem,
+  InboxPage,
+  InboxPlatform,
+  InboxRefreshResult,
+  InboxReplyResult,
+  InboxThread,
   Label,
+  LeadFormSource,
+  LeadsPage,
+  ListInboxConversationsParams,
+  ListInboxParams,
+  ListInboxThreadsParams,
   ListPostsParams,
+  MarkInboxThreadReadInput,
   Post,
   RepurposeUrlInput,
   RewriteInput,
+  TargetingOption,
+  TargetingSearchType,
+  UpdateInboxItemInput,
   UpdatePostInput,
   Workspace,
 } from './types.js';
@@ -44,6 +73,8 @@ export class FoPost {
   readonly workspaces: WorkspacesResource;
   readonly labels: LabelsResource;
   readonly ai: AiResource;
+  readonly inbox: InboxResource;
+  readonly ads: AdsResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -52,6 +83,8 @@ export class FoPost {
     this.workspaces = new WorkspacesResource(this.http);
     this.labels = new LabelsResource(this.http);
     this.ai = new AiResource(this.http);
+    this.inbox = new InboxResource(this.http);
+    this.ads = new AdsResource(this.http);
   }
 }
 
@@ -199,5 +232,254 @@ class AiResource {
     credits: { charged: number; remaining: number };
   }> {
     return this.http.post('/v1/ai/repurpose-url', input);
+  }
+}
+
+class InboxResource {
+  constructor(private http: HttpClient) {}
+
+  /** Comments, mentions and DMs, newest first. Paginated: the result carries `meta`. */
+  list(params: ListInboxParams = {}): Promise<InboxPage<InboxItem>> {
+    return this.http.get<InboxPage<InboxItem>>('/v1/inbox', {
+      workspace_id: params.workspaceId,
+      type: params.type,
+      state: params.state,
+      platform: params.platform,
+      account_id: params.accountId,
+      post_id: params.postId,
+      post_external_id: params.postExternalId,
+      conversation_id: params.conversationId,
+      direction: params.direction,
+      q: params.q,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /** One row per platform post with comments, or per post we were mentioned in. */
+  threads(params: ListInboxThreadsParams = {}): Promise<InboxPage<InboxThread>> {
+    return this.http.get<InboxPage<InboxThread>>('/v1/inbox/posts', {
+      workspace_id: params.workspaceId,
+      kind: params.kind,
+      platform: params.platform,
+      account_id: params.accountId,
+      state: params.state,
+      q: params.q,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /** One row per DM thread, latest first. */
+  conversations(params: ListInboxConversationsParams = {}): Promise<InboxPage<InboxConversation>> {
+    return this.http.get<InboxPage<InboxConversation>>('/v1/inbox/conversations', {
+      workspace_id: params.workspaceId,
+      platform: params.platform,
+      account_id: params.accountId,
+      state: params.state,
+      q: params.q,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  unreadCount(params: { workspaceId?: string } = {}): Promise<{ count: number }> {
+    return this.http.get<{ count: number }>('/v1/inbox/unread-count', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  accounts(params: { workspaceId?: string } = {}): Promise<InboxAccount[]> {
+    return this.http.get<InboxAccount[]>('/v1/inbox/accounts', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  platforms(): Promise<InboxPlatform[]> {
+    return this.http.get<InboxPlatform[]>('/v1/inbox/platforms');
+  }
+
+  markThreadRead(input: MarkInboxThreadReadInput): Promise<{ updated: number }> {
+    return this.http.post<{ updated: number }>('/v1/inbox/read', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      post_external_id: input.postExternalId,
+      conversation_id: input.conversationId,
+    });
+  }
+
+  /** Poll every inbox-capable account in the workspace now. */
+  refresh(workspaceId: string): Promise<InboxRefreshResult> {
+    return this.http.post<InboxRefreshResult>('/v1/inbox/refresh', { workspace_id: workspaceId });
+  }
+
+  update(id: string, input: UpdateInboxItemInput): Promise<InboxItem> {
+    return this.http.request<InboxItem>('PATCH', `/v1/inbox/${id}`, input);
+  }
+
+  /** Sends the reply on the platform as the connected account. */
+  reply(id: string, text: string): Promise<InboxReplyResult> {
+    return this.http.post<InboxReplyResult>(`/v1/inbox/${id}/reply`, { text });
+  }
+
+  hide(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/hide`);
+  }
+
+  unhide(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unhide`);
+  }
+
+  /** Deletes the comment on the platform. */
+  delete(id: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/inbox/${id}`);
+  }
+
+  /** Replies an automation or the agent drafted that a person still has to send. */
+  listApprovals(params: { workspaceId?: string } = {}): Promise<InboxApproval[]> {
+    return this.http.get<InboxApproval[]>('/v1/inbox/approvals', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  /** Sends the draft, or `text` in its place. */
+  approveReply(id: number, text?: string): Promise<{ id: number; outcome: string }> {
+    return this.http.post(`/v1/inbox/approvals/${id}/approve`, text === undefined ? {} : { text });
+  }
+
+  rejectReply(id: number): Promise<{ id: number; outcome: string }> {
+    return this.http.post(`/v1/inbox/approvals/${id}/reject`);
+  }
+}
+
+class AdsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Boosts and ads created through FoPost, with insights from their last refresh. */
+  list(params: { workspaceId?: string } = {}): Promise<Ad[]> {
+    return this.http.get<Ad[]>('/v1/ads', { workspace_id: params.workspaceId });
+  }
+
+  /** Ads on the connected ad accounts that were made elsewhere. Read live, never stored. */
+  external(params: { workspaceId?: string } = {}): Promise<ExternalAd[]> {
+    return this.http.get<ExternalAd[]>('/v1/ads/external', { workspace_id: params.workspaceId });
+  }
+
+  boostable(params: { workspaceId?: string } = {}): Promise<BoostablePost[]> {
+    return this.http.get<BoostablePost[]>('/v1/ads/boostable', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  connections(params: { workspaceId?: string } = {}): Promise<AdConnection[]> {
+    return this.http.get<AdConnection[]>('/v1/ads/connections', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  /** Each connection with the ad accounts and Pages its grant reaches. */
+  sources(params: { workspaceId?: string } = {}): Promise<AdSource[]> {
+    return this.http.get<AdSource[]>('/v1/ads/sources', { workspace_id: params.workspaceId });
+  }
+
+  /** Returns the Meta login URL; the caller finishes it in their own browser. */
+  authorizeMeta(input: AuthorizeMetaAdsInput): Promise<{ url: string }> {
+    return this.http.post<{ url: string }>('/v1/ads/connections/meta/authorize', input);
+  }
+
+  /** Also deletes every ad record created through the connection. */
+  deleteConnection(id: string, workspaceId: string): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/connections/${id}`, undefined, {
+      workspace_id: workspaceId,
+    });
+  }
+
+  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
+  boost(input: BoostPostInput): Promise<Ad> {
+    return this.http.post<Ad>('/v1/ads/boost', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
+  create(input: CreateAdInput): Promise<Ad> {
+    return this.http.post<Ad>('/v1/ads', input);
+  }
+
+  /** Reads the delivery status and lifetime insights from Meta. */
+  refresh(id: string, workspaceId: string): Promise<Ad> {
+    return this.http.request<Ad>('POST', `/v1/ads/${id}/refresh`, undefined, {
+      workspace_id: workspaceId,
+    });
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  setStatus(id: string, workspaceId: string, status: 'active' | 'paused'): Promise<Ad> {
+    return this.http.request<Ad>(
+      'PATCH',
+      `/v1/ads/${id}`,
+      { status },
+      { workspace_id: workspaceId },
+    );
+  }
+
+  /** Ends delivery and deletes the ad on Meta. Needs the `publish` scope as well as `ads`. */
+  delete(id: string, workspaceId: string): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/${id}`, undefined, { workspace_id: workspaceId });
+  }
+
+  audiences(params: {
+    workspaceId?: string;
+    connectionId: string;
+    adAccountId: string;
+  }): Promise<AudiencesResult> {
+    return this.http.get<AudiencesResult>('/v1/ads/audiences', {
+      workspace_id: params.workspaceId,
+      connection_id: params.connectionId,
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  createAudience(input: CreateAudienceInput): Promise<{ id: string; added: number }> {
+    return this.http.post('/v1/ads/audiences', input);
+  }
+
+  /** Locations, interests, behaviours and income brackets as Meta names them. */
+  searchTargeting(params: {
+    workspaceId?: string;
+    connectionId: string;
+    type: TargetingSearchType;
+    q?: string;
+  }): Promise<TargetingOption[]> {
+    return this.http.get<TargetingOption[]>('/v1/ads/targeting/search', {
+      workspace_id: params.workspaceId,
+      connection_id: params.connectionId,
+      type: params.type,
+      q: params.q,
+    });
+  }
+
+  leadForms(params: { workspaceId?: string } = {}): Promise<LeadFormSource[]> {
+    return this.http.get<LeadFormSource[]>('/v1/ads/lead-forms', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  createLeadForm(input: CreateLeadFormInput): Promise<{ id: string }> {
+    return this.http.post('/v1/ads/lead-forms', input);
+  }
+
+  /** One page of leads; pass `nextCursor` back as `after` for the next. */
+  leads(
+    formId: string,
+    params: { workspaceId?: string; connectionId: string; pageId: string; after?: string },
+  ): Promise<LeadsPage> {
+    return this.http.get<LeadsPage>(`/v1/ads/lead-forms/${formId}/leads`, {
+      workspace_id: params.workspaceId,
+      connection_id: params.connectionId,
+      page_id: params.pageId,
+      after: params.after,
+    });
   }
 }
