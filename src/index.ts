@@ -18,6 +18,17 @@
 import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
+  AnalyticsScopeParams,
+  CollectPostResult,
+  ContentDecay,
+  ContentDecayParams,
+  MetricChangePage,
+  MetricChangesParams,
+  NativePost,
+  NativePostsParams,
+  PostTimeline,
+  PostingFrequency,
+  PostingFrequencyParams,
   AccountGroup,
   Ad,
   AdAccountTree,
@@ -132,6 +143,7 @@ export class FoPost {
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly analytics: AnalyticsResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -145,6 +157,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.analytics = new AnalyticsResource(this.http);
   }
 }
 
@@ -970,6 +983,76 @@ class ValidateResource {
   /** Fetches the file and runs the upload checks on it; nothing is stored. */
   media(input: { url: string }): Promise<ValidateMediaResult> {
     return this.http.post<ValidateMediaResult>('/v1/validate/media', input);
+  }
+}
+
+/**
+ * Deeper posting analytics, derived from the repeated readings the platform
+ * collector takes of every post as it ages.
+ */
+class AnalyticsResource {
+  constructor(private http: HttpClient) {}
+
+  private scope(params: AnalyticsScopeParams = {}) {
+    return { workspace_id: params.workspaceId, accountId: params.accountId };
+  }
+
+  /** How engagement accumulates with a post's age, and where the half-life falls. */
+  decay(params: ContentDecayParams = {}): Promise<ContentDecay> {
+    return this.http.get<ContentDecay>('/v1/analytics/decay', {
+      ...this.scope(params),
+      days: params.days,
+    });
+  }
+
+  /** Weekly posting cadence set against what each cadence earned per post. */
+  frequency(params: PostingFrequencyParams = {}): Promise<PostingFrequency> {
+    return this.http.get<PostingFrequency>('/v1/analytics/frequency', {
+      ...this.scope(params),
+      days: params.days,
+    });
+  }
+
+  /**
+   * Every reading held for one post, oldest first, one timeline per delivery.
+   * `idOrPermalink` is a FoPost post id or the permalink of a post made
+   * natively on the network.
+   */
+  timeline(idOrPermalink: string): Promise<PostTimeline> {
+    return this.http.get<PostTimeline>(
+      `/v1/analytics/posts/${encodeURIComponent(idOrPermalink)}/timeline`,
+    );
+  }
+
+  /**
+   * Readings recorded after `since`, oldest first, with a cursor to continue.
+   * Poll this to mirror our metrics without refetching the whole history.
+   */
+  changes(params: MetricChangesParams = {}): Promise<MetricChangePage> {
+    return this.http.get<MetricChangePage>('/v1/analytics/changes', {
+      ...this.scope(params),
+      since: params.since,
+      limit: params.limit,
+    });
+  }
+
+  /**
+   * Re-read one post from the network now. Spends the same per-user budget as
+   * a full collection run, so a burst answers 429 with `retryAfter`.
+   */
+  collectPost(idOrPermalink: string): Promise<CollectPostResult> {
+    return this.http.post<CollectPostResult>(
+      `/v1/posts/${encodeURIComponent(idOrPermalink)}/analytics/collect`,
+    );
+  }
+
+  /** Posts on the account that never went out through FoPost, newest first. */
+  nativePosts(accountId: string, params: NativePostsParams = {}): Promise<InboxPage<NativePost>> {
+    return this.http.get<InboxPage<NativePost>>(`/v1/accounts/${accountId}/native-posts`, {
+      page: params.page,
+      per_page: params.perPage,
+      days: params.days,
+    });
   }
 }
 

@@ -422,6 +422,177 @@ export type InboxApproval = {
   } | null;
 };
 
+// ─── Analytics ─────────────────────────────────────────────────────
+
+export type DecayBucket =
+  'under_1h' | '1h_3h' | '3h_6h' | '6h_12h' | '12h_24h' | '1d_3d' | '3d_7d' | 'over_7d';
+
+export type DecayBand = {
+  bucket: DecayBucket;
+  label: string;
+  /** Posts with at least one reading in this band. */
+  posts: number;
+  avgEngagements: number;
+  avgImpressions: number;
+  /** Mean share of the post's final engagement reached by this age, 0-1. */
+  shareOfFinal: number | null;
+};
+
+export type ContentDecay = {
+  days: number;
+  postsMeasured: number;
+  /** First band where the average post had passed half its final engagement. */
+  halfLifeBucket: DecayBucket | null;
+  bands: DecayBand[];
+};
+
+export type FrequencyBandKey = 'under_3' | '3_5' | '6_10' | 'over_10';
+
+export type FrequencyWeek = {
+  /** Monday of the week, UTC, as YYYY-MM-DD. */
+  weekStart: string;
+  posts: number;
+  engagements: number;
+  avgEngagementsPerPost: number;
+};
+
+export type FrequencyBand = {
+  band: FrequencyBandKey;
+  label: string;
+  weeks: number;
+  posts: number;
+  avgPostsPerWeek: number;
+  avgEngagementsPerPost: number;
+  /** Engagements over reach, impressions as the stand-in; null with neither. */
+  engagementRate: number | null;
+};
+
+export type PostingFrequency = {
+  days: number;
+  weeks: FrequencyWeek[];
+  bands: FrequencyBand[];
+  best: { band: FrequencyBandKey; label: string; avgEngagementsPerPost: number } | null;
+};
+
+export type PostTimelinePoint = {
+  at: string;
+  /** Minutes since publication; null when the network never said when. */
+  ageMinutes: number | null;
+  impressions: number | null;
+  reach: number | null;
+  engagements: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  videoViews: number | null;
+  /** Movement since the previous point. */
+  delta: {
+    impressions: number;
+    reach: number;
+    engagements: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+};
+
+export type PostTimeline = {
+  /** Null when the post was made natively on the network. */
+  postId: string | null;
+  deliveries: Array<{
+    accountId: string;
+    platform: string;
+    username: string;
+    externalPostId: string;
+    postedAt: string | null;
+    points: PostTimelinePoint[];
+  }>;
+};
+
+export type MetricChange = {
+  accountId: string;
+  platform: string;
+  externalPostId: string;
+  /** Null for a post made natively on the network. */
+  postId: string | null;
+  postedAt: string | null;
+  fetchedAt: string;
+  impressions: number | null;
+  reach: number | null;
+  engagements: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+};
+
+export type MetricChangePage = {
+  since: string;
+  /** Feed back as `since` to continue; null when nothing changed. */
+  cursor: string | null;
+  hasMore: boolean;
+  changes: MetricChange[];
+};
+
+export type CollectPostResult = {
+  collected: number;
+  deliveries: Array<{
+    accountId: string;
+    platform: string;
+    externalPostId: string;
+    collected: boolean;
+    fetchedAt: string | null;
+    /** Why the refresh did not happen. */
+    message: string | null;
+  }>;
+};
+
+export type NativePost = {
+  externalPostId: string;
+  text: string | null;
+  permalink: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  postedAt: string | null;
+  fetchedAt: string;
+  metrics: {
+    impressions: number | null;
+    reach: number | null;
+    engagements: number | null;
+    likes: number | null;
+    comments: number | null;
+    shares: number | null;
+    videoViews: number | null;
+  };
+};
+
+export type AnalyticsScopeParams = {
+  workspaceId?: string;
+  accountId?: string;
+};
+
+export type ContentDecayParams = AnalyticsScopeParams & {
+  /** Only posts published in the last this many days. Default 30, max 365. */
+  days?: number;
+};
+
+export type PostingFrequencyParams = AnalyticsScopeParams & {
+  /** Default 90, minimum 7, max 365. */
+  days?: number;
+};
+
+export type MetricChangesParams = AnalyticsScopeParams & {
+  /** ISO 8601. Omit for the last seven days. */
+  since?: string;
+  limit?: number;
+};
+
+export type NativePostsParams = {
+  page?: number;
+  perPage?: number;
+  /** Only posts published in the last this many days. */
+  days?: number;
+};
+
 export type InboxPage<T> = {
   data: T[];
   meta: { page: number; perPage: number; total: number };

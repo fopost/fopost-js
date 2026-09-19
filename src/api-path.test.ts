@@ -76,6 +76,12 @@ async function callEveryEndpoint(fopost: FoPost) {
     size: 1,
   });
   await fopost.media.complete('up1');
+  await fopost.analytics.decay({ days: 30 });
+  await fopost.analytics.frequency({ days: 90 });
+  await fopost.analytics.timeline('p1');
+  await fopost.analytics.changes({ since: '2026-03-02T00:00:00Z' });
+  await fopost.analytics.collectPost('p1');
+  await fopost.analytics.nativePosts('a1', { page: 1, perPage: 20 });
 }
 
 describe('request paths', () => {
@@ -83,12 +89,20 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(48);
+    expect(urls.length).toBe(54);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
       expect(path.startsWith('/v1/')).toBe(true);
     }
+  });
+
+  it('escapes a permalink addressed as a post id', async () => {
+    const { urls, client } = recordingClient();
+    await client.analytics.timeline('https://x.com/acme/status/1');
+    expect(new URL(urls[0]).pathname).toBe(
+      '/v1/analytics/posts/https%3A%2F%2Fx.com%2Facme%2Fstatus%2F1/timeline',
+    );
   });
 
   it('keeps the default base URL host-only', async () => {
