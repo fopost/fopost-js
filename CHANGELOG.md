@@ -2,6 +2,15 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
+## Unreleased
+
+### Added
+
+- `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
+  and workspace members; a member's `id` is the handle for `inbox.startConversation`.
+- `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
+  a Slack account posts under. All need the `accounts` scope.
+
 ## 0.6.0
 
 ### Added

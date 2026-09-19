@@ -93,6 +93,9 @@ import type {
   RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
+  SlackChannel,
+  SlackIdentity,
+  SlackMember,
   TargetingOption,
   TelegramBotCommand,
   TelegramBotCommands,
@@ -101,6 +104,7 @@ import type {
   TargetingSearchType,
   UpdateInboxItemInput,
   UpdatePostInput,
+  UpdateSlackIdentityInput,
   ValidateLengthResult,
   ValidateMediaResult,
   ValidatePostInput,
@@ -274,6 +278,29 @@ class AccountsResource {
 
   deleteTelegramBotCommands(id: string): Promise<TelegramBotCommands> {
     return this.http.delete<TelegramBotCommands>(`/v1/accounts/${id}/telegram/commands`);
+  }
+
+  /** Public channels, plus private ones the app was invited to. */
+  listSlackChannels(id: string): Promise<SlackChannel[]> {
+    return this.http.get<SlackChannel[]>(`/v1/accounts/${id}/slack/channels`);
+  }
+
+  /** People in the Slack workspace; a member's id is the handle for `inbox.startConversation`. */
+  listSlackMembers(id: string): Promise<SlackMember[]> {
+    return this.http.get<SlackMember[]>(`/v1/accounts/${id}/slack/members`);
+  }
+
+  getSlackIdentity(id: string): Promise<SlackIdentity> {
+    return this.http.get<SlackIdentity>(`/v1/accounts/${id}/slack/identity`);
+  }
+
+  /** Omitted fields keep their value and null clears one; setting one icon clears the other. */
+  updateSlackIdentity(id: string, input: UpdateSlackIdentityInput): Promise<SlackIdentity> {
+    const body: Record<string, unknown> = {};
+    if (input.username !== undefined) body.username = input.username;
+    if (input.iconUrl !== undefined) body.icon_url = input.iconUrl;
+    if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
+    return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
   }
 }
 

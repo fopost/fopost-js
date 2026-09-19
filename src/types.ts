@@ -116,6 +116,45 @@ export type TelegramBotCommands = {
   commands: TelegramBotCommand[];
 };
 
+export type SlackChannel = {
+  /** Slack channel id. */
+  id: string;
+  name: string;
+  is_private: boolean;
+  /** Whether the bot is in the channel. */
+  is_member: boolean;
+  /** The channel this account posts to. */
+  is_current: boolean;
+};
+
+export type SlackMember = {
+  /** Slack user id; pass it as the handle to `inbox.startConversation` to open a DM. */
+  id: string;
+  name: string;
+  real_name: string | null;
+  display_name: string | null;
+  avatar: string | null;
+  is_bot: boolean;
+};
+
+/** The name and icon a Slack account posts under; null means the app default. */
+export type SlackIdentity = {
+  username: string | null;
+  icon_url: string | null;
+  /** Emoji code, e.g. `:rocket:`. */
+  icon_emoji: string | null;
+};
+
+/** Omitted fields keep their value, null clears one. Set iconUrl or iconEmoji, not both. */
+export type UpdateSlackIdentityInput = {
+  /** 1-80 characters. */
+  username?: string | null;
+  /** An http(s) URL. */
+  iconUrl?: string | null;
+  /** An emoji code, e.g. `:rocket:`. */
+  iconEmoji?: string | null;
+};
+
 /** Account groups come back in the API's snake_case shape. */
 export type AccountGroup = {
   /** Public account group id (uuid). */
