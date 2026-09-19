@@ -139,7 +139,8 @@ scratch project (this catches an `exports` map that builds but is unreachable). 
 publishing if the version is already on npm, and publishes with `--provenance`
 (`id-token: write`).
 
-Requires repo secret `NPM_TOKEN`. The workflow fails loudly if it is unset.
+Auth is npm trusted publishing (OIDC through `id-token: write`), so there is no `NPM_TOKEN`
+secret. The workflow upgrades npm first because trusted publishing needs npm 11.5.1 or later.
 
 ## Git
 
