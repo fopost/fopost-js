@@ -96,6 +96,10 @@ All notable changes to `@fopost/sdk` are documented here.
     `listInstagramStories`, `getInstagramStoryInsights`.
   - LinkedIn: `searchLinkedInMentions`, which returns the `annotation` to paste into
     a post for LinkedIn to render a link.
+- `accounts.platformMetrics` reads the numbers only an account's own network reports,
+  keyed by the platform's own metric names — ad-break earnings, story taps, a retention
+  curve, the search terms behind a listing. Needs the `analytics` scope; a network whose
+  metric access has not been granted yet answers `503 platform_metrics_unavailable`.
 
 ## 0.6.0
 

@@ -21,6 +21,7 @@ import type {
   AccountGroup,
   ActivityEvent,
   ActivityPage,
+  AccountPlatformMetrics,
   Ad,
   AdAccountTree,
   AdCampaign,
@@ -414,6 +415,17 @@ class PostsResource {
   }
 }
 
+/** The wire shape of the per-network metric set, before the camelCase mapping. */
+type RawPlatformMetrics = {
+  platform: Account['platform'];
+  account?: { fetched_at: string | null; metrics: AccountPlatformMetrics['account']['metrics'] };
+  post?: {
+    external_post_id: string | null;
+    fetched_at: string | null;
+    metrics: AccountPlatformMetrics['post']['metrics'];
+  };
+};
+
 class AccountsResource {
   constructor(private http: HttpClient) {}
 
@@ -430,6 +442,32 @@ class AccountsResource {
 
   health(id: string): Promise<unknown> {
     return this.http.get(`/v1/accounts/${id}/health`);
+  }
+
+  /**
+   * The numbers only this account's network reports, keyed by the platform's own
+   * metric names — ad-break earnings, story taps, a retention curve, the search
+   * terms behind a listing. Read from the newest collected snapshot, never live.
+   *
+   * A network whose metric access has not been granted yet answers 503
+   * (`platform_metrics_unavailable`) rather than an empty set.
+   */
+  async platformMetrics(id: string): Promise<AccountPlatformMetrics> {
+    const raw = await this.http.get<RawPlatformMetrics>(`/v1/accounts/${id}/insights`, {
+      raw: 'true',
+    });
+    return {
+      platform: raw.platform,
+      account: {
+        fetchedAt: raw.account?.fetched_at ?? null,
+        metrics: raw.account?.metrics ?? [],
+      },
+      post: {
+        externalPostId: raw.post?.external_post_id ?? null,
+        fetchedAt: raw.post?.fetched_at ?? null,
+        metrics: raw.post?.metrics ?? [],
+      },
+    };
   }
 
   /** Sets a display name; null or an empty string restores the platform name. */
