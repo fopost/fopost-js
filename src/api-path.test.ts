@@ -39,6 +39,10 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.getTelegramBotCommands('a1');
   await fopost.accounts.setTelegramBotCommands('a1', [{ command: 'start', description: 'Start' }]);
   await fopost.accounts.deleteTelegramBotCommands('a1');
+  await fopost.accounts.listSlackChannels('a1');
+  await fopost.accounts.listSlackMembers('a1');
+  await fopost.accounts.getSlackIdentity('a1');
+  await fopost.accounts.updateSlackIdentity('a1', { username: 'x' });
   await fopost.accountGroups.list({ workspaceId: 'ws' });
   await fopost.accountGroups.get('g1');
   await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
@@ -79,7 +83,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(44);
+    expect(urls.length).toBe(48);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
