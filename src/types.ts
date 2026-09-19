@@ -592,3 +592,52 @@ export type AuthorizeMetaAdsInput = {
   /** Dashboard path to land on after Meta redirects back. */
   returnTo?: string;
 };
+
+export type ContentSignal = {
+  level: 'info' | 'warn';
+  code: string;
+  message: string;
+};
+
+export type ValidatePostInput = {
+  content?: string;
+  media?: Array<{ url: string; mimeType: string; size?: number }>;
+  platforms: Platform[];
+};
+
+export type ValidatePostResult = {
+  ready: boolean;
+  platforms: Array<{
+    platform: Platform;
+    ready: boolean;
+    /** Hard blockers that would prevent publishing. */
+    issues: string[];
+    score?: number;
+    /** Advisory; never blocks publishing. */
+    signals: ContentSignal[];
+  }>;
+};
+
+export type ValidateLengthResult = {
+  ok: boolean;
+  platforms: Array<{
+    platform: Platform;
+    /** What the platform counts, in `unit`. */
+    length: number;
+    /** null when the platform has no text limit. */
+    limit: number | null;
+    unit: 'chars' | 'bytes';
+    ok: boolean;
+    signals: ContentSignal[];
+  }>;
+};
+
+export type ValidateMediaResult = {
+  ok: boolean;
+  issues: string[];
+  name: string;
+  size: number;
+  /** Present only when the file passed. */
+  mime_type?: string;
+  type?: string;
+};

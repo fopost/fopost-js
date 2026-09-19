@@ -42,6 +42,7 @@ import type {
   InboxReplyResult,
   InboxThread,
   Label,
+  Platform,
   LeadFormSource,
   LeadsPage,
   ListInboxConversationsParams,
@@ -56,6 +57,10 @@ import type {
   TargetingSearchType,
   UpdateInboxItemInput,
   UpdatePostInput,
+  ValidateLengthResult,
+  ValidateMediaResult,
+  ValidatePostInput,
+  ValidatePostResult,
   Workspace,
 } from './types.js';
 
@@ -75,6 +80,7 @@ export class FoPost {
   readonly ai: AiResource;
   readonly inbox: InboxResource;
   readonly ads: AdsResource;
+  readonly validate: ValidateResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -85,6 +91,7 @@ export class FoPost {
     this.ai = new AiResource(this.http);
     this.inbox = new InboxResource(this.http);
     this.ads = new AdsResource(this.http);
+    this.validate = new ValidateResource(this.http);
   }
 }
 
@@ -481,5 +488,27 @@ class AdsResource {
       page_id: params.pageId,
       after: params.after,
     });
+  }
+}
+
+class ValidateResource {
+  constructor(private http: HttpClient) {}
+
+  /** The preflight checks, for content that has not been saved as a post. */
+  post(input: ValidatePostInput): Promise<ValidatePostResult> {
+    return this.http.post<ValidatePostResult>('/v1/validate/post', {
+      content: input.content,
+      media: input.media?.map((m) => ({ url: m.url, mime_type: m.mimeType, size: m.size })),
+      platforms: input.platforms,
+    });
+  }
+
+  length(input: { text: string; platforms: Platform[] }): Promise<ValidateLengthResult> {
+    return this.http.post<ValidateLengthResult>('/v1/validate/length', input);
+  }
+
+  /** Fetches the file and runs the upload checks on it; nothing is stored. */
+  media(input: { url: string }): Promise<ValidateMediaResult> {
+    return this.http.post<ValidateMediaResult>('/v1/validate/media', input);
   }
 }
