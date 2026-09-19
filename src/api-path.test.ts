@@ -47,6 +47,13 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.inbox.reply('i1', 'hi');
   await fopost.ads.list();
   await fopost.ads.setStatus('ad1', 'ws', 'paused');
+  await fopost.media.presign({
+    workspaceId: 'ws',
+    filename: 'a.png',
+    mimeType: 'image/png',
+    size: 1,
+  });
+  await fopost.media.complete('up1');
 }
 
 describe('request paths', () => {
@@ -54,7 +61,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(24);
+    expect(urls.length).toBe(26);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

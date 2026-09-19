@@ -641,3 +641,37 @@ export type ValidateMediaResult = {
   mime_type?: string;
   type?: string;
 };
+
+// ─── Media ─────────────────────────────────────────────────────────
+
+export type PresignUploadInput = {
+  workspaceId: string;
+  filename: string;
+  mimeType: string;
+  /** Bytes, 1 to 52428800. */
+  size: number;
+};
+
+export type PresignedUpload = {
+  uploadId: string;
+  uploadUrl: string;
+  method: 'PUT';
+  headers: { 'Content-Type': string };
+  expiresAt: string;
+};
+
+export type UploadedMedia = {
+  id: string;
+  type: 'image' | 'video' | 'gif' | 'document';
+  name: string;
+  url: string;
+  previewUrl: string;
+  size: number;
+};
+
+export type DirectUploadInput = {
+  workspaceId: string;
+  filename: string;
+  mimeType: string;
+  data: Blob | Uint8Array | ArrayBuffer;
+};
