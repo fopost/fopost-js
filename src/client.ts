@@ -28,7 +28,8 @@ export const DEFAULT_BASE_URL = 'https://api.fopost.com';
 export class HttpClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
-  private readonly fetchImpl: typeof fetch;
+  /** The fetch in use; direct uploads PUT bytes through it without the API key. */
+  readonly fetchImpl: typeof fetch;
 
   constructor(opts: HttpClientOptions) {
     if (!opts.apiKey) {
