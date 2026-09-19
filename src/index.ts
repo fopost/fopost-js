@@ -18,6 +18,7 @@
 import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
+  AccountGroup,
   Ad,
   AdConnection,
   AdSource,
@@ -26,6 +27,7 @@ import type {
   AuthorizeMetaAdsInput,
   BoostPostInput,
   BoostablePost,
+  CreateAccountGroupInput,
   CreateAdInput,
   CreateAudienceInput,
   CreateLeadFormInput,
@@ -48,12 +50,15 @@ import type {
   LeadsPage,
   ListInboxConversationsParams,
   ListInboxParams,
+  ListAccountsParams,
   ListInboxThreadsParams,
   ListPostsParams,
   MarkInboxThreadReadInput,
+  MovedAccount,
   Post,
   PresignUploadInput,
   PresignedUpload,
+  RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
   TargetingOption,
@@ -79,6 +84,7 @@ export class FoPost {
   // Resource namespaces — bound below in constructor.
   readonly posts: PostsResource;
   readonly accounts: AccountsResource;
+  readonly accountGroups: AccountGroupsResource;
   readonly workspaces: WorkspacesResource;
   readonly labels: LabelsResource;
   readonly ai: AiResource;
@@ -91,6 +97,7 @@ export class FoPost {
     this.http = new HttpClient(opts);
     this.posts = new PostsResource(this.http);
     this.accounts = new AccountsResource(this.http);
+    this.accountGroups = new AccountGroupsResource(this.http);
     this.workspaces = new WorkspacesResource(this.http);
     this.labels = new LabelsResource(this.http);
     this.ai = new AiResource(this.http);
@@ -130,7 +137,8 @@ class PostsResource {
       status: input.status ?? 'draft',
       content: input.content,
       schedule_at: input.scheduleAt,
-      accounts: accountIds(input.accounts),
+      accounts: input.accounts === undefined ? undefined : accountIds(input.accounts),
+      account_group_id: input.accountGroupId,
       labels: input.labels,
       title: input.title,
     });
@@ -175,9 +183,10 @@ class PostsResource {
 class AccountsResource {
   constructor(private http: HttpClient) {}
 
-  list(params: { workspaceId: string }): Promise<Account[]> {
+  list(params: ListAccountsParams): Promise<Account[]> {
     return this.http.get<Account[]>('/v1/accounts', {
       workspace_id: params.workspaceId,
+      group_id: params.groupId,
     });
   }
 
@@ -187,6 +196,58 @@ class AccountsResource {
 
   health(id: string): Promise<unknown> {
     return this.http.get(`/v1/accounts/${id}/health`);
+  }
+
+  /** Sets a display name; null or an empty string restores the platform name. */
+  update(id: string, input: { displayName: string | null }): Promise<RenamedAccount> {
+    return this.http.patch<RenamedAccount>(`/v1/accounts/${id}`, {
+      display_name: input.displayName,
+    });
+  }
+
+  /** Needs ownership of both workspaces; a 409 move_blocked lists blocking_tables on err.body. */
+  move(id: string, input: { workspaceId: string }): Promise<MovedAccount> {
+    return this.http.post<MovedAccount>(`/v1/accounts/${id}/move`, {
+      workspace_id: input.workspaceId,
+    });
+  }
+}
+
+class AccountGroupsResource {
+  constructor(private http: HttpClient) {}
+
+  list(params: { workspaceId?: string } = {}): Promise<AccountGroup[]> {
+    return this.http.get<AccountGroup[]>('/v1/account-groups', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  get(id: string): Promise<AccountGroup> {
+    return this.http.get<AccountGroup>(`/v1/account-groups/${id}`);
+  }
+
+  create(input: CreateAccountGroupInput): Promise<AccountGroup> {
+    return this.http.post<AccountGroup>('/v1/account-groups', {
+      workspace_id: input.workspaceId,
+      name: input.name,
+      account_ids: input.accountIds === undefined ? undefined : accountIds(input.accountIds),
+    });
+  }
+
+  update(id: string, input: { name: string }): Promise<AccountGroup> {
+    return this.http.patch<AccountGroup>(`/v1/account-groups/${id}`, { name: input.name });
+  }
+
+  /** Deletes the group only; its accounts stay connected. */
+  delete(id: string): Promise<{ message: string }> {
+    return this.http.delete<{ message: string }>(`/v1/account-groups/${id}`);
+  }
+
+  /** Replaces the group's members with exactly these accounts. */
+  setMembers(id: string, accounts: Array<string | { id: string }>): Promise<AccountGroup> {
+    return this.http.put<AccountGroup>(`/v1/account-groups/${id}/members`, {
+      account_ids: accountIds(accounts),
+    });
   }
 }
 

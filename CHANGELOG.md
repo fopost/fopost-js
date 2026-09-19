@@ -10,6 +10,13 @@ All notable changes to `@fopost/sdk` are documented here.
   `post` (issues and signals per platform), `length` (counted length against
   each platform limit) and `media` (the upload checks on a file by URL, without
   storing it). Needs the `posts` scope.
+- `fopost.accountGroups`: named sets of accounts. `list`, `get`, `create`,
+  `update` (rename), `delete` and `setMembers`. Needs the `accounts` scope.
+- `accounts.update` renames an account (`displayName: null` restores the
+  platform name) and `accounts.move` moves one to another workspace you own.
+  `accounts.list` takes a `groupId` filter, and accounts carry `platformName`.
+- `posts.create` takes `accountGroupId`, merged with `accounts`; `accounts` may
+  be omitted when a group is given.
 
 ## 0.3.0
 

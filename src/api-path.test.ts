@@ -32,6 +32,14 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.list({ workspaceId: 'ws' });
   await fopost.accounts.get('a1');
   await fopost.accounts.health('a1');
+  await fopost.accounts.update('a1', { displayName: 'x' });
+  await fopost.accounts.move('a1', { workspaceId: 'ws2' });
+  await fopost.accountGroups.list({ workspaceId: 'ws' });
+  await fopost.accountGroups.get('g1');
+  await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
+  await fopost.accountGroups.update('g1', { name: 'g' });
+  await fopost.accountGroups.delete('g1');
+  await fopost.accountGroups.setMembers('g1', ['a1']);
   await fopost.workspaces.list();
   await fopost.workspaces.get('ws');
   await fopost.labels.list({ workspaceId: 'ws' });
@@ -61,7 +69,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(26);
+    expect(urls.length).toBe(34);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

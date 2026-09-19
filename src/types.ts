@@ -57,9 +57,46 @@ export type Account = {
   workspaceId: string;
   platform: Platform;
   username: string;
+  /** The display name override when set, else the platform name. */
   name: string;
+  /** The name the platform reports, regardless of any override. */
+  platformName?: string;
   active: boolean;
   isPrimary: boolean;
+};
+
+export type ListAccountsParams = {
+  workspaceId: string;
+  /** Only accounts in this account group. */
+  groupId?: string;
+};
+
+export type RenamedAccount = {
+  id: string;
+  name: string;
+  platform_name: string;
+};
+
+export type MovedAccount = {
+  id: string;
+  workspace_id: string;
+};
+
+/** Account groups come back in the API's snake_case shape. */
+export type AccountGroup = {
+  /** Public account group id (uuid). */
+  id: string;
+  name: string;
+  account_ids: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateAccountGroupInput = {
+  workspaceId: string;
+  name: string;
+  /** Account ids. Objects of the form { id } are accepted too. */
+  accountIds?: Array<string | { id: string }>;
 };
 
 export type Label = {
@@ -103,14 +140,16 @@ export type CreatePostInput = {
   content: ContentBlock[];
   /** Required when status is 'scheduled'. ISO 8601. */
   scheduleAt?: string;
-  /** Account ids. Objects of the form { id } are accepted too. */
-  accounts: Array<string | { id: string }>;
+  /** Account ids. Objects of the form { id } are accepted too. Optional when accountGroupId is set. */
+  accounts?: Array<string | { id: string }>;
+  /** Posts to every account in the group, merged with accounts; each account once. */
+  accountGroupId?: string;
   labels?: string[];
   /** Article title / email subject on platforms that take one (Hashnode, WordPress, ...) */
   title?: string;
 };
 
-export type UpdatePostInput = Partial<Omit<CreatePostInput, 'workspaceId'>>;
+export type UpdatePostInput = Partial<Omit<CreatePostInput, 'workspaceId' | 'accountGroupId'>>;
 
 export type ListPostsParams = {
   workspaceId: string;

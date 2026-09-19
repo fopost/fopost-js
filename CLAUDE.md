@@ -6,7 +6,7 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 `@fopost/sdk` on npm — the official TypeScript/Node.js client for the FoPost REST API
 (`fopost.com`). Current version `0.3.0`. It wraps the API's HTTP surface in a namespaced
-client (`posts`, `accounts`, `workspaces`, `labels`, `ai`, `inbox`, `ads`) with hand-written DTOs.
+client (`posts`, `accounts`, `accountGroups`, `workspaces`, `labels`, `ai`, `inbox`, `ads`) with hand-written DTOs.
 
 Requires Node >= 18 (`globalThis.fetch`). Source is ESM TypeScript; `tsup` emits ESM +
 CJS + `.d.ts`/`.d.cts` into `dist/`. Zero runtime dependencies.
@@ -83,7 +83,8 @@ is already public and is the right thing to expose.
 - Rate-limit headers (`X-RateLimit-*`) are **not surfaced**. Only the Go SDK reads them.
 
 Resource coverage is a subset of the API: posts (list/get/create/update/delete/publish/
-cancel/retry/preflight/deliveries), accounts (list/get/health), workspaces (list/get),
+cancel/retry/preflight/deliveries), accounts (list/get/health/update/move), accountGroups
+(list/get/create/update/delete/setMembers), workspaces (list/get),
 labels (list), ai (credits/generateCaption/rewrite/repurposeUrl), inbox (the `/v1/inbox`
 family except the X Chat routes), ads (the `/v1/ads` family), validate (post/length/media). `communities`, `webhooks`,
 `analytics`, `automations`, and `media` are **not wrapped here** — the Go and Rust SDKs have
