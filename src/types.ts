@@ -1212,6 +1212,12 @@ export type UpdateContactFieldInput = {
 // ─── Conversation analytics ────────────────────────────────────────
 
 export type ConversationAnalyticsRow = {
+  /**
+   * An opaque, stable handle for the thread, not the id or handle the inbox
+   * groups on. It lines the same conversation up between two calls; to reach
+   * the thread itself, read the person through `contacts.conversations()`,
+   * which needs the `inbox` scope rather than `analytics`.
+   */
   key: string;
   accountId: string;
   platform: string;
