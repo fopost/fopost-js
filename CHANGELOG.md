@@ -6,6 +6,13 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `contacts` namespace: the people behind the inbox. `list`, `get`, `create`, `update`,
+  `delete`, `conversations` (the threads one person appears in), `import` (CSV), and
+  `listFields`/`createField`/`updateField`/`deleteField` for the custom columns a
+  workspace keeps. All need the `inbox` scope.
+- `contacts.conversationAnalytics` reads `/v1/analytics/inbox/conversations`: volume and
+  median reply time per thread. Needs the `analytics` scope.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon

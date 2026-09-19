@@ -1102,3 +1102,142 @@ export type DirectUploadInput = {
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
 };
+
+// ─── Contacts ──────────────────────────────────────────────────────
+
+/** One handle on one network. `handle` is lower-cased with no leading @. */
+export type ContactChannel = {
+  platform: string;
+  handle: string;
+  /** The platform's own id for this person, when the network gave us one. */
+  externalId?: string | null;
+};
+
+export type ContactSource = 'inbox' | 'radar' | 'import';
+
+export type Contact = {
+  id: string;
+  display_name: string | null;
+  channels: ContactChannel[];
+  source: ContactSource;
+  note: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  /** Custom field values, keyed by field key. */
+  fields: Record<string, string>;
+  labels: Array<{ id: string; name: string; color: string }>;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type ContactPage = {
+  data: Contact[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListContactsParams = {
+  workspaceId?: string;
+  /** Matches a display name or any of their handles. */
+  search?: string;
+  platform?: string;
+  source?: ContactSource;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateContactInput = {
+  workspaceId: string;
+  channels: ContactChannel[];
+  displayName?: string;
+  note?: string;
+  fields?: Record<string, string>;
+};
+
+export type UpdateContactInput = {
+  displayName?: string | null;
+  channels?: ContactChannel[];
+  note?: string | null;
+  /** A null or empty value clears that field. */
+  fields?: Record<string, string | null>;
+};
+
+/** One thread a contact appears in. `key` is how the inbox groups it. */
+export type ContactConversation = {
+  key: string;
+  account_id: string;
+  account_username: string | null;
+  platform: string;
+  messages: number;
+  received: number;
+  sent: number;
+  last_message_at: string | null;
+  last_item_id: string | null;
+};
+
+export type ContactImportResult = {
+  created: number;
+  /** Rows that folded into a contact already on file. */
+  merged: number;
+  skipped: Array<{ row: number; reason: string }>;
+  /** Columns that named neither a reserved field nor a custom field. */
+  unknownColumns: string[];
+};
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+
+export type ContactField = {
+  id: string;
+  /** Lower-case key; also the CSV column header. Fixed once created. */
+  key: string;
+  name: string;
+  type: CustomFieldType;
+  /** Allowed values when `type` is `select`. */
+  options: string[];
+  position: number;
+};
+
+export type CreateContactFieldInput = {
+  key: string;
+  name: string;
+  type?: CustomFieldType;
+  options?: string[];
+};
+
+export type UpdateContactFieldInput = {
+  name?: string;
+  options?: string[];
+  position?: number;
+};
+
+// ─── Conversation analytics ────────────────────────────────────────
+
+export type ConversationAnalyticsRow = {
+  key: string;
+  accountId: string;
+  platform: string;
+  received: number;
+  sent: number;
+  answered: number;
+  open: number;
+  /** Median minutes to the first reply in this thread. */
+  medianResponseMinutes: number | null;
+  firstMessageAt: string | null;
+  lastMessageAt: string | null;
+};
+
+export type ConversationAnalytics = {
+  conversations: ConversationAnalyticsRow[];
+  total: number;
+  page: number;
+  perPage: number;
+};
+
+export type ListConversationAnalyticsParams = {
+  workspaceId?: string;
+  accountId?: string;
+  /** Reporting period, 1 to 365. Defaults to 7. */
+  days?: number;
+  sort?: 'volume' | 'slowest' | 'recent';
+  page?: number;
+  perPage?: number;
+};

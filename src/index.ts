@@ -102,6 +102,18 @@ import type {
   TelegramConnectCode,
   TelegramConnectStatus,
   TargetingSearchType,
+  Contact,
+  ContactConversation,
+  ContactField,
+  ContactImportResult,
+  ContactPage,
+  ConversationAnalytics,
+  CreateContactFieldInput,
+  CreateContactInput,
+  ListContactsParams,
+  ListConversationAnalyticsParams,
+  UpdateContactFieldInput,
+  UpdateContactInput,
   UpdateInboxItemInput,
   UpdatePostInput,
   UpdateSlackIdentityInput,
@@ -129,6 +141,7 @@ export class FoPost {
   readonly labels: LabelsResource;
   readonly ai: AiResource;
   readonly inbox: InboxResource;
+  readonly contacts: ContactsResource;
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
@@ -142,6 +155,7 @@ export class FoPost {
     this.labels = new LabelsResource(this.http);
     this.ai = new AiResource(this.http);
     this.inbox = new InboxResource(this.http);
+    this.contacts = new ContactsResource(this.http);
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
@@ -1003,5 +1017,117 @@ class MediaResource {
       throw new FoPostError(text || `Upload failed: HTTP ${res.status}`, res.status);
     }
     return this.complete(presigned.uploadId);
+  }
+}
+
+/**
+ * The people behind the inbox. A contact is one human however many handles
+ * they write from: an inbound item files its author, a reply files whoever
+ * you answered, and both fold into whatever is already on file.
+ */
+class ContactsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Most recently active first. Paginated: the result carries `pagination`. */
+  list(params: ListContactsParams = {}): Promise<ContactPage> {
+    return this.http.get<ContactPage>('/v1/contacts', {
+      workspace_id: params.workspaceId,
+      search: params.search,
+      platform: params.platform,
+      source: params.source,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Contact> {
+    return this.http.get<Contact>(`/v1/contacts/${id}`);
+  }
+
+  /**
+   * Folds into the contact that already holds the first channel, so this
+   * cannot duplicate someone the inbox has already met.
+   */
+  create(input: CreateContactInput): Promise<Contact> {
+    return this.http.post<Contact>('/v1/contacts', {
+      workspace_id: input.workspaceId,
+      channels: input.channels,
+      display_name: input.displayName,
+      note: input.note,
+      fields: input.fields,
+    });
+  }
+
+  update(id: string, input: UpdateContactInput): Promise<Contact> {
+    return this.http.request<Contact>('PATCH', `/v1/contacts/${id}`, {
+      display_name: input.displayName,
+      channels: input.channels,
+      note: input.note,
+      fields: input.fields,
+    });
+  }
+
+  /** The messages stay in the inbox; a later one files them again. */
+  delete(id: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/contacts/${id}`);
+  }
+
+  /** The threads this person appears in, newest first. */
+  conversations(id: string, params: { limit?: number } = {}): Promise<ContactConversation[]> {
+    return this.http.get<ContactConversation[]>(`/v1/contacts/${id}/conversations`, {
+      limit: params.limit,
+    });
+  }
+
+  /**
+   * Import from CSV text. `platform` and `handle` are required columns; any
+   * other column is read as a custom field key and reported when unknown.
+   */
+  import(workspaceId: string, csv: string): Promise<ContactImportResult> {
+    return this.http.post<ContactImportResult>('/v1/contacts/import', {
+      workspace_id: workspaceId,
+      csv,
+    });
+  }
+
+  /** The columns this workspace keeps about its contacts, in display order. */
+  listFields(workspaceId: string): Promise<ContactField[]> {
+    return this.http.get<ContactField[]>('/v1/contacts/fields', {
+      workspace_id: workspaceId,
+    });
+  }
+
+  createField(workspaceId: string, input: CreateContactFieldInput): Promise<ContactField> {
+    return this.http.post<ContactField>(
+      `/v1/contacts/fields?workspace_id=${encodeURIComponent(workspaceId)}`,
+      input,
+    );
+  }
+
+  /** The key and the type are fixed once created; the name and options are not. */
+  updateField(id: string, input: UpdateContactFieldInput): Promise<ContactField> {
+    return this.http.request<ContactField>('PATCH', `/v1/contacts/fields/${id}`, input);
+  }
+
+  /** Removes the field and every answer to it. */
+  deleteField(id: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/contacts/fields/${id}`);
+  }
+
+  /**
+   * Inbox analytics per thread: what each one carried and how long it waited
+   * for a reply. Needs the `analytics` scope, not `inbox`.
+   */
+  conversationAnalytics(
+    params: ListConversationAnalyticsParams = {},
+  ): Promise<ConversationAnalytics> {
+    return this.http.get<ConversationAnalytics>('/v1/analytics/inbox/conversations', {
+      workspace_id: params.workspaceId,
+      accountId: params.accountId,
+      days: params.days,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.perPage,
+    });
   }
 }
