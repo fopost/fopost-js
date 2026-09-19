@@ -6,7 +6,7 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 `@fopost/sdk` on npm — the official TypeScript/Node.js client for the FoPost REST API
 (`fopost.com`). Current version `0.2.3`. It wraps the API's HTTP surface in a namespaced
-client (`posts`, `accounts`, `workspaces`, `labels`, `ai`) with hand-written DTOs.
+client (`posts`, `accounts`, `workspaces`, `labels`, `ai`, `inbox`, `ads`) with hand-written DTOs.
 
 Requires Node >= 18 (`globalThis.fetch`). Source is ESM TypeScript; `tsup` emits ESM +
 CJS + `.d.ts`/`.d.cts` into `dist/`. Zero runtime dependencies.
@@ -84,7 +84,8 @@ is already public and is the right thing to expose.
 
 Resource coverage is a subset of the API: posts (list/get/create/update/delete/publish/
 cancel/retry/preflight/deliveries), accounts (list/get/health), workspaces (list/get),
-labels (list), ai (credits/generateCaption/rewrite/repurposeUrl). `communities`, `webhooks`,
+labels (list), ai (credits/generateCaption/rewrite/repurposeUrl), inbox (the `/v1/inbox`
+family except the X Chat routes), ads (the `/v1/ads` family). `communities`, `webhooks`,
 `analytics`, `automations`, and `media` are **not wrapped here** — the Go and Rust SDKs have
 them. Adding one is a public-surface change: see the Downstream Packages rule.
 

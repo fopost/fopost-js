@@ -101,13 +101,15 @@ try {
 
 ## Resources
 
-| Namespace    | Methods                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------- |
-| `posts`      | `list`, `get`, `create`, `update`, `delete`, `publish`, `cancel`, `retry`, `preflight`, `deliveries` |
-| `accounts`   | `list`, `get`, `health`                                                                              |
-| `workspaces` | `list`, `get`                                                                                        |
-| `labels`     | `list`                                                                                               |
-| `ai`         | `credits`, `generateCaption`, `rewrite`, `repurposeUrl`                                              |
+| Namespace    | Methods                                                                                                                                                                                                                                       |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `posts`      | `list`, `get`, `create`, `update`, `delete`, `publish`, `cancel`, `retry`, `preflight`, `deliveries`                                                                                                                                          |
+| `accounts`   | `list`, `get`, `health`                                                                                                                                                                                                                       |
+| `workspaces` | `list`, `get`                                                                                                                                                                                                                                 |
+| `labels`     | `list`                                                                                                                                                                                                                                        |
+| `ai`         | `credits`, `generateCaption`, `rewrite`, `repurposeUrl`                                                                                                                                                                                       |
+| `inbox`      | `list`, `threads`, `conversations`, `unreadCount`, `accounts`, `platforms`, `markThreadRead`, `refresh`, `update`, `reply`, `hide`, `unhide`, `delete`, `listApprovals`, `approveReply`, `rejectReply`                                        |
+| `ads`        | `list`, `external`, `boostable`, `connections`, `sources`, `authorizeMeta`, `deleteConnection`, `boost`, `create`, `refresh`, `setStatus`, `delete`, `audiences`, `createAudience`, `searchTargeting`, `leadForms`, `createLeadForm`, `leads` |
 
 ## Contributing
 

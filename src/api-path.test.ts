@@ -43,6 +43,10 @@ async function callEveryEndpoint(fopost: FoPost) {
     url: 'https://example.com',
     platforms: ['twitter'],
   });
+  await fopost.inbox.list();
+  await fopost.inbox.reply('i1', 'hi');
+  await fopost.ads.list();
+  await fopost.ads.setStatus('ad1', 'ws', 'paused');
 }
 
 describe('request paths', () => {
@@ -50,7 +54,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(20);
+    expect(urls.length).toBe(24);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

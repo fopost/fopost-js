@@ -2,6 +2,18 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
+## Unreleased
+
+### Added
+
+- `fopost.inbox`: comments, mentions and DMs across connected accounts. List,
+  thread and conversation views, reply, state changes, hide, unhide, delete, a
+  manual refresh, and the replies awaiting approval. Needs the `inbox` scope.
+- `fopost.ads`: Meta Ads. Connections and sources, boost a published post,
+  create an ad, pause, resume, refresh and delete, plus audiences, targeting
+  search and Instant Form leads. Needs the `ads` scope; boost, create,
+  setStatus and delete also need `publish`.
+
 ## 0.2.3
 
 ### Fixed
