@@ -262,8 +262,21 @@ export type InboxItem = {
   createdAt: string;
   canReply: boolean;
   hidden: boolean;
+  liked: boolean;
+  pinned: boolean;
+  /** Our reaction on a DM. */
+  reaction: string | null;
+  editedAt: string | null;
   canHide: boolean;
+  /** Also true for our own replies. */
   canDelete: boolean;
+  canLike: boolean;
+  canPin: boolean;
+  canEdit: boolean;
+  canReact: boolean;
+  canSendMedia: boolean;
+  canQuickReply: boolean;
+  canPrivateReply: boolean;
   post: { id: string; title: string | null } | null;
   postContext: InboxPostContext | null;
   account: InboxAccountRef | null;
@@ -306,6 +319,7 @@ export type InboxAccount = {
   pendingReason: string | null;
   dmSupported: boolean;
   dmPendingReason: string | null;
+  canStartConversation: boolean;
 };
 
 export type InboxPlatform = {
@@ -390,6 +404,27 @@ export type UpdateInboxItemInput = {
 export type InboxReplyResult = {
   item: InboxItem;
   reply: { externalId: string | null; externalUrl: string | null };
+};
+
+export type InboxReplyOptions = {
+  /** Media library ids to attach to a DM, max 10. Only where `canSendMedia` is true. */
+  mediaIds?: string[];
+  /** Answer buttons under a DM, max 13 of 20 characters. Only where `canQuickReply` is true. */
+  quickReplies?: string[];
+};
+
+/** Either a DM to `handle` from `accountId`, or a private reply to the inbox comment `commentId`. */
+export type StartInboxConversationInput = (
+  | { accountId: string; handle: string; commentId?: never }
+  | { commentId: string; accountId?: never; handle?: never }
+) & {
+  text: string;
+  mediaIds?: string[];
+};
+
+export type StartInboxConversationResult = {
+  conversationId: string | null;
+  item: InboxItem | null;
 };
 
 export type InboxRefreshResult = {

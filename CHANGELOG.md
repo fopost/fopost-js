@@ -2,6 +2,24 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
+## 0.5.0
+
+### Added
+
+- `inbox.like`, `unlike`, `pin`, `unpin` and `react` act on an item on the platform,
+  `inbox.editComment` edits our own comment, `inbox.startConversation` opens a DM by
+  handle or answers a comment privately, and `inbox.setTyping` shows or clears the
+  typing indicator. All need the `publish` scope.
+- `inbox.reply` takes `mediaIds` and `quickReplies`; `text` may be omitted when
+  `mediaIds` is given.
+- Inbox items carry `liked`, `pinned`, `reaction`, `editedAt` and the `canLike`,
+  `canPin`, `canEdit`, `canReact`, `canSendMedia`, `canQuickReply` and
+  `canPrivateReply` flags. Inbox accounts carry `canStartConversation`.
+
+### Changed
+
+- `inbox.delete` also deletes our own replies, which needs the `publish` scope.
+
 ## 0.4.0
 
 ### Added

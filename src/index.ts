@@ -42,6 +42,7 @@ import type {
   InboxPage,
   InboxPlatform,
   InboxRefreshResult,
+  InboxReplyOptions,
   InboxReplyResult,
   InboxThread,
   Label,
@@ -54,6 +55,8 @@ import type {
   ListInboxThreadsParams,
   ListPostsParams,
   MarkInboxThreadReadInput,
+  StartInboxConversationInput,
+  StartInboxConversationResult,
   MovedAccount,
   Post,
   PresignUploadInput,
@@ -394,9 +397,21 @@ class InboxResource {
     return this.http.request<InboxItem>('PATCH', `/v1/inbox/${id}`, input);
   }
 
-  /** Sends the reply on the platform as the connected account. */
-  reply(id: string, text: string): Promise<InboxReplyResult> {
-    return this.http.post<InboxReplyResult>(`/v1/inbox/${id}/reply`, { text });
+  /** Edits our own comment on the platform. Needs `publish`. */
+  editComment(id: string, text: string): Promise<InboxItem> {
+    return this.http.request<InboxItem>('PATCH', `/v1/inbox/${id}`, { text });
+  }
+
+  /**
+   * Sends the reply on the platform as the connected account. `text` may be omitted when
+   * `mediaIds` is given; `mediaIds` and `quickReplies` need `publish`.
+   */
+  reply(id: string, text?: string, options: InboxReplyOptions = {}): Promise<InboxReplyResult> {
+    const body: Record<string, unknown> = {};
+    if (text !== undefined) body.text = text;
+    if (options.mediaIds !== undefined) body.media_ids = options.mediaIds;
+    if (options.quickReplies !== undefined) body.quick_replies = options.quickReplies;
+    return this.http.post<InboxReplyResult>(`/v1/inbox/${id}/reply`, body);
   }
 
   hide(id: string): Promise<InboxItem> {
@@ -407,9 +422,50 @@ class InboxResource {
     return this.http.post<InboxItem>(`/v1/inbox/${id}/unhide`);
   }
 
-  /** Deletes the comment on the platform. */
+  /** Deletes the comment on the platform, or our own reply (which needs `publish`). */
   delete(id: string): Promise<{ deleted: boolean }> {
     return this.http.delete<{ deleted: boolean }>(`/v1/inbox/${id}`);
+  }
+
+  /** Likes, upvotes or favourites the item on the platform. Needs `publish`. */
+  like(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/like`);
+  }
+
+  unlike(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unlike`);
+  }
+
+  /** Pins our own comment. Needs `publish`. */
+  pin(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/pin`);
+  }
+
+  unpin(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unpin`);
+  }
+
+  /** Reacts to a DM with an emoji; `null` removes ours. Needs `publish`. */
+  react(id: string, reaction: string | null): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/react`, { reaction });
+  }
+
+  /** Opens a DM by handle, or answers a comment privately. Needs `publish`. */
+  startConversation(input: StartInboxConversationInput): Promise<StartInboxConversationResult> {
+    const body: Record<string, unknown> = { text: input.text };
+    if (input.accountId !== undefined) body.account_id = input.accountId;
+    if (input.handle !== undefined) body.handle = input.handle;
+    if (input.commentId !== undefined) body.comment_id = input.commentId;
+    if (input.mediaIds !== undefined) body.media_ids = input.mediaIds;
+    return this.http.post<StartInboxConversationResult>('/v1/inbox/conversations', body);
+  }
+
+  /** Shows (`on`, the default) or clears the typing indicator in a DM thread. Needs `publish`. */
+  setTyping(conversationId: string, accountId: string, on?: boolean): Promise<{ typing: boolean }> {
+    return this.http.post<{ typing: boolean }>(`/v1/inbox/conversations/${conversationId}/typing`, {
+      account_id: accountId,
+      ...(on === undefined ? {} : { on }),
+    });
   }
 
   /** Replies an automation or the agent drafted that a person still has to send. */

@@ -102,6 +102,51 @@ describe('inbox', () => {
       query: { workspace_id: 'ws' },
     });
   });
+
+  it('sends the comment and DM actions on the right paths with snake_case bodies', async () => {
+    const { calls, client } = recordingClient();
+    await client.inbox.reply('i1', 'Thanks!', { mediaIds: ['m1'], quickReplies: ['Yes', 'No'] });
+    expect(last(calls).body).toEqual({
+      text: 'Thanks!',
+      media_ids: ['m1'],
+      quick_replies: ['Yes', 'No'],
+    });
+    await client.inbox.reply('i1', undefined, { mediaIds: ['m1'] });
+    expect(last(calls).body).toEqual({ media_ids: ['m1'] });
+
+    await client.inbox.editComment('i1', 'Fixed typo');
+    expect(last(calls)).toMatchObject({
+      method: 'PATCH',
+      path: '/v1/inbox/i1',
+      body: { text: 'Fixed typo' },
+    });
+
+    for (const action of ['like', 'unlike', 'pin', 'unpin'] as const) {
+      await client.inbox[action]('i1');
+      expect(last(calls)).toMatchObject({ method: 'POST', path: `/v1/inbox/i1/${action}` });
+    }
+
+    await client.inbox.react('i1', null);
+    expect(last(calls)).toMatchObject({ path: '/v1/inbox/i1/react', body: { reaction: null } });
+
+    await client.inbox.startConversation({ accountId: 'a1', handle: 'someone', text: 'Hi' });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/inbox/conversations',
+      body: { account_id: 'a1', handle: 'someone', text: 'Hi' },
+    });
+    await client.inbox.startConversation({ commentId: 'i2', text: 'Hi', mediaIds: ['m1'] });
+    expect(last(calls).body).toEqual({ comment_id: 'i2', text: 'Hi', media_ids: ['m1'] });
+
+    await client.inbox.setTyping('c1', 'a1', false);
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/inbox/conversations/c1/typing',
+      body: { account_id: 'a1', on: false },
+    });
+    await client.inbox.setTyping('c1', 'a1');
+    expect(last(calls).body).toEqual({ account_id: 'a1' });
+  });
 });
 
 describe('ads', () => {
