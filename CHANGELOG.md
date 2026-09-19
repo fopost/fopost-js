@@ -2,10 +2,23 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
-## Unreleased
+## 0.6.0
 
 ### Added
 
+- Campaign tree on `ads`, by Meta id and `connectionId`: `accountTree`, and create,
+  get, update, delete and duplicate for campaigns (`createCampaign`…), ad sets
+  (`createAdSet`…) and ads inside an ad set (`createNetworkAd`…), plus
+  `bulkSetStatus`. Changes need the `publish` scope as well as `ads`.
+- Creatives: `creatives`, `createCreative` (image, video or carousel, with a call to
+  action and URL tags), `getCreative`, `deleteCreative`.
+- Audiences: `getAudience`, `updateAudience`, `deleteAudience`, `addAudienceUsers`.
+- `estimateReach`, `insights` for any Meta object and `adInsights` for a FoPost ad,
+  with a date range, an optional breakdown and a daily timeline.
+- Lead forms and the leads feed: `getLeadForm`, `archiveLeadForm`, `leadsFeed`
+  (pass `nextCursor` back as `cursor`), `leadPages`, `subscribeLeadPage`,
+  `unsubscribeLeadPage`.
+- `ads.create` takes `urlTags`; `Ad.creative` carries it.
 - `accounts.createTelegramConnectCode` mints a one-time code; sending
   `/connect <code>` to the bot in a chat connects that chat.
   `accounts.getTelegramConnectStatus` reports the outcome.

@@ -533,6 +533,7 @@ export type Ad = {
     headline?: string;
     destinationUrl?: string;
     mediaUrl?: string;
+    urlTags?: string;
   } | null;
   insights: AdInsights | null;
   insightsAt: string | null;
@@ -669,6 +670,8 @@ export type CreateAdInput = AdBaseInput & {
   destinationUrl?: string;
   /** A media library asset url. */
   mediaUrl?: string;
+  /** Query string appended to every link in the ad, e.g. `utm_source=meta&utm_medium=paid`. */
+  urlTags?: string;
 };
 
 export type CreateAudienceInput = {
@@ -699,6 +702,283 @@ export type AuthorizeMetaAdsInput = {
   method?: 'business' | 'user';
   /** Dashboard path to land on after Meta redirects back. */
   returnTo?: string;
+};
+
+// ─── Ads: campaign tree, creatives, insights, leads ────────────────
+
+/** A Meta object read inside a workspace. */
+export type AdObjectParams = { workspaceId?: string; connectionId: string };
+/** A Meta object changed inside a workspace; the API requires the workspace here. */
+export type AdObjectMutationParams = { workspaceId: string; connectionId: string };
+
+export type AdObjectStatus = 'active' | 'paused';
+export type AdObjectLevel = 'campaign' | 'ad_set' | 'ad';
+
+export type AdCampaign = {
+  /** Meta's campaign id. */
+  id: string;
+  name: string;
+  /** `ACTIVE`, `PAUSED`, `DELETED` or `ARCHIVED`. */
+  status: string;
+  effectiveStatus: string | null;
+  objective: string | null;
+  /** Null when the budget lives on the ad sets. */
+  budgetMinor: number | null;
+  budgetType: AdBudgetType | null;
+  createdAt: string | null;
+};
+
+export type AdSet = {
+  /** Meta's ad set id. */
+  id: string;
+  name: string;
+  campaignId: string | null;
+  status: string;
+  effectiveStatus: string | null;
+  budgetMinor: number | null;
+  budgetType: AdBudgetType | null;
+  endAt: string | null;
+  optimizationGoal: string | null;
+  createdAt: string | null;
+};
+
+/** An ad inside an ad set, by Meta id. */
+export type NetworkAd = {
+  id: string;
+  name: string;
+  campaignId: string | null;
+  adSetId: string | null;
+  creativeId: string | null;
+  status: string;
+  effectiveStatus: string | null;
+  createdAt: string | null;
+};
+
+export type AdAccountTree = {
+  adAccountId: string;
+  currency: string;
+  workspaceId: string;
+  campaigns: Array<AdCampaign & { adSets: Array<AdSet & { ads: NetworkAd[] }> }>;
+};
+
+export type CreateAdCampaignInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  goal: AdGoal;
+  /** Default true. */
+  paused?: boolean;
+};
+
+export type UpdateAdCampaignInput = { name?: string; status?: AdObjectStatus };
+
+export type CreateAdSetInput = {
+  workspaceId: string;
+  connectionId: string;
+  campaignId: string;
+  /** The Page the ads in this set run as. */
+  pageId: string;
+  name: string;
+  goal: AdGoal;
+  budget: AdBudget;
+  targeting: AdTargeting;
+  /** Default true. */
+  paused?: boolean;
+};
+
+export type UpdateAdSetInput = {
+  name?: string;
+  status?: AdObjectStatus;
+  /** The budget type set at creation stays. */
+  budgetMinor?: number;
+  endAt?: string;
+  targeting?: AdTargeting;
+};
+
+export type CreateNetworkAdInput = {
+  workspaceId: string;
+  connectionId: string;
+  adSetId: string;
+  creativeId: string;
+  name: string;
+  /** Default true. */
+  paused?: boolean;
+};
+
+export type UpdateNetworkAdInput = { name?: string; status?: AdObjectStatus; creativeId?: string };
+
+export type BulkAdStatusInput = {
+  workspaceId: string;
+  connectionId: string;
+  status: AdObjectStatus;
+  /** 1 to 50 objects. */
+  objects: Array<{ id: string; level: AdObjectLevel }>;
+};
+
+export type BulkAdStatusResult = {
+  id: string;
+  level: AdObjectLevel;
+  ok: boolean;
+  error: string | null;
+};
+
+export type AdCallToAction =
+  | 'LEARN_MORE'
+  | 'SHOP_NOW'
+  | 'SIGN_UP'
+  | 'SUBSCRIBE'
+  | 'CONTACT_US'
+  | 'DOWNLOAD'
+  | 'GET_OFFER'
+  | 'BOOK_NOW'
+  | 'APPLY_NOW'
+  | 'WATCH_MORE';
+
+export type AdCreative = {
+  id: string;
+  name: string;
+  format: 'image' | 'video' | 'carousel' | 'post' | 'other';
+  status: string | null;
+  title: string | null;
+  body: string | null;
+  link: string | null;
+  thumbnailUrl: string | null;
+  callToAction: string | null;
+  urlTags: string | null;
+};
+
+export type AdCreativesResult = { creatives: AdCreative[]; workspaceId: string };
+
+export type CreateAdCreativeInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  pageId: string;
+  name: string;
+  format: 'image' | 'video' | 'carousel';
+  /** Primary text. */
+  text: string;
+  headline?: string;
+  destinationUrl?: string;
+  /** Defaults to `LEARN_MORE`. */
+  callToAction?: AdCallToAction;
+  /** Query string appended to every link in the ad. */
+  urlTags?: string;
+  /** A media library asset url: the image, or the video. Required for `video`. */
+  mediaUrl?: string;
+  /** A video's poster frame, as a library image. */
+  thumbnailMediaUrl?: string;
+  /** 2 to 10 cards; required for `carousel`. */
+  cards?: Array<{
+    mediaUrl: string;
+    destinationUrl?: string;
+    headline?: string;
+    description?: string;
+  }>;
+};
+
+export type UpdateAudienceInput = { name?: string; description?: string };
+
+export type ReachEstimateInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  pageId: string;
+  targeting: AdTargeting;
+};
+
+export type ReachEstimate = { lower: number | null; upper: number | null; ready: boolean };
+
+export type AdInsightsBreakdown = 'age' | 'gender' | 'placement' | 'country';
+
+export type InsightsMetrics = {
+  impressions: number;
+  reach: number;
+  clicks: number;
+  /** Account currency, minor units. */
+  spendMinor: number;
+  /** Clicks per impression, as a percentage. */
+  ctr: number;
+  leads: number;
+};
+
+export type AdInsightsReport = {
+  objectId: string;
+  currency: string | null;
+  since: string;
+  until: string;
+  breakdownBy: AdInsightsBreakdown | null;
+  totals: InsightsMetrics | null;
+  breakdown: Array<{ key: string; metrics: InsightsMetrics }>;
+  timeline: Array<{ date: string; metrics: InsightsMetrics }>;
+};
+
+type InsightsRangeParams = {
+  /** YYYY-MM-DD, inclusive. */
+  since: string;
+  /** YYYY-MM-DD, inclusive. */
+  until: string;
+  breakdown?: AdInsightsBreakdown;
+  /** Add a day-by-day timeline. */
+  daily?: boolean;
+};
+
+export type AdInsightsParams = InsightsRangeParams & {
+  workspaceId?: string;
+  connectionId: string;
+  /** A Meta campaign, ad set or ad id. */
+  objectId: string;
+};
+
+export type FoPostAdInsightsParams = InsightsRangeParams & { workspaceId: string };
+
+export type LeadFormDetail = LeadForm & {
+  pageId: string | null;
+  privacyPolicyUrl: string | null;
+  locale: string | null;
+};
+
+export type LeadPageInput = { workspaceId: string; connectionId: string; pageId: string };
+
+export type FeedLead = {
+  id: string;
+  /** Meta's lead id. */
+  leadId: string;
+  connectionId: string;
+  pageId: string;
+  formId: string | null;
+  adId: string | null;
+  adName: string | null;
+  campaignName: string | null;
+  platform: string | null;
+  isOrganic: boolean;
+  fields: Array<{ name: string; values: string[] }>;
+  submittedAt: string;
+  workspaceId: string;
+};
+
+export type LeadsFeedParams = {
+  workspaceId?: string;
+  formId?: string;
+  pageId?: string;
+  /** The previous page's `nextCursor`. */
+  cursor?: string;
+  /** 1 to 100. */
+  limit?: number;
+};
+
+export type LeadsFeedPage = { leads: FeedLead[]; nextCursor: string | null };
+
+export type LeadPage = {
+  connectionId: string;
+  pageId: string;
+  pageName: string | null;
+  createdAt: string;
+  workspaceId: string;
 };
 
 export type ContentSignal = {

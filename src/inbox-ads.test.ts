@@ -250,3 +250,107 @@ describe('ads', () => {
     expect(last(calls).path).toBe('/v1/ads/lead-forms');
   });
 });
+
+describe('ads campaign tree, insights and leads', () => {
+  const ref = { workspaceId: 'ws', connectionId: 'c1' };
+
+  it('reads the account tree and changes campaigns by Meta id with connection_id', async () => {
+    const { calls, client } = recordingClient({
+      data: { adAccountId: 'act_1', currency: 'USD', workspaceId: 'ws', campaigns: [] },
+    });
+    const tree = await client.ads.accountTree('act_1', { connectionId: 'c1' });
+    expect(tree.adAccountId).toBe('act_1');
+    expect(last(calls)).toMatchObject({
+      method: 'GET',
+      path: '/v1/ads/accounts/act_1/tree',
+      query: { connection_id: 'c1' },
+    });
+
+    await client.ads.updateCampaign('123', ref, { status: 'paused' });
+    expect(last(calls)).toMatchObject({
+      method: 'PATCH',
+      path: '/v1/ads/campaigns/123',
+      query: { workspace_id: 'ws', connection_id: 'c1' },
+      body: { status: 'paused' },
+    });
+    await client.ads.duplicateAdSet('456', ref, { paused: false });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/ads/ad-sets/456/duplicate',
+      body: { paused: false },
+    });
+    await client.ads.deleteNetworkAd('789', ref);
+    expect(last(calls)).toMatchObject({ method: 'DELETE', path: '/v1/ads/ads/789' });
+    await client.ads.bulkSetStatus({
+      ...ref,
+      status: 'active',
+      objects: [{ id: '123', level: 'campaign' }],
+    });
+    expect(last(calls)).toMatchObject({ method: 'POST', path: '/v1/ads/status' });
+  });
+
+  it('sends the insights range, breakdown and daily flag as query params', async () => {
+    const { calls, client } = recordingClient();
+    await client.ads.insights({
+      connectionId: 'c1',
+      objectId: '123',
+      since: '2026-09-01',
+      until: '2026-09-07',
+      breakdown: 'age',
+      daily: true,
+    });
+    expect(last(calls)).toMatchObject({
+      path: '/v1/ads/insights',
+      query: {
+        connection_id: 'c1',
+        object_id: '123',
+        since: '2026-09-01',
+        until: '2026-09-07',
+        breakdown: 'age',
+        daily: 'true',
+      },
+    });
+    await client.ads.adInsights('ad1', {
+      workspaceId: 'ws',
+      since: '2026-09-01',
+      until: '2026-09-07',
+    });
+    expect(last(calls)).toMatchObject({
+      path: '/v1/ads/ad1/insights',
+      query: { workspace_id: 'ws', since: '2026-09-01', until: '2026-09-07' },
+    });
+  });
+
+  it('pages the leads feed by passing nextCursor back as cursor', async () => {
+    const { calls, client } = recordingClient({ data: { leads: [], nextCursor: 'next1' } });
+    const first = await client.ads.leadsFeed({ workspaceId: 'ws', formId: 'f1', limit: 50 });
+    expect(first.nextCursor).toBe('next1');
+    expect(last(calls)).toMatchObject({
+      path: '/v1/ads/leads',
+      query: { workspace_id: 'ws', form_id: 'f1', limit: '50' },
+    });
+    await client.ads.leadsFeed({ workspaceId: 'ws', cursor: first.nextCursor! });
+    expect(last(calls).query).toEqual({ workspace_id: 'ws', cursor: 'next1' });
+
+    await client.ads.subscribeLeadPage({ ...ref, pageId: '123' });
+    expect(last(calls)).toMatchObject({ method: 'POST', path: '/v1/ads/lead-pages' });
+    await client.ads.unsubscribeLeadPage('123', ref);
+    expect(last(calls)).toMatchObject({
+      method: 'DELETE',
+      path: '/v1/ads/lead-pages/123',
+      query: { workspace_id: 'ws', connection_id: 'c1' },
+    });
+    await client.ads.archiveLeadForm('f1', { ...ref, pageId: '123' });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/ads/lead-forms/f1/archive',
+      body: { workspaceId: 'ws', connectionId: 'c1', pageId: '123' },
+    });
+    await client.ads.addAudienceUsers('aud1', ref, ['a@yourbrand.com']);
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/ads/audiences/aud1/users',
+      body: { emails: ['a@yourbrand.com'] },
+    });
+  });
+});
