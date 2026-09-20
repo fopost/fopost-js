@@ -72,6 +72,28 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.deleteDiscordRole('a1', 'r1');
   await fopost.accounts.addDiscordMemberRole('a1', 'r1', 'u7');
   await fopost.accounts.removeDiscordMemberRole('a1', 'r1', 'u7');
+  await fopost.accounts.listPinterestBoards('a1');
+  await fopost.accounts.createPinterestBoard('a1', { name: 'Recipes' });
+  await fopost.accounts.listYouTubePlaylists('a1');
+  await fopost.accounts.createYouTubePlaylist('a1', { title: 'Tutorials' });
+  await fopost.accounts.setDefaultYouTubePlaylist('a1', 'PL1');
+  await fopost.accounts.listYouTubeCaptions('a1', 'v1');
+  await fopost.accounts.uploadYouTubeCaptions('a1', 'v1', { language: 'en', body: 'sub' });
+  await fopost.accounts.readYouTubeTranscript('a1', 'cap1');
+  await fopost.accounts.getBlueskyLanguages('a1');
+  await fopost.accounts.setBlueskyLanguages('a1', ['en']);
+  await fopost.accounts.getTikTokCreatorInfo('a1');
+  await fopost.accounts.searchTikTokMusic('a1', { q: 'sunrise' });
+  await fopost.accounts.searchTikTokLocations('a1', { q: 'cafe' });
+  await fopost.accounts.lookupTikTokVideo(
+    'a1',
+    'https://www.tiktok.com/@a/video/7300000000000000000',
+  );
+  await fopost.accounts.searchInstagramAudio('a1', { q: 'birthday' });
+  await fopost.accounts.getInstagramPublishingLimit('a1');
+  await fopost.accounts.listInstagramStories('a1', { insights: true });
+  await fopost.accounts.getInstagramStoryInsights('a1', 's1');
+  await fopost.accounts.searchLinkedInMentions('a1', 'devtestco');
   await fopost.accountGroups.list({ workspaceId: 'ws' });
   await fopost.accountGroups.get('g1');
   await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
@@ -128,7 +150,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(77);
+    expect(urls.length).toBe(96);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

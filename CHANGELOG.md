@@ -80,6 +80,22 @@ All notable changes to `@fopost/sdk` are documented here.
   Profile API access.
 - Array query values now repeat the parameter, which is how `getPerformance` sends
   `daily_metrics`.
+- Per-network extras on `accounts`, all under the `accounts` scope:
+  - Pinterest: `listPinterestBoards`, `createPinterestBoard`. A board id travels as
+    the `board_id` platform setting.
+  - YouTube: `listYouTubePlaylists`, `createYouTubePlaylist`,
+    `setDefaultYouTubePlaylist`, `listYouTubeCaptions`, `uploadYouTubeCaptions`,
+    `readYouTubeTranscript`.
+  - Bluesky: `getBlueskyLanguages` and `setBlueskyLanguages`, the default post
+    languages for a connection.
+  - TikTok: `getTikTokCreatorInfo`, the switches TikTok enforces at publish time;
+    `searchTikTokMusic` and `searchTikTokLocations`, whose ids travel as the
+    `music_id` and `location_id` platform settings; and `lookupTikTokVideo`, which
+    resolves a share link to one of the account's own videos for repurposing.
+  - Instagram: `searchInstagramAudio`, `getInstagramPublishingLimit`,
+    `listInstagramStories`, `getInstagramStoryInsights`.
+  - LinkedIn: `searchLinkedInMentions`, which returns the `annotation` to paste into
+    a post for LinkedIn to render a link.
 
 ## 0.6.0
 

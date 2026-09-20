@@ -171,6 +171,177 @@ export type InboxHandover = {
   control: 'passed' | 'taken';
 };
 
+// ─── Per-network extras ──────────────────────────────────────────
+
+export type PinterestBoard = {
+  /** Pinterest board id; pass it as the `board_id` platform setting to pin to it. */
+  id: string;
+  name: string;
+  privacy: string | null;
+  description: string | null;
+  /** Board cover image. */
+  image: string | null;
+};
+
+export type CreatePinterestBoardInput = {
+  name: string;
+  description?: string;
+  privacy?: 'PUBLIC' | 'PROTECTED' | 'SECRET';
+};
+
+export type YouTubePlaylist = {
+  id: string;
+  title: string;
+  description: string | null;
+  privacy: string | null;
+  item_count: number | null;
+  thumbnail_url: string | null;
+  /** The playlist a new video joins when the post picks none. */
+  is_default: boolean;
+};
+
+export type CreateYouTubePlaylistInput = {
+  title: string;
+  description?: string;
+  privacy?: 'public' | 'unlisted' | 'private';
+};
+
+export type YouTubeCaptionTrack = {
+  id: string;
+  /** BCP-47 tag. */
+  language: string;
+  name: string;
+  track_kind: string | null;
+  is_draft: boolean;
+  is_auto_synced: boolean;
+  last_updated: string | null;
+};
+
+export type UploadYouTubeCaptionsInput = {
+  language: string;
+  name?: string;
+  /** The subtitle file itself; YouTube reads SRT and WebVTT and sniffs which. */
+  body: string;
+  isDraft?: boolean;
+};
+
+export type YouTubeTranscript = {
+  caption_id: string;
+  /** The track as SRT. */
+  transcript: string;
+};
+
+export type BlueskyLanguages = {
+  /** Up to three BCP-47 tags. */
+  languages: string[];
+};
+
+export type TikTokCreatorInfo = {
+  username: string | null;
+  nickname: string | null;
+  avatar_url: string | null;
+  /** Privacy levels this creator may publish at right now. */
+  privacy_level_options: string[];
+  comment_disabled: boolean;
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  max_video_post_duration_sec: number | null;
+};
+
+/** A track from TikTok's Commercial Music Library. */
+export type TikTokMusic = {
+  /** Pass as the `music_id` platform setting on a post. */
+  id: string;
+  title: string;
+  author: string | null;
+  duration_sec: number | null;
+  cover_url: string | null;
+  preview_url: string | null;
+};
+
+/** A place a TikTok post can be tagged with. */
+export type TikTokPlace = {
+  /** Pass as the `location_id` platform setting on a post. */
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+};
+
+export type TikTokSearchParams = {
+  q: string;
+  /** 1 to 50; the API defaults to 20. */
+  limit?: number;
+};
+
+/** One of the connected account's own videos, resolved from a share link. */
+export type TikTokVideoSource = {
+  video_id: string;
+  title: string | null;
+  description: string | null;
+  duration_sec: number | null;
+  cover_image_url: string | null;
+  share_url: string | null;
+  embed_link: string | null;
+  /** What a repurpose run reads. TikTok serves no raw media file, so this is the share URL. */
+  download_url: string | null;
+};
+
+export type InstagramAudio = {
+  /** Pass as the `audio_id` platform setting on a Reel. */
+  id: string;
+  title: string | null;
+  artist: string | null;
+  duration_ms: number | null;
+  audio_type: string | null;
+  cover_artwork_url: string | null;
+  preview_url: string | null;
+  username: string | null;
+  is_ads_eligible: boolean | null;
+};
+
+export type InstagramAudioSearchParams = {
+  /** Keyword; omit for what is trending. */
+  q?: string;
+  audioType?: 'music' | 'original_sound';
+};
+
+export type InstagramPublishingLimit = {
+  quota_usage: number;
+  quota_total: number | null;
+  quota_duration_sec: number | null;
+  remaining: number | null;
+};
+
+export type InstagramStory = {
+  id: string;
+  media_type: string | null;
+  media_product_type: string | null;
+  permalink: string | null;
+  media_url: string | null;
+  thumbnail_url: string | null;
+  caption: string | null;
+  timestamp: string | null;
+  /** Present when asked for; absent for a story too young to report. */
+  insights: Record<string, number> | null;
+};
+
+export type InstagramStoryInsights = {
+  story_id: string;
+  insights: Record<string, number>;
+};
+
+export type LinkedInMention = {
+  urn: string;
+  name: string;
+  vanity_name: string | null;
+  logo_url: string | null;
+  type: string;
+  /** Paste into the post text for LinkedIn to render a link. */
+  annotation: string;
+};
+
 export type SlackChannel = {
   /** Slack channel id. */
   id: string;
