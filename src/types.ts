@@ -687,7 +687,31 @@ export type InboxRefreshResult = {
 
 // ─── Ads ───────────────────────────────────────────────────────────
 
-export type AdGoal = 'engagement' | 'traffic' | 'awareness' | 'video_views';
+export type AdGoal =
+  | 'engagement'
+  | 'traffic'
+  | 'awareness'
+  | 'video_views'
+  /** Opens a Messenger or Instagram Direct thread; needs `messagingDestination`. */
+  | 'messages'
+  /** Dials the advertiser from the ad; needs `phoneNumber`. */
+  | 'calls'
+  /** Opens a WhatsApp thread. Absent from `goals()` unless the deployment has a number. */
+  | 'whatsapp'
+  /** A catalog ad built from a product set; needs `productSetId`. */
+  | 'sales';
+
+export type MessagingDestination = 'messenger' | 'instagram_direct' | 'whatsapp';
+
+/** What a goal needs beyond a budget and an audience. */
+export type AdGoalExtras = {
+  /** Required by the `messages` goal. */
+  messagingDestination?: MessagingDestination;
+  /** Required by the `calls` goal, in E.164, e.g. `+14155550123`. */
+  phoneNumber?: string;
+  /** Required by the `sales` goal: the product set the catalog ad runs from. */
+  productSetId?: string;
+};
 export type AdBudgetType = 'daily' | 'lifetime';
 
 export type AdTargetingItem = { id: string; name: string };
@@ -889,7 +913,7 @@ export type CreateAdInput = AdBaseInput & {
   mediaUrl?: string;
   /** Query string appended to every link in the ad, e.g. `utm_source=meta&utm_medium=paid`. */
   urlTags?: string;
-};
+} & AdGoalExtras;
 
 export type CreateAudienceInput = {
   workspaceId: string;
@@ -1003,7 +1027,7 @@ export type CreateAdSetInput = {
   targeting: AdTargeting;
   /** Default true. */
   paused?: boolean;
-};
+} & AdGoalExtras;
 
 export type UpdateAdSetInput = {
   name?: string;
@@ -1075,9 +1099,9 @@ export type CreateAdCreativeInput = {
   adAccountId: string;
   pageId: string;
   name: string;
-  format: 'image' | 'video' | 'carousel';
-  /** Primary text. */
-  text: string;
+  format: 'image' | 'video' | 'carousel' | 'catalog' | 'partnership';
+  /** Primary text. Required except on `partnership`, which runs the creator's own post. */
+  text?: string;
   headline?: string;
   destinationUrl?: string;
   /** Defaults to `LEARN_MORE`. */
@@ -1095,9 +1119,307 @@ export type CreateAdCreativeInput = {
     headline?: string;
     description?: string;
   }>;
+  /** Required for `catalog`: the network fills the cards from this product set. */
+  productSetId?: string;
+  /** `catalog` only: the per-product line under the headline. */
+  description?: string;
+  /** Required for `partnership`: the creator's media id, or their Page post as `{page}_{post}`. */
+  creatorPostId?: string;
+  /** `partnership` only: the creator's Instagram account. */
+  creatorInstagramUserId?: string;
 };
 
 export type UpdateAudienceInput = { name?: string; description?: string };
+
+// ─── Product catalogs ──────────────────────────────────────────────
+
+export type ProductCatalog = {
+  id: string;
+  name: string;
+  vertical: string | null;
+  productCount: number | null;
+};
+
+export type ProductCatalogsResult = { catalogs: ProductCatalog[]; workspaceId: string };
+
+export type CatalogProduct = {
+  id: string;
+  /** Your own key for the product. */
+  retailerId: string;
+  name: string;
+  description: string | null;
+  availability: string | null;
+  condition: string | null;
+  /** Minor units of `currency`. */
+  priceMinor: number | null;
+  currency: string | null;
+  imageUrl: string | null;
+  url: string | null;
+};
+
+export type CatalogProductsPage = { products: CatalogProduct[]; nextCursor: string | null };
+
+export type CatalogProductWrite =
+  | {
+      op: 'upsert';
+      retailerId: string;
+      name: string;
+      description?: string;
+      url: string;
+      imageUrl: string;
+      /** Minor units of `currency`. */
+      priceMinor: number;
+      currency: string;
+      availability?:
+        'in stock' | 'out of stock' | 'preorder' | 'available for order' | 'discontinued';
+      condition?: 'new' | 'refurbished' | 'used';
+      brand?: string;
+    }
+  | { op: 'delete'; retailerId: string };
+
+export type CatalogBatchResult = { handles: string[]; accepted: number };
+
+export type CreateCatalogInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  /** The network's catalog vertical; `commerce` when omitted. */
+  vertical?: string;
+};
+
+export type ProductFeed = {
+  id: string;
+  name: string;
+  url: string | null;
+  schedule: string | null;
+  createdAt: string | null;
+};
+
+export type CreateProductFeedInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  /** Where the network fetches the file; omit for manual uploads. */
+  url?: string;
+  schedule?: 'HOURLY' | 'DAILY' | 'WEEKLY';
+};
+
+export type ProductFeedUpload = {
+  id: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  status: string | null;
+  errorCount: number | null;
+  warningCount: number | null;
+};
+
+export type ProductSet = {
+  id: string;
+  name: string;
+  productCount: number | null;
+  /** The network's own product-set filter. */
+  filter: Record<string, unknown> | null;
+};
+
+export type ProductSetInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  filter?: Record<string, unknown>;
+};
+
+// ─── Reach and frequency ───────────────────────────────────────────
+
+export type ReachFrequencyPrediction = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  reach: number | null;
+  impressions: number | null;
+  frequencyCap: number | null;
+  /** Account currency, minor units. */
+  budgetMinor: number | null;
+  startAt: string | null;
+  endAt: string | null;
+  /** True once the prediction holds inventory. */
+  reserved: boolean;
+};
+
+export type ReachFrequencyResult = {
+  predictions: ReachFrequencyPrediction[];
+  workspaceId: string;
+};
+
+export type CreateReachFrequencyInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  targeting: AdTargeting;
+  placements: string[];
+  budgetMinor: number;
+  startAt: string;
+  endAt: string;
+  /** How often one person should see the ad over the flight. */
+  frequencyCap?: number;
+};
+
+export type ReachFrequencyActionInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+};
+
+// ─── Ad Library ────────────────────────────────────────────────────
+
+/** One public archive entry. Read live on every search and stored nowhere. */
+export type AdLibraryEntry = {
+  id: string;
+  pageId: string | null;
+  pageName: string | null;
+  bodies: string[];
+  titles: string[];
+  linkUrls: string[];
+  snapshotUrl: string | null;
+  publisherPlatforms: string[];
+  startedAt: string | null;
+  endedAt: string | null;
+  /** Only on the archive's disclosure entries. */
+  currency: string | null;
+  spendLower: number | null;
+  spendUpper: number | null;
+  impressionsLower: number | null;
+  impressionsUpper: number | null;
+};
+
+export type AdLibraryPage = { entries: AdLibraryEntry[]; nextCursor: string | null };
+
+export type AdLibraryParams = {
+  workspaceId?: string;
+  connectionId: string;
+  /** ISO 3166-1 alpha-2 codes the ad reached; at least one is required. */
+  countries: string[];
+  /** Keyword or Page name; required unless `pageIds` is set. */
+  q?: string;
+  pageIds?: string[];
+  activeStatus?: 'ACTIVE' | 'INACTIVE' | 'ALL';
+  limit?: number;
+  after?: string;
+};
+
+// ─── Partnership ads ───────────────────────────────────────────────
+
+/** A creator who allowlisted this advertiser for partnership ads. */
+export type PartnershipCreator = {
+  id: string;
+  username: string | null;
+  name: string | null;
+  status: string | null;
+  permissions: string[];
+};
+
+export type PartnershipInput = {
+  workspaceId: string;
+  connectionId: string;
+  pageId: string;
+  /** The creator's account id. */
+  creatorId: string;
+};
+
+// ─── Ad account settings ───────────────────────────────────────────
+
+export type AdActivity = {
+  id: string;
+  eventType: string | null;
+  actorName: string | null;
+  objectName: string | null;
+  objectType: string | null;
+  extraData: string | null;
+  createdAt: string | null;
+};
+
+export type AdActivityResult = { activity: AdActivity[]; workspaceId: string };
+
+export type AdLabel = { id: string; name: string; createdAt: string | null };
+
+export type AdLabelInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+};
+
+export type ApplyAdLabelInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  objectId: string;
+  level: AdObjectLevel;
+};
+
+export type AdStudy = {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string | null;
+  status: string | null;
+  startAt: string | null;
+  endAt: string | null;
+};
+
+export type CreateAdStudyInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  /** Two to five cells; traffic splits evenly across them. */
+  cells: Array<{ name: string; objectIds: string[] }>;
+};
+
+export type IosCampaignLimits = { limit: number | null; used: number | null; appId: string | null };
+
+export type HighDemandPeriod = {
+  id: string;
+  startAt: string | null;
+  endAt: string | null;
+  budgetValue: number | null;
+  budgetValueType: string | null;
+};
+
+export type CreateHighDemandPeriodInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  startAt: string;
+  endAt: string;
+  budgetValue: number;
+  budgetValueType: 'ABSOLUTE' | 'MULTIPLIER';
+};
+
+export type ValueRuleSet = {
+  id: string;
+  name: string;
+  status: string | null;
+  rules: Array<{ condition: string | null; multiplier: number | null }>;
+};
+
+export type CreateValueRuleSetInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  rules: Array<{ condition: string; multiplier: number }>;
+};
 
 export type ReachEstimateInput = {
   workspaceId: string;

@@ -27,6 +27,37 @@ import type {
   AdCreativesResult,
   AdInsightsParams,
   AdInsightsReport,
+  AdActivityResult,
+  AdGoal,
+  AdLabel,
+  AdLabelInput,
+  AdLibraryPage,
+  AdLibraryParams,
+  AdStudy,
+  ApplyAdLabelInput,
+  CatalogBatchResult,
+  CatalogProductWrite,
+  CatalogProductsPage,
+  CreateAdStudyInput,
+  CreateCatalogInput,
+  CreateHighDemandPeriodInput,
+  CreateProductFeedInput,
+  CreateReachFrequencyInput,
+  CreateValueRuleSetInput,
+  HighDemandPeriod,
+  IosCampaignLimits,
+  PartnershipCreator,
+  PartnershipInput,
+  ProductCatalog,
+  ProductCatalogsResult,
+  ProductFeed,
+  ProductFeedUpload,
+  ProductSet,
+  ProductSetInput,
+  ReachFrequencyActionInput,
+  ReachFrequencyPrediction,
+  ReachFrequencyResult,
+  ValueRuleSet,
   AdObjectMutationParams,
   AdObjectParams,
   AdSet,
@@ -1296,6 +1327,352 @@ class AdsResource {
       metaQuery(params),
     );
   }
+
+  // ─── Goals ──────────────────────────────────────────────────────
+
+  /**
+   * The goals this connection's network can run right now. Ask rather than
+   * assume: a goal the deployment is not set up for is absent here and is
+   * refused if you send it anyway.
+   */
+  goals(params: AdObjectParams): Promise<AdGoal[]> {
+    return this.http.get<AdGoal[]>('/v1/ads/goals', metaQuery(params));
+  }
+
+  // ─── Product catalogs ───────────────────────────────────────────
+
+  /** Catalogs the connection's business portfolios reach. Read live, never stored. */
+  catalogs(params: AdObjectParams): Promise<ProductCatalogsResult> {
+    return this.http.get<ProductCatalogsResult>('/v1/ads/catalogs', metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createCatalog(input: CreateCatalogInput): Promise<ProductCatalog> {
+    return this.http.post<ProductCatalog>('/v1/ads/catalogs', input);
+  }
+
+  getCatalog(id: string, params: AdObjectParams): Promise<ProductCatalog> {
+    return this.http.get<ProductCatalog>(`/v1/ads/catalogs/${id}`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateCatalog(
+    id: string,
+    params: AdObjectMutationParams,
+    input: { name: string },
+  ): Promise<ProductCatalog> {
+    return this.http.request<ProductCatalog>(
+      'PATCH',
+      `/v1/ads/catalogs/${id}`,
+      { ...input, ...params },
+      metaQuery(params),
+    );
+  }
+
+  /** Deletes every product, feed and set in it. Needs `publish` as well as `ads`. */
+  deleteCatalog(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/catalogs/${id}`, undefined, metaQuery(params));
+  }
+
+  /** One page of products; pass `nextCursor` back as `after`. */
+  catalogProducts(
+    id: string,
+    params: AdObjectParams & { after?: string },
+  ): Promise<CatalogProductsPage> {
+    return this.http.get<CatalogProductsPage>(`/v1/ads/catalogs/${id}/products`, {
+      ...metaQuery(params),
+      after: params.after,
+    });
+  }
+
+  /** Up to 500 upserts and deletes in one batch. Needs `publish` as well as `ads`. */
+  writeCatalogProducts(
+    id: string,
+    params: AdObjectMutationParams,
+    products: CatalogProductWrite[],
+  ): Promise<CatalogBatchResult> {
+    return this.http.post<CatalogBatchResult>(`/v1/ads/catalogs/${id}/products`, {
+      ...params,
+      products,
+    });
+  }
+
+  productFeeds(id: string, params: AdObjectParams): Promise<ProductFeed[]> {
+    return this.http.get<ProductFeed[]>(`/v1/ads/catalogs/${id}/feeds`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createProductFeed(id: string, input: CreateProductFeedInput): Promise<ProductFeed> {
+    return this.http.post<ProductFeed>(`/v1/ads/catalogs/${id}/feeds`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteProductFeed(id: string, feedId: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/catalogs/${id}/feeds/${feedId}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+
+  /** Each run the network made of the feed. */
+  feedUploads(id: string, feedId: string, params: AdObjectParams): Promise<ProductFeedUpload[]> {
+    return this.http.get<ProductFeedUpload[]>(
+      `/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`,
+      metaQuery(params),
+    );
+  }
+
+  /** Fetches the feed now. Needs the `publish` scope as well as `ads`. */
+  startFeedUpload(
+    id: string,
+    feedId: string,
+    params: AdObjectMutationParams & { url?: string },
+  ): Promise<{ id: string }> {
+    return this.http.post(`/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`, params);
+  }
+
+  /** A catalog ad runs from a product set, not the whole catalog. */
+  productSets(id: string, params: AdObjectParams): Promise<ProductSet[]> {
+    return this.http.get<ProductSet[]>(`/v1/ads/catalogs/${id}/product-sets`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createProductSet(id: string, input: ProductSetInput): Promise<ProductSet> {
+    return this.http.post<ProductSet>(`/v1/ads/catalogs/${id}/product-sets`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateProductSet(id: string, setId: string, input: ProductSetInput): Promise<ProductSet> {
+    return this.http.request<ProductSet>(
+      'PATCH',
+      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
+      input,
+      metaQuery(input),
+    );
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteProductSet(id: string, setId: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+
+  // ─── Reach and frequency ────────────────────────────────────────
+
+  reachFrequency(params: AdObjectParams & { adAccountId: string }): Promise<ReachFrequencyResult> {
+    return this.http.get<ReachFrequencyResult>('/v1/ads/reach-frequency', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Prices a flight. Nothing is bought until you reserve it. */
+  createReachFrequency(input: CreateReachFrequencyInput): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>('/v1/ads/reach-frequency', input);
+  }
+
+  getReachFrequency(
+    id: string,
+    params: AdObjectParams & { adAccountId: string },
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.get<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}`, {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Holds the inventory the prediction priced. Needs `publish` as well as `ads`. */
+  reserveReachFrequency(
+    id: string,
+    input: ReachFrequencyActionInput,
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}/reserve`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  cancelReachFrequency(
+    id: string,
+    input: ReachFrequencyActionInput,
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}/cancel`, input);
+  }
+
+  // ─── Ad Library ─────────────────────────────────────────────────
+
+  /**
+   * The public ad archive: ads anyone is running, by keyword or by Page.
+   * Read live on every call and stored nowhere, so an ad that stops running
+   * is simply absent from the next search.
+   */
+  adLibrary(params: AdLibraryParams): Promise<AdLibraryPage> {
+    return this.http.get<AdLibraryPage>('/v1/ads/library', {
+      ...metaQuery(params),
+      countries: params.countries.join(','),
+      q: params.q,
+      page_ids: params.pageIds?.join(','),
+      active_status: params.activeStatus,
+      limit: params.limit,
+      after: params.after,
+    });
+  }
+
+  // ─── Partnership ads ────────────────────────────────────────────
+
+  /** Creators who allowlisted this Page to run partnership ads on their posts. */
+  partnershipCreators(params: AdObjectParams & { pageId: string }): Promise<PartnershipCreator[]> {
+    return this.http.get<PartnershipCreator[]>('/v1/ads/partnership/creators', {
+      ...metaQuery(params),
+      page_id: params.pageId,
+    });
+  }
+
+  requestPartnership(input: PartnershipInput): Promise<PartnershipCreator[]> {
+    return this.http.post<PartnershipCreator[]>('/v1/ads/partnership/creators', input);
+  }
+
+  revokePartnership(
+    creatorId: string,
+    params: AdObjectMutationParams & { pageId: string },
+  ): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/partnership/creators/${creatorId}`, undefined, {
+      ...metaQuery(params),
+      page_id: params.pageId,
+    });
+  }
+
+  // ─── Ad account settings ────────────────────────────────────────
+
+  /** Who changed what on the ad account, and when. */
+  accountActivity(
+    params: AdObjectParams & { adAccountId: string; since?: string; until?: string },
+  ): Promise<AdActivityResult> {
+    return this.http.get<AdActivityResult>('/v1/ads/account/activity', {
+      ...accountQuery(params),
+      since: params.since,
+      until: params.until,
+    });
+  }
+
+  labels(params: AdObjectParams & { adAccountId: string }): Promise<AdLabel[]> {
+    return this.http.get<AdLabel[]>('/v1/ads/account/labels', accountQuery(params));
+  }
+
+  createLabel(input: AdLabelInput): Promise<AdLabel> {
+    return this.http.post<AdLabel>('/v1/ads/account/labels', input);
+  }
+
+  updateLabel(id: string, input: AdLabelInput): Promise<AdLabel> {
+    return this.http.request<AdLabel>(
+      'PATCH',
+      `/v1/ads/account/labels/${id}`,
+      input,
+      metaQuery(input),
+    );
+  }
+
+  deleteLabel(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/labels/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  /** Keeps whatever labels the object already carries. */
+  applyLabel(id: string, input: ApplyAdLabelInput): Promise<unknown> {
+    return this.http.post(`/v1/ads/account/labels/${id}/apply`, input);
+  }
+
+  studies(params: AdObjectParams & { adAccountId: string }): Promise<AdStudy[]> {
+    return this.http.get<AdStudy[]>('/v1/ads/account/studies', accountQuery(params));
+  }
+
+  /** Splits traffic evenly across the cells for the length of the flight. */
+  createStudy(input: CreateAdStudyInput): Promise<AdStudy> {
+    return this.http.post<AdStudy>('/v1/ads/account/studies', input);
+  }
+
+  getStudy(id: string, params: AdObjectParams & { adAccountId: string }): Promise<AdStudy> {
+    return this.http.get<AdStudy>(`/v1/ads/account/studies/${id}`, accountQuery(params));
+  }
+
+  deleteStudy(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/studies/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  /** How many iOS 14 campaigns the account may run at once, per app. */
+  iosCampaignLimits(
+    params: AdObjectParams & { adAccountId: string },
+  ): Promise<IosCampaignLimits[]> {
+    return this.http.get<IosCampaignLimits[]>('/v1/ads/account/ios-limits', accountQuery(params));
+  }
+
+  highDemandPeriods(params: AdObjectParams & { adAccountId: string }): Promise<HighDemandPeriod[]> {
+    return this.http.get<HighDemandPeriod[]>(
+      '/v1/ads/account/high-demand-periods',
+      accountQuery(params),
+    );
+  }
+
+  /** Tells the network to expect heavier spend over a window, so pacing allows for it. */
+  createHighDemandPeriod(input: CreateHighDemandPeriodInput): Promise<HighDemandPeriod> {
+    return this.http.post<HighDemandPeriod>('/v1/ads/account/high-demand-periods', input);
+  }
+
+  deleteHighDemandPeriod(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/high-demand-periods/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  valueRuleSets(params: AdObjectParams & { adAccountId: string }): Promise<ValueRuleSet[]> {
+    return this.http.get<ValueRuleSet[]>('/v1/ads/account/value-rule-sets', accountQuery(params));
+  }
+
+  /** Weights conversions so some audiences count for more than others. */
+  createValueRuleSet(input: CreateValueRuleSetInput): Promise<ValueRuleSet> {
+    return this.http.post<ValueRuleSet>('/v1/ads/account/value-rule-sets', input);
+  }
+
+  deleteValueRuleSet(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/value-rule-sets/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+}
+
+function accountQuery(params: { workspaceId?: string; connectionId: string; adAccountId: string }) {
+  return { ...metaQuery(params), ad_account_id: params.adAccountId };
 }
 
 function metaQuery(params: { workspaceId?: string; connectionId: string }) {
