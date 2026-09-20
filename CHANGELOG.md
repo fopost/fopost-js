@@ -10,6 +10,23 @@ All notable changes to `@fopost/sdk` are documented here.
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- LinkedIn is a second ad network behind the same `ads` methods. `ads.providers()`
+  lists the networks a deployment knows, with `capabilities`, `targetingFacets` and
+  `trackingMacros`, and `ads.authorize(provider, input)` starts any of their logins.
+- `AdTargeting.facets` carries the facets a network defines for itself, keyed by the
+  `TargetingSearchType` they were found with — `job_title`, `company_size`,
+  `industry` and the rest of the B2B set.
+- Audiences: the `COMPANY_LIST` and `ENGAGEMENT` subtypes, plus
+  `ads.addAudienceCompanies` to add rows to a company list.
+- Forecasts: `ads.bidPricing` and `ads.supplyForecast`.
+- Conversions: `ads.conversionRules`, `createConversionRule`, `getConversionRule`,
+  `updateConversionRule`, `deleteConversionRule`, `attachConversionRule`,
+  `detachConversionRule`, `conversionMetrics` and `sendConversionEvents`.
+- `ads.adLibrary` searches the network's own public ad library.
+
+### Deprecated
+
+- `ads.authorizeMeta` — use `ads.authorize('meta', input)`. It still works.
 
 ## 0.6.0
 

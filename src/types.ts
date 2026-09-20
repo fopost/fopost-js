@@ -529,6 +529,11 @@ export type AdTargeting = {
   audienceIds?: string[];
   locations?: AdTargetingLocation[];
   interests?: AdTargetingItem[];
+  /**
+   * Facets the network defines for itself, keyed by the `TargetingSearchType`
+   * they were found with. `ads.providers()` says which a network accepts.
+   */
+  facets?: Record<string, AdTargetingItem[]>;
   behaviors?: AdTargetingItem[];
   income?: AdTargetingItem[];
 };
@@ -648,7 +653,27 @@ export type AudiencesResult = {
 };
 
 export type TargetingSearchType =
-  'country' | 'region' | 'city' | 'zip' | 'metro' | 'interest' | 'behavior' | 'income';
+  | 'country'
+  | 'region'
+  | 'city'
+  | 'zip'
+  | 'metro'
+  | 'interest'
+  | 'behavior'
+  | 'income'
+  // B2B facets: a network that sells to companies rather than households.
+  | 'company'
+  | 'company_size'
+  | 'company_category'
+  | 'industry'
+  | 'job_title'
+  | 'job_function'
+  | 'seniority'
+  | 'years_of_experience'
+  | 'skill'
+  | 'degree'
+  | 'field_of_study'
+  | 'member_group';
 
 export type TargetingOption = { id: string; name: string; detail: string | null };
 
@@ -722,7 +747,25 @@ export type CreateAudienceInput = {
   spec:
     | { subtype: 'CUSTOM'; emails?: string[] }
     | { subtype: 'LOOKALIKE'; originAudienceId: string; country: string; ratio?: number }
-    | { subtype: 'WEBSITE'; pixelId: string; retentionDays?: number; urlContains?: string };
+    | { subtype: 'WEBSITE'; pixelId: string; retentionDays?: number; urlContains?: string }
+    | { subtype: 'COMPANY_LIST'; companies?: AdCompany[] }
+    | {
+        subtype: 'ENGAGEMENT';
+        source: 'page' | 'ad' | 'lead_form' | 'video';
+        sourceId: string;
+        retentionDays?: number;
+      };
+};
+
+/** One row of a company-list upload. It travels with the request and is never stored. */
+export type AdCompany = {
+  name?: string;
+  domain?: string;
+  /** The company's page on the network. */
+  pageUrl?: string;
+  /** Stock ticker, where the network matches on one. */
+  ticker?: string;
+  country?: string;
 };
 
 export type CreateLeadFormInput = {
@@ -736,12 +779,168 @@ export type CreateLeadFormInput = {
   followUpUrl?: string;
 };
 
-export type AuthorizeMetaAdsInput = {
+export type AuthorizeAdsInput = {
   workspaceId: string;
-  method?: 'business' | 'user';
-  /** Dashboard path to land on after Meta redirects back. */
+  /** A login route from the network's `connectMethods`; the first one by default. */
+  method?: string;
+  /** Dashboard path to land on after the network redirects back. */
   returnTo?: string;
 };
+
+/** @deprecated Use `AuthorizeAdsInput`. */
+export type AuthorizeMetaAdsInput = AuthorizeAdsInput;
+
+/** An ad network from the API's registry. `configured: false` cannot be connected yet. */
+export type AdProvider = {
+  id: string;
+  name: string;
+  /** Logo slug. */
+  logo: string;
+  configured: boolean;
+  connectMethods: string[];
+  /** What the network supports: campaigns, audiences, conversions, forecasts, and so on. */
+  capabilities: Record<string, boolean>;
+  /** What `ads.searchTargeting` accepts on this network, in picker order. */
+  targetingFacets: TargetingSearchType[];
+  /** Macros the network expands inside a creative's tracking parameters. */
+  trackingMacros: Array<{ token: string; description: string }>;
+};
+
+// ─── Ads: forecasts, conversions and the public ad library ─────────
+
+export type AdForecastInput = {
+  workspaceId: string;
+  connectionId: string;
+  adAccountId: string;
+  goal: AdGoal;
+  targeting: AdTargeting;
+  placements?: string[];
+};
+
+export type BidPricingInput = AdForecastInput & { bidType?: 'CPC' | 'CPM' | 'CPV' };
+
+/** What the auction costs, in minor units of the ad account currency. */
+export type BidPricing = {
+  currency: string;
+  suggestedBidMinor: number | null;
+  minBidMinor: number | null;
+  maxBidMinor: number | null;
+  dailyBudgetFloorMinor: number | null;
+};
+
+export type SupplyForecastInput = AdForecastInput & {
+  /** Budget for the forecast window, minor units. */
+  budgetMinor?: number;
+};
+
+export type SupplyForecast = {
+  currency: string;
+  impressions: number | null;
+  clicks: number | null;
+  spendMinor: number | null;
+  /** Days the numbers cover. */
+  windowDays: number | null;
+  ready: boolean;
+};
+
+export type ConversionType =
+  | 'purchase'
+  | 'lead'
+  | 'sign_up'
+  | 'add_to_cart'
+  | 'download'
+  | 'install'
+  | 'key_page_view'
+  | 'other';
+
+export type ConversionAttribution = 'last_touch' | 'each_campaign';
+
+export type CreateConversionRuleInput = {
+  workspaceId: string;
+  connectionId: string;
+  adAccountId: string;
+  name: string;
+  type: ConversionType;
+  attribution: ConversionAttribution;
+  postClickWindowDays?: number;
+  viewThroughWindowDays?: number;
+  /** Default value of one conversion, minor units. */
+  valueMinor?: number;
+  currency?: string;
+};
+
+export type UpdateConversionRuleInput = Partial<
+  Omit<CreateConversionRuleInput, 'workspaceId' | 'connectionId' | 'adAccountId'>
+> & { enabled?: boolean };
+
+export type ConversionRule = {
+  id: string;
+  name: string;
+  type: ConversionType;
+  attribution: ConversionAttribution;
+  postClickWindowDays: number;
+  viewThroughWindowDays: number;
+  valueMinor?: number;
+  currency?: string;
+  enabled: boolean;
+  createdAt: string | null;
+  /** Ad sets this rule is attached to. */
+  campaignIds: string[];
+};
+
+export type ConversionMetrics = {
+  conversions: number;
+  postClickConversions: number;
+  viewThroughConversions: number;
+  valueMinor: number;
+  costPerConversionMinor: number | null;
+};
+
+/** One conversion sent back to the network. The address is hashed inside the API. */
+export type ConversionEvent = {
+  /** Epoch milliseconds. */
+  happenedAt: number;
+  valueMinor?: number;
+  currency?: string;
+  /** Your own id for the event, so a replay is counted once. */
+  eventId?: string;
+  email?: string;
+  /** The network's click id, as the landing page received it. */
+  clickId?: string;
+};
+
+export type AdLibraryParams = {
+  workspaceId?: string;
+  connectionId: string;
+  keyword?: string;
+  advertiser?: string;
+  /** ISO 3166-1 alpha-2 codes. */
+  countries?: string[];
+  /** YYYY-MM-DD. */
+  since?: string;
+  until?: string;
+  cursor?: string;
+};
+
+/** A public ad from the network's own library, never a connection's own data. */
+export type AdLibraryAd = {
+  id: string;
+  advertiserName: string | null;
+  advertiserUrl: string | null;
+  headline: string | null;
+  body: string | null;
+  type: string | null;
+  thumbnailUrl: string | null;
+  firstImpressionAt: string | null;
+  lastImpressionAt: string | null;
+  countries: string[];
+  detailsUrl: string | null;
+  /** The paying entity, where the network discloses one. */
+  payer: string | null;
+  impressionsRange: string | null;
+};
+
+export type AdLibraryPage = { ads: AdLibraryAd[]; nextCursor: string | null };
 
 // ─── Ads: campaign tree, creatives, insights, leads ────────────────
 

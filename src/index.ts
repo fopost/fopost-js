@@ -53,7 +53,20 @@ import type {
   Audience,
   AiCreditBalance,
   AudiencesResult,
-  AuthorizeMetaAdsInput,
+  AdCompany,
+  AdLibraryPage,
+  AdLibraryParams,
+  AdProvider,
+  AuthorizeAdsInput,
+  BidPricing,
+  BidPricingInput,
+  ConversionEvent,
+  ConversionMetrics,
+  ConversionRule,
+  CreateConversionRuleInput,
+  SupplyForecast,
+  SupplyForecastInput,
+  UpdateConversionRuleInput,
   BoostPostInput,
   BoostablePost,
   CreateAccountGroupInput,
@@ -603,9 +616,19 @@ class AdsResource {
     return this.http.get<AdSource[]>('/v1/ads/sources', { workspace_id: params.workspaceId });
   }
 
-  /** Returns the Meta login URL; the caller finishes it in their own browser. */
-  authorizeMeta(input: AuthorizeMetaAdsInput): Promise<{ url: string }> {
-    return this.http.post<{ url: string }>('/v1/ads/connections/meta/authorize', input);
+  /** The ad networks this deployment knows, with what each one supports. */
+  providers(): Promise<AdProvider[]> {
+    return this.http.get<AdProvider[]>('/v1/ads/providers');
+  }
+
+  /** Returns the network's login URL; the caller finishes it in their own browser. */
+  authorize(provider: string, input: AuthorizeAdsInput): Promise<{ url: string }> {
+    return this.http.post<{ url: string }>(`/v1/ads/connections/${provider}/authorize`, input);
+  }
+
+  /** @deprecated Use `authorize('meta', input)`. */
+  authorizeMeta(input: AuthorizeAdsInput): Promise<{ url: string }> {
+    return this.authorize('meta', input);
   }
 
   /** Also deletes every ad record created through the connection. */
@@ -663,7 +686,7 @@ class AdsResource {
     return this.http.post('/v1/ads/audiences', input);
   }
 
-  /** Locations, interests, behaviours and income brackets as Meta names them. */
+  /** Locations and facets as the network names them; `providers()` says which it takes. */
   searchTargeting(params: {
     workspaceId?: string;
     connectionId: string;
@@ -921,6 +944,142 @@ class AdsResource {
   /** Turns on new-lead notifications for the Page and backfills its recent leads. */
   subscribeLeadPage(input: LeadPageInput): Promise<{ pageId: string; backfilled: number }> {
     return this.http.post('/v1/ads/lead-pages', input);
+  }
+
+  /**
+   * Adds companies to a company-list audience. The rows travel with the
+   * request and are never stored.
+   */
+  addAudienceCompanies(
+    id: string,
+    params: AdObjectMutationParams,
+    companies: AdCompany[],
+  ): Promise<{ added: number }> {
+    return this.http.request(
+      'POST',
+      `/v1/ads/audiences/${id}/companies`,
+      { companies },
+      metaQuery(params),
+    );
+  }
+
+  /** The network's own public ad library, not the connection's ads. */
+  adLibrary(params: AdLibraryParams): Promise<AdLibraryPage> {
+    return this.http.get<AdLibraryPage>('/v1/ads/ad-library', {
+      workspace_id: params.workspaceId,
+      connection_id: params.connectionId,
+      keyword: params.keyword,
+      advertiser: params.advertiser,
+      countries: params.countries?.join(','),
+      since: params.since,
+      until: params.until,
+      cursor: params.cursor,
+    });
+  }
+
+  /** What the auction currently costs for that audience. */
+  bidPricing(input: BidPricingInput): Promise<BidPricing> {
+    return this.http.post<BidPricing>('/v1/ads/linkedin/bid-pricing', input);
+  }
+
+  /** What that audience would deliver at that budget. */
+  supplyForecast(input: SupplyForecastInput): Promise<SupplyForecast> {
+    return this.http.post<SupplyForecast>('/v1/ads/linkedin/supply-forecast', input);
+  }
+
+  conversionRules(params: AdObjectParams & { adAccountId: string }): Promise<ConversionRule[]> {
+    return this.http.get<ConversionRule[]>('/v1/ads/linkedin/conversion-rules', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  createConversionRule(input: CreateConversionRuleInput): Promise<{ id: string }> {
+    return this.http.post('/v1/ads/linkedin/conversion-rules', input);
+  }
+
+  getConversionRule(id: string, params: AdObjectParams): Promise<ConversionRule> {
+    return this.http.get<ConversionRule>(
+      `/v1/ads/linkedin/conversion-rules/${id}`,
+      metaQuery(params),
+    );
+  }
+
+  updateConversionRule(
+    id: string,
+    params: AdObjectMutationParams,
+    input: UpdateConversionRuleInput,
+  ): Promise<ConversionRule> {
+    return this.http.request<ConversionRule>(
+      'PATCH',
+      `/v1/ads/linkedin/conversion-rules/${id}`,
+      input,
+      metaQuery(params),
+    );
+  }
+
+  /** Turns the rule off; the network keeps the history. */
+  deleteConversionRule(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/linkedin/conversion-rules/${id}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+
+  attachConversionRule(
+    id: string,
+    params: AdObjectMutationParams,
+    campaignId: string,
+  ): Promise<ConversionRule> {
+    return this.http.request<ConversionRule>(
+      'POST',
+      `/v1/ads/linkedin/conversion-rules/${id}/associations`,
+      { campaignId },
+      metaQuery(params),
+    );
+  }
+
+  detachConversionRule(
+    id: string,
+    params: AdObjectMutationParams,
+    campaignId: string,
+  ): Promise<ConversionRule> {
+    return this.http.request<ConversionRule>(
+      'DELETE',
+      `/v1/ads/linkedin/conversion-rules/${id}/associations`,
+      { campaignId },
+      metaQuery(params),
+    );
+  }
+
+  conversionMetrics(
+    id: string,
+    params: AdObjectParams & { since: string; until: string },
+  ): Promise<ConversionMetrics> {
+    return this.http.get<ConversionMetrics>(`/v1/ads/linkedin/conversion-rules/${id}/metrics`, {
+      ...metaQuery(params),
+      since: params.since,
+      until: params.until,
+    });
+  }
+
+  /**
+   * Sends conversions back to the network. The address on each event is hashed
+   * inside the API and nothing about an event is stored.
+   */
+  sendConversionEvents(
+    id: string,
+    params: AdObjectMutationParams,
+    events: ConversionEvent[],
+  ): Promise<{ accepted: number }> {
+    return this.http.request(
+      'POST',
+      `/v1/ads/linkedin/conversion-rules/${id}/events`,
+      { events },
+      metaQuery(params),
+    );
   }
 
   unsubscribeLeadPage(pageId: string, params: AdObjectMutationParams): Promise<unknown> {
