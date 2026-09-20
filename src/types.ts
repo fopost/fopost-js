@@ -116,6 +116,61 @@ export type TelegramBotCommands = {
   commands: TelegramBotCommand[];
 };
 
+// ─── Meta messaging settings ───────────────────────────────────
+
+/** A tappable prompt Messenger or Instagram shows before the first message. */
+export type MetaIceBreaker = {
+  /** Up to 80 characters. */
+  question: string;
+  /** What your webhook receives when it is tapped. */
+  payload: string;
+};
+
+export type MetaIceBreakers = {
+  ice_breakers: MetaIceBreaker[];
+};
+
+/** A persistent-menu item: a postback your webhook receives, or an http(s) link. */
+export type MetaMenuItem =
+  | { type: 'postback'; title: string; payload: string }
+  | { type: 'web_url'; title: string; url: string };
+
+/** One locale's menu; `default` is the fallback every language uses. */
+export type MetaPersistentMenuEntry = {
+  locale: string;
+  call_to_actions: MetaMenuItem[];
+  composer_input_disabled?: boolean;
+};
+
+export type MetaPersistentMenu = {
+  persistent_menu: MetaPersistentMenuEntry[];
+};
+
+export type MetaGreetingText = {
+  locale: string;
+  /** Up to 160 characters. */
+  text: string;
+};
+
+export type MetaGreeting = {
+  greeting: MetaGreetingText[];
+};
+
+/** What the network is delivering to the FoPost webhook for one account. */
+export type WebhookSubscription = {
+  /** False when the subscription lapsed or a required field is missing. */
+  subscribed: boolean;
+  fields: string[];
+  missing_fields: string[];
+};
+
+/** The outcome of a Messenger thread hand-over. */
+export type InboxHandover = {
+  /** The app control was passed to, or null when it was taken back. */
+  app_id: string | null;
+  control: 'passed' | 'taken';
+};
+
 export type SlackChannel = {
   /** Slack channel id. */
   id: string;
@@ -153,6 +208,122 @@ export type UpdateSlackIdentityInput = {
   iconUrl?: string | null;
   /** An emoji code, e.g. `:rocket:`. */
   iconEmoji?: string | null;
+};
+
+export type DiscordChannel = {
+  /** Discord channel id. */
+  id: string;
+  name: string;
+  /** Discord channel type: 0 text, 5 announcement, 15 forum. */
+  type: number;
+  parent_id: string | null;
+  nsfw: boolean;
+  /** False when a channel permission in Discord shuts the bot out of this channel. */
+  can_post: boolean;
+  /** The channel this account posts to. */
+  is_current: boolean;
+};
+
+/** The nickname and avatar the bot wears in this server; null means its own. */
+export type DiscordIdentity = {
+  username: string | null;
+  avatar_url: string | null;
+};
+
+/** Omitted fields keep their value, null clears one. */
+export type UpdateDiscordIdentityInput = {
+  /** 1-32 characters. */
+  username?: string | null;
+  /** An http(s) URL. */
+  avatarUrl?: string | null;
+};
+
+export type DiscordMessage = {
+  id: string;
+  channel_id: string;
+  content: string;
+  author_id: string;
+  author_name: string;
+  pinned: boolean;
+  created_at: string;
+};
+
+export type DiscordScheduledEvent = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Voice or stage channel, or null for an event somewhere else. */
+  channel_id: string | null;
+  location: string | null;
+  start_time: string;
+  end_time: string | null;
+  /** `scheduled`, `active`, `completed` or `canceled`. */
+  status: string;
+  user_count: number | null;
+};
+
+/** Name a channelId, or a location with an endTime. */
+export type CreateDiscordEventInput = {
+  name: string;
+  description?: string;
+  /** ISO 8601. */
+  startTime: string;
+  /** ISO 8601; required for an event at a location. */
+  endTime?: string;
+  channelId?: string;
+  location?: string;
+};
+
+export type UpdateDiscordEventInput = Partial<CreateDiscordEventInput> & {
+  status?: 'scheduled' | 'active' | 'completed' | 'canceled';
+};
+
+export type DiscordMember = {
+  /** Discord user id; pass it as the member id to send a DM or assign a role. */
+  id: string;
+  username: string;
+  display_name: string | null;
+  /** Nickname in this server. */
+  nick: string | null;
+  avatar: string | null;
+  is_bot: boolean;
+  roles: string[];
+  joined_at: string | null;
+};
+
+export type DiscordRole = {
+  id: string;
+  name: string;
+  /** RGB integer; 0 is the default colour. */
+  color: number;
+  /** Shown separately in the member list. */
+  hoist: boolean;
+  mentionable: boolean;
+  /** Owned by an integration; not editable. */
+  managed: boolean;
+  position: number;
+  /** Permission bitfield as a decimal string. */
+  permissions: string;
+};
+
+export type CreateDiscordRoleInput = {
+  name: string;
+  color?: number;
+  hoist?: boolean;
+  mentionable?: boolean;
+  /** Permission bitfield as a decimal string. */
+  permissions?: string;
+};
+
+export type UpdateDiscordRoleInput = Partial<CreateDiscordRoleInput>;
+
+/** A message the bot put somewhere. */
+export type DiscordMessageRef = { id: string; channel_id: string };
+
+export type CreateDiscordThreadInput = {
+  name: string;
+  /** Minutes of inactivity before it archives: 60, 1440, 4320 or 10080. */
+  autoArchiveDuration?: 60 | 1440 | 4320 | 10080;
 };
 
 /** Account groups come back in the API's snake_case shape. */
@@ -276,7 +447,7 @@ export type RepurposeUrlInput = {
 
 // ─── Inbox ─────────────────────────────────────────────────────────
 
-export type InboxItemType = 'comment' | 'mention' | 'dm';
+export type InboxItemType = 'comment' | 'mention' | 'dm' | 'review';
 export type InboxItemState = 'unread' | 'read' | 'resolved' | 'snoozed';
 
 export type InboxAccountRef = {
@@ -325,6 +496,8 @@ export type InboxItem = {
   authorHandle: string | null;
   authorAvatarUrl: string | null;
   text: string | null;
+  /** Stars on a review, 1-5. Null on every other type. */
+  rating: number | null;
   attachments: InboxAttachment[];
   permalink: string | null;
   postExternalId: string | null;
@@ -364,6 +537,8 @@ export type InboxThread = {
   lastCommentAt: string | null;
   lastCommentText: string | null;
   lastCommentAuthor: string | null;
+  /** Stars, on a review thread. Null on comments and mentions. */
+  rating: number | null;
   post: InboxPostContext | null;
   account: InboxAccountRef | null;
 };
@@ -448,8 +623,11 @@ export type ListInboxParams = {
 
 export type ListInboxThreadsParams = {
   workspaceId?: string;
-  /** `comments` (default) for threads under our posts, `mentions` for posts we were tagged in. */
-  kind?: 'comments' | 'mentions';
+  /**
+   * `comments` (default) for threads under our posts, `mentions` for posts we
+   * were tagged in, `reviews` for ratings left on the business.
+   */
+  kind?: 'comments' | 'mentions' | 'reviews';
   platform?: Platform;
   accountId?: string;
   state?: InboxItemState;
@@ -509,7 +687,31 @@ export type InboxRefreshResult = {
 
 // ─── Ads ───────────────────────────────────────────────────────────
 
-export type AdGoal = 'engagement' | 'traffic' | 'awareness' | 'video_views';
+export type AdGoal =
+  | 'engagement'
+  | 'traffic'
+  | 'awareness'
+  | 'video_views'
+  /** Opens a Messenger or Instagram Direct thread; needs `messagingDestination`. */
+  | 'messages'
+  /** Dials the advertiser from the ad; needs `phoneNumber`. */
+  | 'calls'
+  /** Opens a WhatsApp thread. Absent from `goals()` unless the deployment has a number. */
+  | 'whatsapp'
+  /** A catalog ad built from a product set; needs `productSetId`. */
+  | 'sales';
+
+export type MessagingDestination = 'messenger' | 'instagram_direct' | 'whatsapp';
+
+/** What a goal needs beyond a budget and an audience. */
+export type AdGoalExtras = {
+  /** Required by the `messages` goal. */
+  messagingDestination?: MessagingDestination;
+  /** Required by the `calls` goal, in E.164, e.g. `+14155550123`. */
+  phoneNumber?: string;
+  /** Required by the `sales` goal: the product set the catalog ad runs from. */
+  productSetId?: string;
+};
 export type AdBudgetType = 'daily' | 'lifetime';
 
 export type AdTargetingItem = { id: string; name: string };
@@ -711,7 +913,7 @@ export type CreateAdInput = AdBaseInput & {
   mediaUrl?: string;
   /** Query string appended to every link in the ad, e.g. `utm_source=meta&utm_medium=paid`. */
   urlTags?: string;
-};
+} & AdGoalExtras;
 
 export type CreateAudienceInput = {
   workspaceId: string;
@@ -825,7 +1027,7 @@ export type CreateAdSetInput = {
   targeting: AdTargeting;
   /** Default true. */
   paused?: boolean;
-};
+} & AdGoalExtras;
 
 export type UpdateAdSetInput = {
   name?: string;
@@ -897,9 +1099,9 @@ export type CreateAdCreativeInput = {
   adAccountId: string;
   pageId: string;
   name: string;
-  format: 'image' | 'video' | 'carousel';
-  /** Primary text. */
-  text: string;
+  format: 'image' | 'video' | 'carousel' | 'catalog' | 'partnership';
+  /** Primary text. Required except on `partnership`, which runs the creator's own post. */
+  text?: string;
   headline?: string;
   destinationUrl?: string;
   /** Defaults to `LEARN_MORE`. */
@@ -917,9 +1119,307 @@ export type CreateAdCreativeInput = {
     headline?: string;
     description?: string;
   }>;
+  /** Required for `catalog`: the network fills the cards from this product set. */
+  productSetId?: string;
+  /** `catalog` only: the per-product line under the headline. */
+  description?: string;
+  /** Required for `partnership`: the creator's media id, or their Page post as `{page}_{post}`. */
+  creatorPostId?: string;
+  /** `partnership` only: the creator's Instagram account. */
+  creatorInstagramUserId?: string;
 };
 
 export type UpdateAudienceInput = { name?: string; description?: string };
+
+// ─── Product catalogs ──────────────────────────────────────────────
+
+export type ProductCatalog = {
+  id: string;
+  name: string;
+  vertical: string | null;
+  productCount: number | null;
+};
+
+export type ProductCatalogsResult = { catalogs: ProductCatalog[]; workspaceId: string };
+
+export type CatalogProduct = {
+  id: string;
+  /** Your own key for the product. */
+  retailerId: string;
+  name: string;
+  description: string | null;
+  availability: string | null;
+  condition: string | null;
+  /** Minor units of `currency`. */
+  priceMinor: number | null;
+  currency: string | null;
+  imageUrl: string | null;
+  url: string | null;
+};
+
+export type CatalogProductsPage = { products: CatalogProduct[]; nextCursor: string | null };
+
+export type CatalogProductWrite =
+  | {
+      op: 'upsert';
+      retailerId: string;
+      name: string;
+      description?: string;
+      url: string;
+      imageUrl: string;
+      /** Minor units of `currency`. */
+      priceMinor: number;
+      currency: string;
+      availability?:
+        'in stock' | 'out of stock' | 'preorder' | 'available for order' | 'discontinued';
+      condition?: 'new' | 'refurbished' | 'used';
+      brand?: string;
+    }
+  | { op: 'delete'; retailerId: string };
+
+export type CatalogBatchResult = { handles: string[]; accepted: number };
+
+export type CreateCatalogInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  /** The network's catalog vertical; `commerce` when omitted. */
+  vertical?: string;
+};
+
+export type ProductFeed = {
+  id: string;
+  name: string;
+  url: string | null;
+  schedule: string | null;
+  createdAt: string | null;
+};
+
+export type CreateProductFeedInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  /** Where the network fetches the file; omit for manual uploads. */
+  url?: string;
+  schedule?: 'HOURLY' | 'DAILY' | 'WEEKLY';
+};
+
+export type ProductFeedUpload = {
+  id: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  status: string | null;
+  errorCount: number | null;
+  warningCount: number | null;
+};
+
+export type ProductSet = {
+  id: string;
+  name: string;
+  productCount: number | null;
+  /** The network's own product-set filter. */
+  filter: Record<string, unknown> | null;
+};
+
+export type ProductSetInput = {
+  workspaceId: string;
+  connectionId: string;
+  name: string;
+  filter?: Record<string, unknown>;
+};
+
+// ─── Reach and frequency ───────────────────────────────────────────
+
+export type ReachFrequencyPrediction = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  reach: number | null;
+  impressions: number | null;
+  frequencyCap: number | null;
+  /** Account currency, minor units. */
+  budgetMinor: number | null;
+  startAt: string | null;
+  endAt: string | null;
+  /** True once the prediction holds inventory. */
+  reserved: boolean;
+};
+
+export type ReachFrequencyResult = {
+  predictions: ReachFrequencyPrediction[];
+  workspaceId: string;
+};
+
+export type CreateReachFrequencyInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  targeting: AdTargeting;
+  placements: string[];
+  budgetMinor: number;
+  startAt: string;
+  endAt: string;
+  /** How often one person should see the ad over the flight. */
+  frequencyCap?: number;
+};
+
+export type ReachFrequencyActionInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+};
+
+// ─── Ad Library ────────────────────────────────────────────────────
+
+/** One public archive entry. Read live on every search and stored nowhere. */
+export type AdLibraryEntry = {
+  id: string;
+  pageId: string | null;
+  pageName: string | null;
+  bodies: string[];
+  titles: string[];
+  linkUrls: string[];
+  snapshotUrl: string | null;
+  publisherPlatforms: string[];
+  startedAt: string | null;
+  endedAt: string | null;
+  /** Only on the archive's disclosure entries. */
+  currency: string | null;
+  spendLower: number | null;
+  spendUpper: number | null;
+  impressionsLower: number | null;
+  impressionsUpper: number | null;
+};
+
+export type AdLibraryPage = { entries: AdLibraryEntry[]; nextCursor: string | null };
+
+export type AdLibraryParams = {
+  workspaceId?: string;
+  connectionId: string;
+  /** ISO 3166-1 alpha-2 codes the ad reached; at least one is required. */
+  countries: string[];
+  /** Keyword or Page name; required unless `pageIds` is set. */
+  q?: string;
+  pageIds?: string[];
+  activeStatus?: 'ACTIVE' | 'INACTIVE' | 'ALL';
+  limit?: number;
+  after?: string;
+};
+
+// ─── Partnership ads ───────────────────────────────────────────────
+
+/** A creator who allowlisted this advertiser for partnership ads. */
+export type PartnershipCreator = {
+  id: string;
+  username: string | null;
+  name: string | null;
+  status: string | null;
+  permissions: string[];
+};
+
+export type PartnershipInput = {
+  workspaceId: string;
+  connectionId: string;
+  pageId: string;
+  /** The creator's account id. */
+  creatorId: string;
+};
+
+// ─── Ad account settings ───────────────────────────────────────────
+
+export type AdActivity = {
+  id: string;
+  eventType: string | null;
+  actorName: string | null;
+  objectName: string | null;
+  objectType: string | null;
+  extraData: string | null;
+  createdAt: string | null;
+};
+
+export type AdActivityResult = { activity: AdActivity[]; workspaceId: string };
+
+export type AdLabel = { id: string; name: string; createdAt: string | null };
+
+export type AdLabelInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+};
+
+export type ApplyAdLabelInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  objectId: string;
+  level: AdObjectLevel;
+};
+
+export type AdStudy = {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string | null;
+  status: string | null;
+  startAt: string | null;
+  endAt: string | null;
+};
+
+export type CreateAdStudyInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  /** Two to five cells; traffic splits evenly across them. */
+  cells: Array<{ name: string; objectIds: string[] }>;
+};
+
+export type IosCampaignLimits = { limit: number | null; used: number | null; appId: string | null };
+
+export type HighDemandPeriod = {
+  id: string;
+  startAt: string | null;
+  endAt: string | null;
+  budgetValue: number | null;
+  budgetValueType: string | null;
+};
+
+export type CreateHighDemandPeriodInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  startAt: string;
+  endAt: string;
+  budgetValue: number;
+  budgetValueType: 'ABSOLUTE' | 'MULTIPLIER';
+};
+
+export type ValueRuleSet = {
+  id: string;
+  name: string;
+  status: string | null;
+  rules: Array<{ condition: string | null; multiplier: number | null }>;
+};
+
+export type CreateValueRuleSetInput = {
+  workspaceId: string;
+  connectionId: string;
+  /** `act_…` */
+  adAccountId: string;
+  name: string;
+  rules: Array<{ condition: string; multiplier: number }>;
+};
 
 export type ReachEstimateInput = {
   workspaceId: string;
@@ -1101,6 +1601,406 @@ export type DirectUploadInput = {
   filename: string;
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
+};
+
+// ─── Knowledge base ────────────────────────────────────────────────
+//
+// What a workspace has told FoPost about itself, used to ground a drafted
+// reply in its own answers rather than an invented one.
+
+export type KnowledgeSourceKind = 'faq' | 'text' | 'url' | 'file';
+export type KnowledgeSourceStatus = 'pending' | 'syncing' | 'ready' | 'failed';
+
+export type KnowledgeSource = {
+  /** Public knowledge source id (uuid). */
+  id: string;
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Only a `ready` source is searched. */
+  status: KnowledgeSourceStatus;
+  /** Why the last sync failed, in plain words. */
+  statusMessage: string | null;
+  /** Set for `url` sources. */
+  url: string | null;
+  /** Set for `file` sources: the media library item read. */
+  mediaId: string | null;
+  /** Null means the source serves the whole workspace. */
+  brandVoiceId: string | null;
+  /** Searchable passages the last sync produced. */
+  chunkCount: number;
+  /** The typed text, for `faq` and `text` sources only. */
+  content: string | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** One retrieved passage, with the source it came from so a reply can cite it. */
+export type KnowledgeMatch = {
+  sourceId: string;
+  sourceTitle: string;
+  sourceKind: KnowledgeSourceKind;
+  sourceUrl: string | null;
+  text: string;
+  /** Similarity to the question, 0-1. */
+  score: number;
+};
+
+export type CreateKnowledgeSourceInput = {
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Required for `faq` and `text`. */
+  content?: string;
+  /** Required for `url`. */
+  url?: string;
+  /** Required for `file`: a plain-text or CSV media library item. */
+  mediaId?: string;
+  brandVoiceId?: string | null;
+  workspaceId?: string;
+};
+
+export type UpdateKnowledgeSourceInput = {
+  title?: string;
+  content?: string;
+  url?: string;
+  brandVoiceId?: string | null;
+};
+
+export type SearchKnowledgeParams = {
+  /** The question, in plain words. */
+  q: string;
+  /** How many passages, default 5, max 20. */
+  topK?: number;
+  brandVoiceId?: string;
+  workspaceId?: string;
+};
+
+// ─── Contacts ──────────────────────────────────────────────────────
+
+/** One handle on one network. `handle` is lower-cased with no leading @. */
+export type ContactChannel = {
+  platform: string;
+  handle: string;
+  /** The platform's own id for this person, when the network gave us one. */
+  externalId?: string | null;
+};
+
+export type ContactSource = 'inbox' | 'radar' | 'import';
+
+export type Contact = {
+  id: string;
+  display_name: string | null;
+  channels: ContactChannel[];
+  source: ContactSource;
+  note: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  /** Custom field values, keyed by field key. */
+  fields: Record<string, string>;
+  labels: Array<{ id: string; name: string; color: string }>;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type ContactPage = {
+  data: Contact[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListContactsParams = {
+  workspaceId?: string;
+  /** Matches a display name or any of their handles. */
+  search?: string;
+  platform?: string;
+  source?: ContactSource;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateContactInput = {
+  workspaceId: string;
+  channels: ContactChannel[];
+  displayName?: string;
+  note?: string;
+  fields?: Record<string, string>;
+};
+
+export type UpdateContactInput = {
+  displayName?: string | null;
+  channels?: ContactChannel[];
+  note?: string | null;
+  /** A null or empty value clears that field. */
+  fields?: Record<string, string | null>;
+};
+
+/** One thread a contact appears in. `key` is how the inbox groups it. */
+export type ContactConversation = {
+  key: string;
+  account_id: string;
+  account_username: string | null;
+  platform: string;
+  messages: number;
+  received: number;
+  sent: number;
+  last_message_at: string | null;
+  last_item_id: string | null;
+};
+
+export type ContactImportResult = {
+  created: number;
+  /** Rows that folded into a contact already on file. */
+  merged: number;
+  skipped: Array<{ row: number; reason: string }>;
+  /** Columns that named neither a reserved field nor a custom field. */
+  unknownColumns: string[];
+};
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+
+export type ContactField = {
+  id: string;
+  /** Lower-case key; also the CSV column header. Fixed once created. */
+  key: string;
+  name: string;
+  type: CustomFieldType;
+  /** Allowed values when `type` is `select`. */
+  options: string[];
+  position: number;
+};
+
+export type CreateContactFieldInput = {
+  key: string;
+  name: string;
+  type?: CustomFieldType;
+  options?: string[];
+};
+
+export type UpdateContactFieldInput = {
+  name?: string;
+  options?: string[];
+  position?: number;
+};
+
+// ─── Conversation analytics ────────────────────────────────────────
+
+export type ConversationAnalyticsRow = {
+  /**
+   * An opaque, stable handle for the thread, not the id or handle the inbox
+   * groups on. It lines the same conversation up between two calls; to reach
+   * the thread itself, read the person through `contacts.conversations()`,
+   * which needs the `inbox` scope rather than `analytics`.
+   */
+  key: string;
+  accountId: string;
+  platform: string;
+  received: number;
+  sent: number;
+  answered: number;
+  open: number;
+  /** Median minutes to the first reply in this thread. */
+  medianResponseMinutes: number | null;
+  firstMessageAt: string | null;
+  lastMessageAt: string | null;
+};
+
+export type ConversationAnalytics = {
+  conversations: ConversationAnalyticsRow[];
+  total: number;
+  page: number;
+  perPage: number;
+};
+
+export type ListConversationAnalyticsParams = {
+  workspaceId?: string;
+  accountId?: string;
+  /** Reporting period, 1 to 365. Defaults to 7. */
+  days?: number;
+  sort?: 'volume' | 'slowest' | 'recent';
+  page?: number;
+  perPage?: number;
+};
+
+// ─── Broadcasts and sequences ──────────────────────────────────────
+
+/**
+ * Who a broadcast or an enrollment resolves to, expressed over contacts.
+ * Every clause narrows: a contact has to match all of them.
+ */
+export type AudienceFilter = {
+  /** Contacts with a handle on at least one of these networks. */
+  platforms?: string[];
+  labelIds?: string[];
+  source?: ContactSource;
+  fields?: Array<{
+    key: string;
+    op?: 'is' | 'is_not' | 'contains' | 'is_set' | 'is_not_set';
+    value?: string;
+  }>;
+};
+
+export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled';
+
+export type BroadcastCounts = {
+  total: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  pending: number;
+};
+
+export type Broadcast = {
+  id: string;
+  name: string;
+  text: string;
+  account_id: string | null;
+  audience: Record<string, unknown>;
+  status: BroadcastStatus;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  counts?: BroadcastCounts;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type BroadcastPage = {
+  data: Broadcast[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type RecipientStatus = 'pending' | 'sent' | 'skipped' | 'failed';
+
+/**
+ * Why nothing was sent. `window_closed` means the network's messaging window
+ * had shut — Messenger and Instagram take a business-initiated message only
+ * within 24 hours of the contact's last one, so nothing was attempted.
+ */
+export type SkipReason = 'window_closed' | 'no_conversation' | 'unsupported_platform';
+
+export type BroadcastRecipient = {
+  contact_id: string;
+  display_name: string | null;
+  status: RecipientStatus;
+  skip_reason: SkipReason | null;
+  sent_at: string | null;
+  error: string | null;
+};
+
+export type BroadcastRecipientPage = {
+  data: BroadcastRecipient[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListBroadcastsParams = {
+  workspaceId?: string;
+  status?: BroadcastStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateBroadcastInput = {
+  workspaceId: string;
+  /** The connected account the messages go out from. */
+  accountId: string;
+  /** Internal only; never sent to anyone. */
+  name: string;
+  text: string;
+  mediaId?: string | null;
+  /** Omitted means every contact in the workspace. */
+  audience?: AudienceFilter;
+  /** Send it at this time instead of on demand. */
+  scheduledAt?: string | null;
+};
+
+export type UpdateBroadcastInput = {
+  name?: string;
+  text?: string;
+  mediaId?: string | null;
+  audience?: AudienceFilter;
+  scheduledAt?: string | null;
+};
+
+export type ListRecipientsParams = {
+  status?: RecipientStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type SequenceStatus = 'active' | 'paused';
+
+/** One message and how long after the previous step it goes out. */
+export type SequenceStep = {
+  delay_hours: number;
+  text: string;
+  media_id?: string | null;
+};
+
+export type Sequence = {
+  id: string;
+  name: string;
+  account_id: string | null;
+  steps: SequenceStep[];
+  status: SequenceStatus;
+  created_at: string;
+  enrollments?: {
+    total: number;
+    active: number;
+    completed: number;
+    stopped: number;
+    failed: number;
+  };
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type SequencePage = {
+  data: Sequence[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type CreateSequenceInput = {
+  workspaceId: string;
+  accountId: string;
+  name: string;
+  steps: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+export type UpdateSequenceInput = {
+  name?: string;
+  steps?: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+/** Name contacts outright, or the audience they are drawn from. */
+export type EnrollInput = {
+  contactIds?: string[];
+  audience?: AudienceFilter;
+};
+
+export type EnrollmentStatus = 'active' | 'completed' | 'stopped' | 'failed';
+
+export type Enrollment = {
+  id: string;
+  contact_id: string;
+  display_name: string | null;
+  /** Steps already sent, so also the index of the next one. */
+  step: number;
+  next_at: string | null;
+  status: EnrollmentStatus;
+  last_sent_at: string | null;
+  /** On a skipped step, the reason: `window_closed` or `no_conversation`. */
+  error: string | null;
+};
+
+export type EnrollmentPage = {
+  data: Enrollment[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListPageParams = {
+  page?: number;
+  perPage?: number;
 };
 
 // ─── Activity ──────────────────────────────────────────────────────
