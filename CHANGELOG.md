@@ -6,10 +6,54 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `accounts.listDiscordChannels`, `switchDiscordChannel`, `getDiscordIdentity` and
+  `updateDiscordIdentity` read and change where a Discord bot connection posts and the
+  nickname and avatar it wears.
+- `accounts.listDiscordPins`, `deleteDiscordMessage`, `pinDiscordMessage`,
+  `unpinDiscordMessage`, `crosspostDiscordMessage`, `createDiscordThread` and
+  `sendDiscordDm` act on messages in the connected channel; these also need the
+  `publish` scope.
+- `accounts.listDiscordEvents`, `getDiscordEvent`, `createDiscordEvent`,
+  `updateDiscordEvent` and `deleteDiscordEvent` manage the server's scheduled events.
+- `accounts.listDiscordMembers`, `getDiscordMember`, `listDiscordRoles`,
+  `createDiscordRole`, `updateDiscordRole`, `deleteDiscordRole`, `addDiscordMemberRole`
+  and `removeDiscordMemberRole` manage the server's roster and roles. A Discord
+  connection made with a webhook answers `409 webhook_connection` on all of them.
+- `knowledge` resource for the workspace knowledge base: `list`, `create`, `update`,
+  `delete`, `sync` and `search`. A source is an FAQ, a note, a URL on your own site or
+  a plain-text/CSV media item; `search` returns the passages closest to a question, and
+  is what grounds a drafted inbox reply in your own answers. Needs the `inbox` scope.
+- `broadcasts` namespace: one message into every conversation the workspace already has
+  with a segment of its contacts. `list`, `get`, `create`, `update`, `delete`, `send`,
+  `cancel`, and `recipients`. Reading needs the `inbox` scope; `send` and `cancel` also
+  need `publish`.
+- `sequences` namespace: a series of messages on a delay. `list`, `get`, `create`,
+  `update`, `delete`, `enroll`, `unenroll`, and `enrollments`. `enroll` and `unenroll`
+  need `publish` as well as `inbox`.
+- Both honour each network's messaging window server-side. Messenger and Instagram take a
+  business-initiated message only within 24 hours of the contact's last one, so recipients
+  outside it come back `skipped` with `skip_reason: 'window_closed'` and nothing is
+  attempted — the number sent is often lower than the audience.
+
+- `contacts` namespace: the people behind the inbox. `list`, `get`, `create`, `update`,
+  `delete`, `conversations` (the threads one person appears in), `import` (CSV), and
+  `listFields`/`createField`/`updateField`/`deleteField` for the custom columns a
+  workspace keeps. All need the `inbox` scope.
+- `contacts.conversationAnalytics` reads `/v1/analytics/inbox/conversations`: volume and
+  median reply time per thread. Needs the `analytics` scope.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- Meta messaging settings on `accounts`: `getIceBreakers`, `setIceBreakers` and
+  `deleteIceBreakers` (Facebook Pages and Instagram), plus `getPersistentMenu`,
+  `setPersistentMenu`, `deletePersistentMenu`, `getGreeting`, `setGreeting` and
+  `deleteGreeting` (Facebook Pages). Networks without a field answer 400.
+- `accounts.getWebhookSubscription` reports whether the network is still delivering
+  events for an account, and `resubscribeWebhook` puts a lapsed subscription back.
+- `inbox.handover` passes a Messenger thread to another Meta app, or takes it back
+  when no `appId` is given. Needs `inbox` and `publish`.
 
 ## 0.6.0
 
