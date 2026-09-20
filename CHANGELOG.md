@@ -19,6 +19,11 @@ All notable changes to `@fopost/sdk` are documented here.
   `createDiscordRole`, `updateDiscordRole`, `deleteDiscordRole`, `addDiscordMemberRole`
   and `removeDiscordMemberRole` manage the server's roster and roles. A Discord
   connection made with a webhook answers `409 webhook_connection` on all of them.
+- `knowledge` resource for the workspace knowledge base: `list`, `create`, `update`,
+  `delete`, `sync` and `search`. A source is an FAQ, a note, a URL on your own site or
+  a plain-text/CSV media item; `search` returns the passages closest to a question, and
+  is what grounds a drafted inbox reply in your own answers. Needs the `inbox` scope.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
