@@ -2042,3 +2042,126 @@ export type ActivityPage = {
   data: ActivityEvent[];
   meta: { nextCursor: string | null };
 };
+
+// ─── Google Business Profile ───────────────────────────────────────
+
+/**
+ * Business Profile responses relay Google's own shape, field for field, so a
+ * field you know from the Business Profile APIs is the field you get back.
+ */
+export type GoogleBusinessPayload = Record<string, unknown>;
+
+export type GoogleBusinessHoursPeriod = {
+  openDay: GoogleBusinessDay;
+  openTime: string;
+  closeDay: GoogleBusinessDay;
+  closeTime: string;
+};
+
+export type GoogleBusinessDay =
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+/** Omitted fields are left alone; null clears one. */
+export type UpdateGoogleBusinessLocationInput = {
+  title?: string;
+  description?: string | null;
+  websiteUri?: string | null;
+  primaryPhone?: string | null;
+  additionalPhones?: string[];
+  storeCode?: string | null;
+  regularHours?: GoogleBusinessHoursPeriod[];
+};
+
+export type GoogleBusinessAttributeInput = {
+  name: string;
+  values?: Array<string | number | boolean>;
+  uriValues?: string[];
+};
+
+export type GoogleBusinessAttributesParams = {
+  /** List what Google offers for the location's category instead of what is set. */
+  available?: boolean;
+  categoryName?: string;
+  regionCode?: string;
+  languageCode?: string;
+};
+
+export type GoogleBusinessMediaCategory =
+  | 'COVER'
+  | 'PROFILE'
+  | 'LOGO'
+  | 'EXTERIOR'
+  | 'INTERIOR'
+  | 'PRODUCT'
+  | 'AT_WORK'
+  | 'FOOD_AND_DRINK'
+  | 'MENU'
+  | 'COMMON_AREA'
+  | 'ROOMS'
+  | 'TEAMS'
+  | 'ADDITIONAL';
+
+/** The photo comes from the media library; JPEG and PNG only. */
+export type AddGoogleBusinessMediaInput = {
+  mediaId: string;
+  category?: GoogleBusinessMediaCategory;
+  description?: string;
+};
+
+export type GoogleBusinessPlaceActionType =
+  | 'APPOINTMENT'
+  | 'ONLINE_APPOINTMENT'
+  | 'DINING_RESERVATION'
+  | 'FOOD_ORDERING'
+  | 'FOOD_DELIVERY'
+  | 'FOOD_TAKEOUT'
+  | 'SHOP_ONLINE';
+
+export type CreateGoogleBusinessPlaceActionInput = {
+  uri: string;
+  placeActionType: GoogleBusinessPlaceActionType;
+  isPreferred?: boolean;
+};
+
+export type UpdateGoogleBusinessPlaceActionInput = {
+  uri?: string;
+  isPreferred?: boolean;
+};
+
+export type GoogleBusinessVerificationMethod =
+  'ADDRESS' | 'EMAIL' | 'PHONE_CALL' | 'SMS' | 'AUTO' | 'VETTED_PARTNER';
+
+export type StartGoogleBusinessVerificationInput = {
+  method: GoogleBusinessVerificationMethod;
+  languageCode?: string;
+  phoneNumber?: string;
+  emailAddress?: string;
+  mailerContactName?: string;
+};
+
+export type GoogleBusinessDailyMetric =
+  | 'BUSINESS_IMPRESSIONS_DESKTOP_MAPS'
+  | 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH'
+  | 'BUSINESS_IMPRESSIONS_MOBILE_MAPS'
+  | 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH'
+  | 'BUSINESS_CONVERSATIONS'
+  | 'BUSINESS_DIRECTION_REQUESTS'
+  | 'CALL_CLICKS'
+  | 'WEBSITE_CLICKS'
+  | 'BUSINESS_BOOKINGS'
+  | 'BUSINESS_FOOD_ORDERS'
+  | 'BUSINESS_FOOD_MENU_CLICKS';
+
+export type GoogleBusinessPerformanceParams = {
+  /** ISO dates, `2026-09-01`. */
+  startDate: string;
+  endDate: string;
+  /** Defaults to the common set of impressions, calls, directions and clicks. */
+  dailyMetrics?: GoogleBusinessDailyMetric[];
+};
+
+export type GoogleBusinessSearchKeywordsParams = {
+  startDate: string;
+  endDate: string;
+  pageToken?: string;
+};
