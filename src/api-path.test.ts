@@ -98,6 +98,22 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.ads.setStatus('ad1', 'ws', 'paused');
   await fopost.ads.accountTree('act_1', { connectionId: 'c1' });
   await fopost.ads.leadsFeed();
+  await fopost.ads.authorizeGoogle({ workspaceId: 'ws' });
+  await fopost.ads.google.keywords({ connectionId: 'c1', customerId: '1234567890' });
+  await fopost.ads.google.createKeyword({
+    workspaceId: 'ws',
+    connectionId: 'c1',
+    customerId: '1234567890',
+    adGroupId: '1234567890~adGroup~77',
+    text: 'shoes',
+    matchType: 'EXACT',
+  });
+  await fopost.ads.google.assets({ connectionId: 'c1', customerId: '1234567890' });
+  await fopost.ads.google.query({
+    connectionId: 'c1',
+    customerId: '1234567890',
+    query: 'SELECT campaign.id FROM campaign',
+  });
   await fopost.media.presign({
     workspaceId: 'ws',
     filename: 'a.png',
@@ -112,7 +128,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(72);
+    expect(urls.length).toBe(77);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

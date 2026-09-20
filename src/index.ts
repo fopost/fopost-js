@@ -87,6 +87,37 @@ import type {
   AiCreditBalance,
   AudiencesResult,
   AuthorizeMetaAdsInput,
+  AddGoogleNegativeKeywordsInput,
+  AttachGoogleAssetInput,
+  AttachGoogleNegativeKeywordListInput,
+  CreateGoogleAssetGroupInput,
+  CreateGoogleAssetInput,
+  CreateGoogleBidStrategyInput,
+  CreateGoogleConversionActionInput,
+  CreateGoogleKeywordInput,
+  CreateGoogleNegativeKeywordListInput,
+  GoogleAdScheduleSlot,
+  GoogleAdsScope,
+  GoogleAdsWriteScope,
+  GoogleAssetGroup,
+  GoogleAssetsResult,
+  GoogleBidStrategy,
+  GoogleConversionAction,
+  GoogleDateRange,
+  GoogleKeyword,
+  GoogleKeywordIdea,
+  GoogleKeywordIdeasInput,
+  GoogleKeywordMetricsInput,
+  GoogleLocalServicesLead,
+  GoogleQueryInput,
+  GoogleQueryResult,
+  GoogleSearchTerm,
+  GoogleSharedSet,
+  SetGoogleAdScheduleInput,
+  UpdateGoogleAssetGroupInput,
+  UpdateGoogleKeywordInput,
+  UploadGoogleConversionAdjustmentsInput,
+  UploadGoogleConversionsInput,
   BoostPostInput,
   BoostablePost,
   CreateAccountGroupInput,
@@ -1022,7 +1053,12 @@ class KnowledgeResource {
 }
 
 class AdsResource {
-  constructor(private http: HttpClient) {}
+  /** The Search surface no other network has: keywords, assets, conversions, GAQL. */
+  readonly google: GoogleAdsResource;
+
+  constructor(private http: HttpClient) {
+    this.google = new GoogleAdsResource(http);
+  }
 
   /** Boosts and ads created through FoPost, with insights from their last refresh. */
   list(params: { workspaceId?: string } = {}): Promise<Ad[]> {
@@ -1054,6 +1090,11 @@ class AdsResource {
   /** Returns the Meta login URL; the caller finishes it in their own browser. */
   authorizeMeta(input: AuthorizeMetaAdsInput): Promise<{ url: string }> {
     return this.http.post<{ url: string }>('/v1/ads/connections/meta/authorize', input);
+  }
+
+  /** Returns the Google login URL to send the user to. */
+  authorizeGoogle(input: AuthorizeMetaAdsInput): Promise<{ url: string }> {
+    return this.http.post<{ url: string }>('/v1/ads/connections/google/authorize', input);
   }
 
   /** Also deletes every ad record created through the connection. */
@@ -1725,6 +1766,193 @@ class AdsResource {
 
 function accountQuery(params: { workspaceId?: string; connectionId: string; adAccountId: string }) {
   return { ...metaQuery(params), ad_account_id: params.adAccountId };
+}
+
+/**
+ * Google Ads only. Campaigns, ad groups, ads, audiences and insights are on
+ * `ads` itself and work across networks; what lives here has no equivalent
+ * elsewhere. Every call names a `customerId` the connection's grant reaches.
+ */
+class GoogleAdsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Keywords on the account, or on one ad group. */
+  keywords(scope: GoogleAdsScope, params: { adGroupId?: string } = {}): Promise<GoogleKeyword[]> {
+    return this.http.get<GoogleKeyword[]>('/v1/ads/google/keywords', {
+      ...googleQuery(scope),
+      ad_group_id: params.adGroupId,
+    });
+  }
+
+  /** Needs the `publish` scope as well as `ads`: the keyword goes live. */
+  createKeyword(input: CreateGoogleKeywordInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/keywords', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateKeyword(id: string, input: UpdateGoogleKeywordInput): Promise<{ id: string }> {
+    return this.http.request<{ id: string }>('PATCH', `/v1/ads/google/keywords/${id}`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteKeyword(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/google/keywords/${id}`, scope);
+  }
+
+  /** Ideas from seed keywords, a landing page, or both. */
+  keywordIdeas(input: GoogleKeywordIdeasInput): Promise<GoogleKeywordIdea[]> {
+    return this.http.post<GoogleKeywordIdea[]>('/v1/ads/google/keyword-ideas', input);
+  }
+
+  keywordMetrics(input: GoogleKeywordMetricsInput): Promise<GoogleKeywordIdea[]> {
+    return this.http.post<GoogleKeywordIdea[]>('/v1/ads/google/keyword-metrics', input);
+  }
+
+  /** What people actually searched, with the metrics each term earned. */
+  searchTerms(scope: GoogleAdsScope, range: GoogleDateRange): Promise<GoogleSearchTerm[]> {
+    return this.http.get<GoogleSearchTerm[]>('/v1/ads/google/search-terms', {
+      ...googleQuery(scope),
+      ...range,
+    });
+  }
+
+  bidStrategies(scope: GoogleAdsScope): Promise<GoogleBidStrategy[]> {
+    return this.http.get<GoogleBidStrategy[]>('/v1/ads/google/bid-strategies', googleQuery(scope));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createBidStrategy(input: CreateGoogleBidStrategyInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/bid-strategies', input);
+  }
+
+  adSchedule(scope: GoogleAdsScope, campaignId: string): Promise<GoogleAdScheduleSlot[]> {
+    return this.http.get<GoogleAdScheduleSlot[]>('/v1/ads/google/ad-schedule', {
+      ...googleQuery(scope),
+      campaign_id: campaignId,
+    });
+  }
+
+  /** Replaces every slot on the campaign. Needs the `publish` scope as well as `ads`. */
+  setAdSchedule(input: SetGoogleAdScheduleInput): Promise<{ slots: number }> {
+    return this.http.request<{ slots: number }>('PUT', '/v1/ads/google/ad-schedule', input);
+  }
+
+  negativeKeywordLists(scope: GoogleAdsScope): Promise<GoogleSharedSet[]> {
+    return this.http.get<GoogleSharedSet[]>('/v1/ads/google/negative-keywords', googleQuery(scope));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createNegativeKeywordList(input: CreateGoogleNegativeKeywordListInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/negative-keywords', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  addNegativeKeywords(input: AddGoogleNegativeKeywordsInput): Promise<{ added: number }> {
+    return this.http.post<{ added: number }>('/v1/ads/google/negative-keywords/keywords', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  attachNegativeKeywordList(
+    input: AttachGoogleNegativeKeywordListInput,
+  ): Promise<{ campaignId: string; sharedSetId: string }> {
+    return this.http.post('/v1/ads/google/negative-keywords/attach', input);
+  }
+
+  /** Sitelinks, callouts and snippets, with the links that put each one under an ad. */
+  assets(scope: GoogleAdsScope): Promise<GoogleAssetsResult> {
+    return this.http.get<GoogleAssetsResult>('/v1/ads/google/assets', googleQuery(scope));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createAsset(input: CreateGoogleAssetInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/assets', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  attachAsset(input: AttachGoogleAssetInput): Promise<{ assetId: string }> {
+    return this.http.post<{ assetId: string }>('/v1/ads/google/assets/attach', input);
+  }
+
+  /**
+   * Removes the links that put the asset under an ad; the asset itself is
+   * permanent on Google. Needs the `publish` scope as well as `ads`.
+   */
+  deleteAsset(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/google/assets/${id}`, scope);
+  }
+
+  assetGroups(
+    scope: GoogleAdsScope,
+    params: { campaignId?: string } = {},
+  ): Promise<GoogleAssetGroup[]> {
+    return this.http.get<GoogleAssetGroup[]>('/v1/ads/google/asset-groups', {
+      ...googleQuery(scope),
+      campaign_id: params.campaignId,
+    });
+  }
+
+  /** Needs the `publish` scope as well as `ads`. Starts paused unless `status` says otherwise. */
+  createAssetGroup(input: CreateGoogleAssetGroupInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/asset-groups', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateAssetGroup(id: string, input: UpdateGoogleAssetGroupInput): Promise<{ id: string }> {
+    return this.http.request<{ id: string }>('PATCH', `/v1/ads/google/asset-groups/${id}`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteAssetGroup(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/google/asset-groups/${id}`, scope);
+  }
+
+  /** Leads from Local Services Ads, read live and never stored. */
+  localServicesLeads(
+    scope: GoogleAdsScope,
+    range: GoogleDateRange,
+  ): Promise<GoogleLocalServicesLead[]> {
+    return this.http.get<GoogleLocalServicesLead[]>('/v1/ads/google/local-services', {
+      ...googleQuery(scope),
+      ...range,
+    });
+  }
+
+  conversionActions(scope: GoogleAdsScope): Promise<GoogleConversionAction[]> {
+    return this.http.get<GoogleConversionAction[]>(
+      '/v1/ads/google/conversions',
+      googleQuery(scope),
+    );
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createConversionAction(input: CreateGoogleConversionActionInput): Promise<{ id: string }> {
+    return this.http.post<{ id: string }>('/v1/ads/google/conversions', input);
+  }
+
+  /** Offline conversions, matched to a click. Needs the `publish` scope as well as `ads`. */
+  uploadConversions(input: UploadGoogleConversionsInput): Promise<{ uploaded: number }> {
+    return this.http.post<{ uploaded: number }>('/v1/ads/google/conversions/upload', input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  uploadConversionAdjustments(
+    input: UploadGoogleConversionAdjustmentsInput,
+  ): Promise<{ uploaded: number }> {
+    return this.http.post<{ uploaded: number }>('/v1/ads/google/conversions/adjustments', input);
+  }
+
+  /** A raw read-only GAQL SELECT. Rows come back exactly as Google returns them. */
+  query(input: GoogleQueryInput): Promise<GoogleQueryResult> {
+    return this.http.post<GoogleQueryResult>('/v1/ads/insights/query', input);
+  }
+}
+
+function googleQuery(scope: GoogleAdsScope) {
+  return {
+    workspace_id: scope.workspaceId,
+    connection_id: scope.connectionId,
+    customer_id: scope.customerId,
+  };
 }
 
 function metaQuery(params: { workspaceId?: string; connectionId: string }) {
