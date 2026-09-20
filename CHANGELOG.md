@@ -10,6 +10,16 @@ All notable changes to `@fopost/sdk` are documented here.
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- `whatsapp` resource for a WhatsApp Business connection: the business profile
+  (`getProfile`, `updateProfile`, `requestDisplayName`, `setUsername`), message templates
+  including the platform's own library (`listTemplates`, `createTemplate`,
+  `importTemplate`, …), groups, blocking, commerce settings and flows
+  (`createFlow`, `uploadFlowJson`, `publishFlow`, `listFlowResponses`, …), plus
+  `getAccountEvents`. All need the `accounts` scope.
+- `whatsapp.createSandboxSession` and `listSandboxSessions` invite a tester to the
+  platform-owned WhatsApp test number. Inviting sends a template, so it needs the
+  `publish` scope.
+- `'whatsapp'` on the `Platform` union.
 
 ## 0.6.0
 

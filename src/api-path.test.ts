@@ -76,6 +76,58 @@ async function callEveryEndpoint(fopost: FoPost) {
     size: 1,
   });
   await fopost.media.complete('up1');
+  await fopost.whatsapp.getProfile('a1');
+  await fopost.whatsapp.updateProfile('a1', { about: 'We ship on Fridays' });
+  await fopost.whatsapp.requestDisplayName('a1', 'Yourbrand');
+  await fopost.whatsapp.setUsername('a1', 'yourbrand');
+  await fopost.whatsapp.listTemplates('a1');
+  await fopost.whatsapp.listTemplateLibrary('a1');
+  await fopost.whatsapp.getTemplate('a1', 't1');
+  await fopost.whatsapp.createTemplate('a1', {
+    name: 'order_shipped',
+    language: 'en_US',
+    category: 'UTILITY',
+    components: [{ type: 'BODY', text: 'On its way.' }],
+  });
+  await fopost.whatsapp.importTemplate('a1', {
+    libraryTemplateName: 'order_confirmation',
+    name: 'order_confirmed',
+    language: 'en_US',
+    category: 'UTILITY',
+  });
+  await fopost.whatsapp.updateTemplate('a1', 't1', { category: 'MARKETING' });
+  await fopost.whatsapp.deleteTemplate('a1', 't1', { name: 'order_shipped' });
+  await fopost.whatsapp.listGroups('a1');
+  await fopost.whatsapp.createGroup('a1', { subject: 'Launch crew' });
+  await fopost.whatsapp.getGroup('a1', 'g1');
+  await fopost.whatsapp.updateGroup('a1', 'g1', { subject: 'Crew' });
+  await fopost.whatsapp.deleteGroup('a1', 'g1');
+  await fopost.whatsapp.getGroupInviteLink('a1', 'g1');
+  await fopost.whatsapp.resetGroupInviteLink('a1', 'g1');
+  await fopost.whatsapp.removeGroupParticipants('a1', 'g1', ['+15551234567']);
+  await fopost.whatsapp.listBlocked('a1');
+  await fopost.whatsapp.blockUsers('a1', ['+15551234567']);
+  await fopost.whatsapp.unblockUsers('a1', ['+15551234567']);
+  await fopost.whatsapp.getCommerceSettings('a1');
+  await fopost.whatsapp.updateCommerceSettings('a1', { cartEnabled: true });
+  await fopost.whatsapp.linkCatalog('a1', 'cat1');
+  await fopost.whatsapp.listFlows('a1');
+  await fopost.whatsapp.getFlow('a1', 'f1');
+  await fopost.whatsapp.createFlow('a1', {
+    name: 'Book a fitting',
+    categories: ['LEAD_GENERATION'],
+  });
+  await fopost.whatsapp.updateFlow('a1', 'f1', { name: 'Fitting' });
+  await fopost.whatsapp.deleteFlow('a1', 'f1');
+  await fopost.whatsapp.uploadFlowJson('a1', 'f1', { version: '7.0', screens: [] });
+  await fopost.whatsapp.publishFlow('a1', 'f1');
+  await fopost.whatsapp.deprecateFlow('a1', 'f1');
+  await fopost.whatsapp.listFlowResponses('a1');
+  await fopost.whatsapp.getEncryptionKeyStatus('a1');
+  await fopost.whatsapp.setEncryptionKey('a1', '-----BEGIN PUBLIC KEY-----');
+  await fopost.whatsapp.getAccountEvents('a1');
+  await fopost.whatsapp.listSandboxSessions({ workspaceId: 'ws' });
+  await fopost.whatsapp.createSandboxSession({ workspaceId: 'ws', phoneNumber: '+15551234567' });
 }
 
 describe('request paths', () => {
@@ -83,7 +135,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(48);
+    expect(urls.length).toBe(87);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

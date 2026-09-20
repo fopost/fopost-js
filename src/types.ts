@@ -35,7 +35,8 @@ export type Platform =
   | 'wordpress'
   | 'nostr'
   | 'whop'
-  | 'skool';
+  | 'skool'
+  | 'whatsapp';
 
 export type PostStatus =
   'draft' | 'pending_approval' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'cancelled';
@@ -1101,4 +1102,157 @@ export type DirectUploadInput = {
   filename: string;
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
+};
+
+// ─── WhatsApp Business ─────────────────────────────────────────────
+//
+// The platform owns these resources, so every read is live and nothing here is
+// a cached copy. A template's status is whatever the platform assigned it.
+
+export type WhatsappTemplateCategory = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+
+export type WhatsappTemplate = {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  /** The review status the platform assigned: APPROVED, PENDING, REJECTED, … */
+  status: string;
+  rejectedReason: string | null;
+  components: unknown[];
+  qualityScore: string | null;
+};
+
+export type CreateWhatsappTemplateInput = {
+  /** Lowercase letters, digits and underscores. */
+  name: string;
+  language: string;
+  category: WhatsappTemplateCategory;
+  components: Array<Record<string, unknown>>;
+  allowCategoryChange?: boolean;
+};
+
+export type UpdateWhatsappTemplateInput = {
+  category?: WhatsappTemplateCategory;
+  components?: Array<Record<string, unknown>>;
+};
+
+export type ImportWhatsappTemplateInput = {
+  libraryTemplateName: string;
+  name: string;
+  language: string;
+  category: WhatsappTemplateCategory;
+  libraryTemplateButtonInputs?: Array<Record<string, unknown>>;
+};
+
+export type WhatsappProfile = {
+  about: string | null;
+  address: string | null;
+  description: string | null;
+  email: string | null;
+  vertical: string | null;
+  websites: string[];
+  profilePictureUrl: string | null;
+  displayName: string | null;
+  /** The platform's review state for the display name. */
+  displayNameStatus: string | null;
+  username: string | null;
+  qualityRating: string | null;
+  messagingLimitTier: string | null;
+};
+
+export type UpdateWhatsappProfileInput = {
+  about?: string;
+  address?: string;
+  description?: string;
+  vertical?: string;
+  websites?: string[];
+  /** A library media id, uploaded first. */
+  profilePictureMediaId?: string;
+};
+
+export type WhatsappGroup = {
+  id: string;
+  subject: string;
+  description: string | null;
+  participantCount: number | null;
+  inviteLink: string | null;
+  createdAt: string | null;
+};
+
+export type WhatsappBlockResult = {
+  blocked?: string[];
+  unblocked?: string[];
+  failed: string[];
+};
+
+export type WhatsappCommerceSettings = {
+  cartEnabled: boolean | null;
+  catalogVisible: boolean | null;
+  catalogId: string | null;
+};
+
+export type WhatsappFlowCategory =
+  | 'SIGN_UP'
+  | 'SIGN_IN'
+  | 'APPOINTMENT_BOOKING'
+  | 'LEAD_GENERATION'
+  | 'CONTACT_US'
+  | 'CUSTOMER_SUPPORT'
+  | 'SURVEY'
+  | 'OTHER';
+
+export type WhatsappFlow = {
+  id: string;
+  name: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'DEPRECATED' | 'BLOCKED' | string;
+  categories: string[];
+  validationErrors: Array<{ error: string; message: string }>;
+  endpointUri: string | null;
+  jsonVersion: string | null;
+  previewUrl: string | null;
+  previewExpiresAt: string | null;
+};
+
+export type CreateWhatsappFlowInput = {
+  name: string;
+  categories: WhatsappFlowCategory[];
+  /** Where the platform calls back for a flow that reads live data. */
+  endpointUri?: string;
+  cloneFlowId?: string;
+};
+
+export type UpdateWhatsappFlowInput = {
+  name?: string;
+  categories?: WhatsappFlowCategory[];
+  endpointUri?: string;
+};
+
+export type WhatsappFlowJsonResult = {
+  success: boolean;
+  validationErrors: Array<{ error: string; message: string }>;
+};
+
+export type WhatsappFlowResponse = {
+  messageId: string;
+  waId: string | null;
+  flowToken: string | null;
+  answers: Record<string, unknown>;
+  respondedAt: string | null;
+};
+
+/** Only whether a key is registered travels; the key itself never comes back. */
+export type WhatsappEncryptionKeyStatus = {
+  hasKey: boolean;
+  signatureStatus: string | null;
+};
+
+export type WhatsappSandboxSession = {
+  id: string;
+  status: 'invited' | 'active' | 'expired';
+  /** The last four digits only; the number itself is never stored. */
+  phoneNumberLast4: string;
+  invitedAt: string;
+  activatedAt: string | null;
+  expiresAt: string;
 };

@@ -111,6 +111,22 @@ import type {
   ValidatePostResult,
   UploadedMedia,
   Workspace,
+  WhatsappTemplate,
+  CreateWhatsappTemplateInput,
+  UpdateWhatsappTemplateInput,
+  ImportWhatsappTemplateInput,
+  WhatsappProfile,
+  UpdateWhatsappProfileInput,
+  WhatsappGroup,
+  WhatsappBlockResult,
+  WhatsappCommerceSettings,
+  WhatsappFlow,
+  CreateWhatsappFlowInput,
+  UpdateWhatsappFlowInput,
+  WhatsappFlowJsonResult,
+  WhatsappFlowResponse,
+  WhatsappEncryptionKeyStatus,
+  WhatsappSandboxSession,
 } from './types.js';
 
 export { FoPostError };
@@ -132,6 +148,7 @@ export class FoPost {
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly whatsapp: WhatsappResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -145,6 +162,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.whatsapp = new WhatsappResource(this.http);
   }
 }
 
@@ -1003,5 +1021,333 @@ class MediaResource {
       throw new FoPostError(text || `Upload failed: HTTP ${res.status}`, res.status);
     }
     return this.complete(presigned.uploadId);
+  }
+}
+
+/**
+ * WhatsApp Business. The platform owns templates, flows, the profile and the
+ * commerce settings, so every method here is a live read or write against the
+ * customer's own WhatsApp Business Account. All of it answers 503 until
+ * WhatsApp is set up on the deployment.
+ */
+class WhatsappResource {
+  constructor(private http: HttpClient) {}
+
+  getProfile(accountId: string): Promise<WhatsappProfile> {
+    return this.http.get<WhatsappProfile>(`/v1/accounts/${accountId}/whatsapp/profile`);
+  }
+
+  updateProfile(accountId: string, input: UpdateWhatsappProfileInput): Promise<WhatsappProfile> {
+    const body: Record<string, unknown> = {};
+    if (input.about !== undefined) body.about = input.about;
+    if (input.address !== undefined) body.address = input.address;
+    if (input.description !== undefined) body.description = input.description;
+    if (input.vertical !== undefined) body.vertical = input.vertical;
+    if (input.websites !== undefined) body.websites = input.websites;
+    if (input.profilePictureMediaId !== undefined) {
+      body.profile_picture_media_id = input.profilePictureMediaId;
+    }
+    return this.http.patch<WhatsappProfile>(`/v1/accounts/${accountId}/whatsapp/profile`, body);
+  }
+
+  /** A review, not a write: the number keeps its old name until it passes. */
+  requestDisplayName(accountId: string, displayName: string): Promise<{ requested: boolean }> {
+    return this.http.post<{ requested: boolean }>(
+      `/v1/accounts/${accountId}/whatsapp/profile/display-name`,
+      { display_name: displayName },
+    );
+  }
+
+  setUsername(accountId: string, username: string): Promise<WhatsappProfile> {
+    return this.http.put<WhatsappProfile>(`/v1/accounts/${accountId}/whatsapp/profile/username`, {
+      username,
+    });
+  }
+
+  listTemplates(accountId: string, params: { after?: string } = {}): Promise<WhatsappTemplate[]> {
+    return this.http.get<WhatsappTemplate[]>(`/v1/accounts/${accountId}/whatsapp/templates`, {
+      after: params.after,
+    });
+  }
+
+  /** The platform's pre-written templates, for adapting instead of drafting. */
+  listTemplateLibrary(
+    accountId: string,
+    params: { search?: string } = {},
+  ): Promise<Array<Record<string, unknown>>> {
+    return this.http.get<Array<Record<string, unknown>>>(
+      `/v1/accounts/${accountId}/whatsapp/templates/library`,
+      { search: params.search },
+    );
+  }
+
+  getTemplate(accountId: string, templateId: string): Promise<WhatsappTemplate> {
+    return this.http.get<WhatsappTemplate>(
+      `/v1/accounts/${accountId}/whatsapp/templates/${templateId}`,
+    );
+  }
+
+  /** Files a template for review; the result carries the status the platform gave it. */
+  createTemplate(accountId: string, input: CreateWhatsappTemplateInput): Promise<WhatsappTemplate> {
+    const body: Record<string, unknown> = {
+      name: input.name,
+      language: input.language,
+      category: input.category,
+      components: input.components,
+    };
+    if (input.allowCategoryChange !== undefined) {
+      body.allow_category_change = input.allowCategoryChange;
+    }
+    return this.http.post<WhatsappTemplate>(`/v1/accounts/${accountId}/whatsapp/templates`, body);
+  }
+
+  importTemplate(accountId: string, input: ImportWhatsappTemplateInput): Promise<WhatsappTemplate> {
+    const body: Record<string, unknown> = {
+      library_template_name: input.libraryTemplateName,
+      name: input.name,
+      language: input.language,
+      category: input.category,
+    };
+    if (input.libraryTemplateButtonInputs !== undefined) {
+      body.library_template_button_inputs = input.libraryTemplateButtonInputs;
+    }
+    return this.http.post<WhatsappTemplate>(
+      `/v1/accounts/${accountId}/whatsapp/templates/import`,
+      body,
+    );
+  }
+
+  updateTemplate(
+    accountId: string,
+    templateId: string,
+    input: UpdateWhatsappTemplateInput,
+  ): Promise<WhatsappTemplate> {
+    const body: Record<string, unknown> = {};
+    if (input.category !== undefined) body.category = input.category;
+    if (input.components !== undefined) body.components = input.components;
+    return this.http.patch<WhatsappTemplate>(
+      `/v1/accounts/${accountId}/whatsapp/templates/${templateId}`,
+      body,
+    );
+  }
+
+  /** The name is required: it is what the platform deletes by. */
+  deleteTemplate(
+    accountId: string,
+    templateId: string,
+    params: { name: string },
+  ): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${accountId}/whatsapp/templates/${templateId}?name=${encodeURIComponent(params.name)}`,
+    );
+  }
+
+  listGroups(accountId: string): Promise<WhatsappGroup[]> {
+    return this.http.get<WhatsappGroup[]>(`/v1/accounts/${accountId}/whatsapp/groups`);
+  }
+
+  /** Participation is invite-only: send the invite link, there is no add. */
+  createGroup(
+    accountId: string,
+    input: { subject: string; description?: string },
+  ): Promise<WhatsappGroup> {
+    const body: Record<string, unknown> = { subject: input.subject };
+    if (input.description !== undefined) body.description = input.description;
+    return this.http.post<WhatsappGroup>(`/v1/accounts/${accountId}/whatsapp/groups`, body);
+  }
+
+  getGroup(accountId: string, groupId: string): Promise<WhatsappGroup> {
+    return this.http.get<WhatsappGroup>(`/v1/accounts/${accountId}/whatsapp/groups/${groupId}`);
+  }
+
+  updateGroup(
+    accountId: string,
+    groupId: string,
+    input: { subject?: string; description?: string },
+  ): Promise<WhatsappGroup> {
+    const body: Record<string, unknown> = {};
+    if (input.subject !== undefined) body.subject = input.subject;
+    if (input.description !== undefined) body.description = input.description;
+    return this.http.patch<WhatsappGroup>(
+      `/v1/accounts/${accountId}/whatsapp/groups/${groupId}`,
+      body,
+    );
+  }
+
+  deleteGroup(accountId: string, groupId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${accountId}/whatsapp/groups/${groupId}`,
+    );
+  }
+
+  getGroupInviteLink(accountId: string, groupId: string): Promise<{ inviteLink: string | null }> {
+    return this.http.get<{ inviteLink: string | null }>(
+      `/v1/accounts/${accountId}/whatsapp/groups/${groupId}/invite-link`,
+    );
+  }
+
+  /** Issues a new link and invalidates the old one. */
+  resetGroupInviteLink(accountId: string, groupId: string): Promise<{ inviteLink: string | null }> {
+    return this.http.post<{ inviteLink: string | null }>(
+      `/v1/accounts/${accountId}/whatsapp/groups/${groupId}/invite-link`,
+    );
+  }
+
+  removeGroupParticipants(
+    accountId: string,
+    groupId: string,
+    users: string[],
+  ): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${accountId}/whatsapp/groups/${groupId}/participants`,
+      { users },
+    );
+  }
+
+  listBlocked(accountId: string, params: { after?: string } = {}): Promise<string[]> {
+    return this.http.get<string[]>(`/v1/accounts/${accountId}/whatsapp/block`, {
+      after: params.after,
+    });
+  }
+
+  blockUsers(accountId: string, users: string[]): Promise<WhatsappBlockResult> {
+    return this.http.post<WhatsappBlockResult>(`/v1/accounts/${accountId}/whatsapp/block`, {
+      users,
+    });
+  }
+
+  unblockUsers(accountId: string, users: string[]): Promise<WhatsappBlockResult> {
+    return this.http.delete<WhatsappBlockResult>(`/v1/accounts/${accountId}/whatsapp/block`, {
+      users,
+    });
+  }
+
+  getCommerceSettings(accountId: string): Promise<WhatsappCommerceSettings> {
+    return this.http.get<WhatsappCommerceSettings>(`/v1/accounts/${accountId}/whatsapp/commerce`);
+  }
+
+  updateCommerceSettings(
+    accountId: string,
+    input: { cartEnabled?: boolean; catalogVisible?: boolean },
+  ): Promise<WhatsappCommerceSettings> {
+    const body: Record<string, unknown> = {};
+    if (input.cartEnabled !== undefined) body.is_cart_enabled = input.cartEnabled;
+    if (input.catalogVisible !== undefined) body.is_catalog_visible = input.catalogVisible;
+    return this.http.patch<WhatsappCommerceSettings>(
+      `/v1/accounts/${accountId}/whatsapp/commerce`,
+      body,
+    );
+  }
+
+  linkCatalog(accountId: string, catalogId: string): Promise<WhatsappCommerceSettings> {
+    return this.http.post<WhatsappCommerceSettings>(
+      `/v1/accounts/${accountId}/whatsapp/commerce/catalog`,
+      { catalog_id: catalogId },
+    );
+  }
+
+  listFlows(accountId: string): Promise<WhatsappFlow[]> {
+    return this.http.get<WhatsappFlow[]>(`/v1/accounts/${accountId}/whatsapp/flows`);
+  }
+
+  getFlow(accountId: string, flowId: string): Promise<WhatsappFlow> {
+    return this.http.get<WhatsappFlow>(`/v1/accounts/${accountId}/whatsapp/flows/${flowId}`);
+  }
+
+  createFlow(accountId: string, input: CreateWhatsappFlowInput): Promise<WhatsappFlow> {
+    const body: Record<string, unknown> = { name: input.name, categories: input.categories };
+    if (input.endpointUri !== undefined) body.endpoint_uri = input.endpointUri;
+    if (input.cloneFlowId !== undefined) body.clone_flow_id = input.cloneFlowId;
+    return this.http.post<WhatsappFlow>(`/v1/accounts/${accountId}/whatsapp/flows`, body);
+  }
+
+  updateFlow(
+    accountId: string,
+    flowId: string,
+    input: UpdateWhatsappFlowInput,
+  ): Promise<WhatsappFlow> {
+    const body: Record<string, unknown> = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.categories !== undefined) body.categories = input.categories;
+    if (input.endpointUri !== undefined) body.endpoint_uri = input.endpointUri;
+    return this.http.patch<WhatsappFlow>(
+      `/v1/accounts/${accountId}/whatsapp/flows/${flowId}`,
+      body,
+    );
+  }
+
+  /** Drafts only; a published flow is deprecated instead. */
+  deleteFlow(accountId: string, flowId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${accountId}/whatsapp/flows/${flowId}`,
+    );
+  }
+
+  /** The platform answers with its validation errors rather than refusing. */
+  uploadFlowJson(
+    accountId: string,
+    flowId: string,
+    flowJson: Record<string, unknown>,
+  ): Promise<WhatsappFlowJsonResult> {
+    return this.http.put<WhatsappFlowJsonResult>(
+      `/v1/accounts/${accountId}/whatsapp/flows/${flowId}/json`,
+      { flow_json: flowJson },
+    );
+  }
+
+  publishFlow(accountId: string, flowId: string): Promise<WhatsappFlow> {
+    return this.http.post<WhatsappFlow>(
+      `/v1/accounts/${accountId}/whatsapp/flows/${flowId}/publish`,
+    );
+  }
+
+  deprecateFlow(accountId: string, flowId: string): Promise<WhatsappFlow> {
+    return this.http.post<WhatsappFlow>(
+      `/v1/accounts/${accountId}/whatsapp/flows/${flowId}/deprecate`,
+    );
+  }
+
+  listFlowResponses(accountId: string): Promise<WhatsappFlowResponse[]> {
+    return this.http.get<WhatsappFlowResponse[]>(
+      `/v1/accounts/${accountId}/whatsapp/flows/responses`,
+    );
+  }
+
+  getEncryptionKeyStatus(accountId: string): Promise<WhatsappEncryptionKeyStatus> {
+    return this.http.get<WhatsappEncryptionKeyStatus>(
+      `/v1/accounts/${accountId}/whatsapp/flows/encryption-key`,
+    );
+  }
+
+  /** The public half only; the private half stays with the customer. */
+  setEncryptionKey(
+    accountId: string,
+    businessPublicKey: string,
+  ): Promise<WhatsappEncryptionKeyStatus> {
+    return this.http.put<WhatsappEncryptionKeyStatus>(
+      `/v1/accounts/${accountId}/whatsapp/flows/encryption-key`,
+      { business_public_key: businessPublicKey },
+    );
+  }
+
+  getAccountEvents(accountId: string): Promise<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`/v1/accounts/${accountId}/whatsapp/events`);
+  }
+
+  listSandboxSessions(params: { workspaceId: string }): Promise<WhatsappSandboxSession[]> {
+    return this.http.get<WhatsappSandboxSession[]>('/v1/whatsapp/sandbox/sessions', {
+      workspaceId: params.workspaceId,
+    });
+  }
+
+  /** Sends a template from the platform-owned test number, so it needs the publish scope. */
+  createSandboxSession(input: {
+    workspaceId: string;
+    phoneNumber: string;
+  }): Promise<WhatsappSandboxSession> {
+    return this.http.post<WhatsappSandboxSession>('/v1/whatsapp/sandbox/sessions', {
+      workspaceId: input.workspaceId,
+      phoneNumber: input.phoneNumber,
+    });
   }
 }
