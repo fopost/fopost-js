@@ -1271,3 +1271,75 @@ export type DirectUploadInput = {
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
 };
+
+// ─── Knowledge base ────────────────────────────────────────────────
+//
+// What a workspace has told FoPost about itself, used to ground a drafted
+// reply in its own answers rather than an invented one.
+
+export type KnowledgeSourceKind = 'faq' | 'text' | 'url' | 'file';
+export type KnowledgeSourceStatus = 'pending' | 'syncing' | 'ready' | 'failed';
+
+export type KnowledgeSource = {
+  /** Public knowledge source id (uuid). */
+  id: string;
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Only a `ready` source is searched. */
+  status: KnowledgeSourceStatus;
+  /** Why the last sync failed, in plain words. */
+  statusMessage: string | null;
+  /** Set for `url` sources. */
+  url: string | null;
+  /** Set for `file` sources: the media library item read. */
+  mediaId: string | null;
+  /** Null means the source serves the whole workspace. */
+  brandVoiceId: string | null;
+  /** Searchable passages the last sync produced. */
+  chunkCount: number;
+  /** The typed text, for `faq` and `text` sources only. */
+  content: string | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** One retrieved passage, with the source it came from so a reply can cite it. */
+export type KnowledgeMatch = {
+  sourceId: string;
+  sourceTitle: string;
+  sourceKind: KnowledgeSourceKind;
+  sourceUrl: string | null;
+  text: string;
+  /** Similarity to the question, 0-1. */
+  score: number;
+};
+
+export type CreateKnowledgeSourceInput = {
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Required for `faq` and `text`. */
+  content?: string;
+  /** Required for `url`. */
+  url?: string;
+  /** Required for `file`: a plain-text or CSV media library item. */
+  mediaId?: string;
+  brandVoiceId?: string | null;
+  workspaceId?: string;
+};
+
+export type UpdateKnowledgeSourceInput = {
+  title?: string;
+  content?: string;
+  url?: string;
+  brandVoiceId?: string | null;
+};
+
+export type SearchKnowledgeParams = {
+  /** The question, in plain words. */
+  q: string;
+  /** How many passages, default 5, max 20. */
+  topK?: number;
+  brandVoiceId?: string;
+  workspaceId?: string;
+};

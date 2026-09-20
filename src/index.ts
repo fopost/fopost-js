@@ -68,6 +68,12 @@ import type {
   InboxApproval,
   InboxConversation,
   InboxItem,
+  KnowledgeSource,
+  KnowledgeSourceStatus,
+  KnowledgeMatch,
+  CreateKnowledgeSourceInput,
+  UpdateKnowledgeSourceInput,
+  SearchKnowledgeParams,
   InboxPage,
   InboxPlatform,
   InboxRefreshResult,
@@ -153,6 +159,7 @@ export class FoPost {
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly knowledge: KnowledgeResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -166,6 +173,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.knowledge = new KnowledgeResource(this.http);
   }
 }
 
@@ -838,6 +846,63 @@ class InboxResource {
 
   rejectReply(id: number): Promise<{ id: number; outcome: string }> {
     return this.http.post(`/v1/inbox/approvals/${id}/reject`);
+  }
+}
+
+/**
+ * The workspace's own answers, pages and files. Adding a source queues it for
+ * indexing, so it comes back `pending` and turns `ready` once searchable.
+ */
+class KnowledgeResource {
+  constructor(private http: HttpClient) {}
+
+  list(params: { workspaceId?: string } = {}): Promise<KnowledgeSource[]> {
+    return this.http.get<KnowledgeSource[]>('/v1/knowledge/sources', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  create(input: CreateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.post<KnowledgeSource>('/v1/knowledge/sources', {
+      kind: input.kind,
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      media_id: input.mediaId,
+      brand_voice_id: input.brandVoiceId,
+      workspace_id: input.workspaceId,
+    });
+  }
+
+  update(id: string, input: UpdateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.patch<KnowledgeSource>(`/v1/knowledge/sources/${id}`, {
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+
+  delete(id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.http.delete<{ id: string; deleted: boolean }>(`/v1/knowledge/sources/${id}`);
+  }
+
+  /** Read the source again — a `url` source is re-fetched. Returns once queued. */
+  sync(id: string): Promise<{ id: string; status: KnowledgeSourceStatus }> {
+    return this.http.post<{ id: string; status: KnowledgeSourceStatus }>(
+      `/v1/knowledge/sources/${id}/sync`,
+      {},
+    );
+  }
+
+  /** The passages closest to a question. Empty when nothing stored answers it. */
+  search(params: SearchKnowledgeParams): Promise<KnowledgeMatch[]> {
+    return this.http.get<KnowledgeMatch[]>('/v1/knowledge/search', {
+      q: params.q,
+      top_k: params.topK,
+      brand_voice_id: params.brandVoiceId,
+      workspace_id: params.workspaceId,
+    });
   }
 }
 
