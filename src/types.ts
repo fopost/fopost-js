@@ -736,25 +736,31 @@ export type CreateLeadFormInput = {
   followUpUrl?: string;
 };
 
-export type AuthorizeMetaAdsInput = {
+export type AuthorizeAdsInput = {
   workspaceId: string;
-  method?: 'business' | 'user';
-  /** Dashboard path to land on after Meta redirects back. */
+  /** The ad network to connect. Defaults to `meta`. */
+  provider?: string;
+  /** The network's own login method; `business` or `user` on Meta. */
+  method?: string;
+  /** Dashboard path to land on after the network redirects back. */
   returnTo?: string;
 };
 
+/** @deprecated Use {@link AuthorizeAdsInput}. */
+export type AuthorizeMetaAdsInput = AuthorizeAdsInput;
+
 // ─── Ads: campaign tree, creatives, insights, leads ────────────────
 
-/** A Meta object read inside a workspace. */
+/** An ad-network object read inside a workspace. */
 export type AdObjectParams = { workspaceId?: string; connectionId: string };
-/** A Meta object changed inside a workspace; the API requires the workspace here. */
+/** An ad-network object changed inside a workspace; the API requires the workspace here. */
 export type AdObjectMutationParams = { workspaceId: string; connectionId: string };
 
 export type AdObjectStatus = 'active' | 'paused';
 export type AdObjectLevel = 'campaign' | 'ad_set' | 'ad';
 
 export type AdCampaign = {
-  /** Meta's campaign id. */
+  /** The campaign id on the network. */
   id: string;
   name: string;
   /** `ACTIVE`, `PAUSED`, `DELETED` or `ARCHIVED`. */
@@ -768,7 +774,7 @@ export type AdCampaign = {
 };
 
 export type AdSet = {
-  /** Meta's ad set id. */
+  /** The ad set id on the network. */
   id: string;
   name: string;
   campaignId: string | null;
@@ -781,7 +787,7 @@ export type AdSet = {
   createdAt: string | null;
 };
 
-/** An ad inside an ad set, by Meta id. */
+/** An ad inside an ad set, by its id on the network. */
 export type NetworkAd = {
   id: string;
   name: string;
@@ -969,7 +975,7 @@ type InsightsRangeParams = {
 export type AdInsightsParams = InsightsRangeParams & {
   workspaceId?: string;
   connectionId: string;
-  /** A Meta campaign, ad set or ad id. */
+  /** A campaign, ad set or ad id on the network. */
   objectId: string;
 };
 
@@ -985,7 +991,7 @@ export type LeadPageInput = { workspaceId: string; connectionId: string; pageId:
 
 export type FeedLead = {
   id: string;
-  /** Meta's lead id. */
+  /** The lead id on the network. */
   leadId: string;
   connectionId: string;
   pageId: string;

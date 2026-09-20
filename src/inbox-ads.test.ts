@@ -230,6 +230,11 @@ describe('ads', () => {
       method: 'POST',
       path: '/v1/ads/connections/meta/authorize',
     });
+    await client.ads.authorize({ workspaceId: 'ws', provider: 'pinterest' });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/ads/connections/pinterest/authorize',
+    });
     await client.ads.createAudience({
       workspaceId: 'ws',
       connectionId: 'c1',

@@ -6,10 +6,19 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `ads.authorize` takes a `provider`, so a connection can be started on any ad
+  network the API lists, not only Meta. `ads.authorizeMeta` still works and is
+  deprecated.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+
+### Changed
+
+- The ads documentation comments describe an ad connection as a network rather
+  than as Meta. No behaviour changed.
 
 ## 0.6.0
 

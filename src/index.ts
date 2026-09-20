@@ -53,7 +53,7 @@ import type {
   Audience,
   AiCreditBalance,
   AudiencesResult,
-  AuthorizeMetaAdsInput,
+  AuthorizeAdsInput,
   BoostPostInput,
   BoostablePost,
   CreateAccountGroupInput,
@@ -603,9 +603,18 @@ class AdsResource {
     return this.http.get<AdSource[]>('/v1/ads/sources', { workspace_id: params.workspaceId });
   }
 
-  /** Returns the Meta login URL; the caller finishes it in their own browser. */
-  authorizeMeta(input: AuthorizeMetaAdsInput): Promise<{ url: string }> {
-    return this.http.post<{ url: string }>('/v1/ads/connections/meta/authorize', input);
+  /**
+   * Returns the network's login URL; the caller finishes it in their own
+   * browser. `provider` names the network and defaults to `meta`; a network
+   * that is not available on the deployment answers 503.
+   */
+  authorize({ provider = 'meta', ...input }: AuthorizeAdsInput): Promise<{ url: string }> {
+    return this.http.post<{ url: string }>(`/v1/ads/connections/${provider}/authorize`, input);
+  }
+
+  /** @deprecated Use {@link AdsResource.authorize}, which takes a `provider`. */
+  authorizeMeta(input: AuthorizeAdsInput): Promise<{ url: string }> {
+    return this.authorize(input);
   }
 
   /** Also deletes every ad record created through the connection. */
@@ -625,7 +634,7 @@ class AdsResource {
     return this.http.post<Ad>('/v1/ads', input);
   }
 
-  /** Reads the delivery status and lifetime insights from Meta. */
+  /** Reads the delivery status and lifetime insights from the network. */
   refresh(id: string, workspaceId: string): Promise<Ad> {
     return this.http.request<Ad>('POST', `/v1/ads/${id}/refresh`, undefined, {
       workspace_id: workspaceId,
@@ -642,7 +651,7 @@ class AdsResource {
     );
   }
 
-  /** Ends delivery and deletes the ad on Meta. Needs the `publish` scope as well as `ads`. */
+  /** Ends delivery and deletes the ad on the network. Needs the `publish` scope as well as `ads`. */
   delete(id: string, workspaceId: string): Promise<unknown> {
     return this.http.request('DELETE', `/v1/ads/${id}`, undefined, { workspace_id: workspaceId });
   }
@@ -663,7 +672,7 @@ class AdsResource {
     return this.http.post('/v1/ads/audiences', input);
   }
 
-  /** Locations, interests, behaviours and income brackets as Meta names them. */
+  /** Locations, interests, behaviours and income brackets as the network names them. */
   searchTargeting(params: {
     workspaceId?: string;
     connectionId: string;
@@ -701,7 +710,7 @@ class AdsResource {
     });
   }
 
-  /** Campaigns, ad sets and ads on one ad account, read live from Meta. */
+  /** Campaigns, ad sets and ads on one ad account, read live from the network. */
   accountTree(adAccountId: string, params: AdObjectParams): Promise<AdAccountTree> {
     return this.http.get<AdAccountTree>(`/v1/ads/accounts/${adAccountId}/tree`, metaQuery(params));
   }
@@ -729,7 +738,7 @@ class AdsResource {
     );
   }
 
-  /** Deletes it and everything beneath it on Meta. Needs the `publish` scope as well as `ads`. */
+  /** Deletes it and everything beneath it on the network. Needs the `publish` scope as well as `ads`. */
   deleteCampaign(id: string, params: AdObjectMutationParams): Promise<unknown> {
     return this.http.request('DELETE', `/v1/ads/campaigns/${id}`, undefined, metaQuery(params));
   }
@@ -872,7 +881,7 @@ class AdsResource {
     return this.http.post<ReachEstimate>('/v1/ads/reach-estimate', input);
   }
 
-  /** Insights for any Meta campaign, ad set or ad on a connection. */
+  /** Insights for any campaign, ad set or ad on a connection. */
   insights(params: AdInsightsParams): Promise<AdInsightsReport> {
     return this.http.get<AdInsightsReport>('/v1/ads/insights', {
       ...metaQuery(params),
