@@ -6,6 +6,9 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `InboxItem.moderationStatus` carries the platform's own state for a comment
+  (`published`, `held`, `spam`, `rejected`), and `InboxAccount.reconnectRequired`
+  flags an account connected before the inbox asked for a permission it needs.
 - `DiscordChannel.can_post` says whether the bot may actually post in a channel; a
   channel permission in Discord can shut it out even though the server allows it.
   `switchDiscordChannel` answers `409 channel_not_writable` for such a channel.

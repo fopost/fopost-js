@@ -448,6 +448,8 @@ export type RepurposeUrlInput = {
 // ─── Inbox ─────────────────────────────────────────────────────────
 
 export type InboxItemType = 'comment' | 'mention' | 'dm' | 'review';
+/** What the platform did with a comment, where it reports one. */
+export type InboxModerationStatus = 'published' | 'held' | 'spam' | 'rejected';
 export type InboxItemState = 'unread' | 'read' | 'resolved' | 'snoozed';
 
 export type InboxAccountRef = {
@@ -513,6 +515,8 @@ export type InboxItem = {
   /** Our reaction on a DM. */
   reaction: string | null;
   editedAt: string | null;
+  /** The platform's own moderation state; null where it does not report one. */
+  moderationStatus: InboxModerationStatus | null;
   canHide: boolean;
   /** Also true for our own replies. */
   canDelete: boolean;
@@ -568,6 +572,8 @@ export type InboxAccount = {
   dmSupported: boolean;
   dmPendingReason: string | null;
   canStartConversation: boolean;
+  /** The grant predates a permission the inbox needs; reconnect the account once. */
+  reconnectRequired: boolean;
 };
 
 export type InboxPlatform = {
