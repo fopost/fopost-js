@@ -143,6 +143,16 @@ import type {
   DiscordMessageRef,
   DiscordRole,
   DiscordScheduledEvent,
+  AddGoogleBusinessMediaInput,
+  CreateGoogleBusinessPlaceActionInput,
+  GoogleBusinessAttributeInput,
+  GoogleBusinessAttributesParams,
+  GoogleBusinessPayload,
+  GoogleBusinessPerformanceParams,
+  GoogleBusinessSearchKeywordsParams,
+  StartGoogleBusinessVerificationInput,
+  UpdateGoogleBusinessLocationInput,
+  UpdateGoogleBusinessPlaceActionInput,
   SlackChannel,
   SlackIdentity,
   MetaIceBreaker,
@@ -224,6 +234,7 @@ export class FoPost {
   readonly media: MediaResource;
   readonly knowledge: KnowledgeResource;
   readonly activity: ActivityResource;
+  readonly googleBusiness: GoogleBusinessResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -242,6 +253,7 @@ export class FoPost {
     this.media = new MediaResource(this.http);
     this.knowledge = new KnowledgeResource(this.http);
     this.activity = new ActivityResource(this.http);
+    this.googleBusiness = new GoogleBusinessResource(this.http);
   }
 }
 
@@ -2068,5 +2080,215 @@ class SequencesResource {
   /** Removes the sequence and every enrollment on it. */
   delete(id: string): Promise<{ message: string }> {
     return this.http.delete<{ message: string }>(`/v1/sequences/${id}`);
+  }
+}
+
+/**
+ * Google Business Profile management for one connected location.
+ *
+ * Google grants Business Profile API access per project. Until the grant
+ * lands on a deployment every method here raises a 503 `configuration_error`.
+ */
+class GoogleBusinessResource {
+  constructor(private http: HttpClient) {}
+
+  getLocation(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/location`);
+  }
+
+  /** Only the fields present in `input` change. */
+  updateLocation(
+    accountId: string,
+    input: UpdateGoogleBusinessLocationInput,
+  ): Promise<GoogleBusinessPayload> {
+    const body: Record<string, unknown> = {};
+    if (input.title !== undefined) body.title = input.title;
+    if (input.description !== undefined) body.description = input.description;
+    if (input.websiteUri !== undefined) body.website_uri = input.websiteUri;
+    if (input.primaryPhone !== undefined) body.primary_phone = input.primaryPhone;
+    if (input.additionalPhones !== undefined) body.additional_phones = input.additionalPhones;
+    if (input.storeCode !== undefined) body.store_code = input.storeCode;
+    if (input.regularHours !== undefined) {
+      body.regular_hours = input.regularHours.map((p) => ({
+        open_day: p.openDay,
+        open_time: p.openTime,
+        close_day: p.closeDay,
+        close_time: p.closeTime,
+      }));
+    }
+    return this.http.patch<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/location`, body);
+  }
+
+  getAttributes(
+    accountId: string,
+    params: GoogleBusinessAttributesParams = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/attributes`, {
+      available: params.available,
+      category_name: params.categoryName,
+      region_code: params.regionCode,
+      language_code: params.languageCode,
+    });
+  }
+
+  /** Only the named attributes change; every other one is left alone. */
+  updateAttributes(
+    accountId: string,
+    attributes: GoogleBusinessAttributeInput[],
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.patch<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/attributes`, {
+      attributes: attributes.map((a) => ({
+        name: a.name,
+        ...(a.values === undefined ? {} : { values: a.values }),
+        ...(a.uriValues === undefined ? {} : { uri_values: a.uriValues }),
+      })),
+    });
+  }
+
+  getMenus(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/menus`);
+  }
+
+  /** Google has no per-section patch, so the whole menu set is replaced. */
+  replaceMenus(accountId: string, menus: unknown[]): Promise<GoogleBusinessPayload> {
+    return this.http.put<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/menus`, { menus });
+  }
+
+  getServices(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/services`);
+  }
+
+  replaceServices(accountId: string, serviceItems: unknown[]): Promise<GoogleBusinessPayload> {
+    return this.http.put<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/services`, {
+      service_items: serviceItems,
+    });
+  }
+
+  listMedia(
+    accountId: string,
+    params: { pageSize?: number; pageToken?: string } = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/media`, {
+      page_size: params.pageSize,
+      page_token: params.pageToken,
+    });
+  }
+
+  /** The photo is a media-library asset in the same workspace, JPEG or PNG. */
+  addMedia(accountId: string, input: AddGoogleBusinessMediaInput): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/media`, {
+      media_id: input.mediaId,
+      category: input.category,
+      description: input.description,
+    });
+  }
+
+  deleteMedia(accountId: string, mediaKey: string): Promise<GoogleBusinessPayload> {
+    return this.http.delete<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/media/${mediaKey}`,
+    );
+  }
+
+  listPlaceActions(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/place-actions`);
+  }
+
+  createPlaceAction(
+    accountId: string,
+    input: CreateGoogleBusinessPlaceActionInput,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/place-actions`, {
+      uri: input.uri,
+      place_action_type: input.placeActionType,
+      ...(input.isPreferred === undefined ? {} : { is_preferred: input.isPreferred }),
+    });
+  }
+
+  updatePlaceAction(
+    accountId: string,
+    linkId: string,
+    input: UpdateGoogleBusinessPlaceActionInput,
+  ): Promise<GoogleBusinessPayload> {
+    const body: Record<string, unknown> = {};
+    if (input.uri !== undefined) body.uri = input.uri;
+    if (input.isPreferred !== undefined) body.is_preferred = input.isPreferred;
+    return this.http.patch<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/place-actions/${linkId}`,
+      body,
+    );
+  }
+
+  deletePlaceAction(accountId: string, linkId: string): Promise<GoogleBusinessPayload> {
+    return this.http.delete<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/place-actions/${linkId}`,
+    );
+  }
+
+  getVerificationOptions(
+    accountId: string,
+    params: { languageCode?: string } = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/verification`, {
+      language_code: params.languageCode,
+    });
+  }
+
+  /** The response names the pending verification to complete with the PIN. */
+  startVerification(
+    accountId: string,
+    input: StartGoogleBusinessVerificationInput,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/verification/start`,
+      {
+        method: input.method,
+        language_code: input.languageCode,
+        phone_number: input.phoneNumber,
+        email_address: input.emailAddress,
+        mailer_contact_name: input.mailerContactName,
+      },
+    );
+  }
+
+  completeVerification(
+    accountId: string,
+    input: { verificationName: string; pin: string },
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/verification/complete`,
+      { verification_name: input.verificationName, pin: input.pin },
+    );
+  }
+
+  /** Daily impressions, calls, direction requests and clicks for the range. */
+  getPerformance(
+    accountId: string,
+    params: GoogleBusinessPerformanceParams,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/performance`, {
+      start_date: params.startDate,
+      end_date: params.endDate,
+      daily_metrics: params.dailyMetrics,
+    });
+  }
+
+  /** The search terms people used to find the listing, by month. */
+  getSearchKeywords(
+    accountId: string,
+    params: GoogleBusinessSearchKeywordsParams,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/performance`, {
+      keywords: true,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      page_token: params.pageToken,
+    });
+  }
+
+  /** Hands the location to another workspace; the caller must own both. */
+  assign(accountId: string, input: { workspaceId: string }): Promise<MovedAccount> {
+    return this.http.post<MovedAccount>(`/v1/accounts/${accountId}/gbp/assign`, {
+      workspace_id: input.workspaceId,
+    });
   }
 }

@@ -60,6 +60,15 @@ All notable changes to `@fopost/sdk` are documented here.
   events for an account, and `resubscribeWebhook` puts a lapsed subscription back.
 - `inbox.handover` passes a Messenger thread to another Meta app, or takes it back
   when no `appId` is given. Needs `inbox` and `publish`.
+- `googleBusiness` namespace: manage a connected Google Business Profile location —
+  the profile (`getLocation`, `updateLocation`), attributes, food menus, services,
+  photos (from the media library, JPEG or PNG), place action links, verification,
+  performance and search keywords, plus `assign` to hand the location to another
+  workspace. Reads need the `accounts` scope, writes `publish` as well. Every method
+  raises a 503 `configuration_error` until Google grants the deployment Business
+  Profile API access.
+- Array query values now repeat the parameter, which is how `getPerformance` sends
+  `daily_metrics`.
 
 ## 0.6.0
 
