@@ -19,6 +19,8 @@ import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
   AccountGroup,
+  ActivityEvent,
+  ActivityPage,
   Ad,
   AdAccountTree,
   AdCampaign,
@@ -27,6 +29,37 @@ import type {
   AdCreativesResult,
   AdInsightsParams,
   AdInsightsReport,
+  AdActivityResult,
+  AdGoal,
+  AdLabel,
+  AdLabelInput,
+  AdLibraryPage,
+  AdLibraryParams,
+  AdStudy,
+  ApplyAdLabelInput,
+  CatalogBatchResult,
+  CatalogProductWrite,
+  CatalogProductsPage,
+  CreateAdStudyInput,
+  CreateCatalogInput,
+  CreateHighDemandPeriodInput,
+  CreateProductFeedInput,
+  CreateReachFrequencyInput,
+  CreateValueRuleSetInput,
+  HighDemandPeriod,
+  IosCampaignLimits,
+  PartnershipCreator,
+  PartnershipInput,
+  ProductCatalog,
+  ProductCatalogsResult,
+  ProductFeed,
+  ProductFeedUpload,
+  ProductSet,
+  ProductSetInput,
+  ReachFrequencyActionInput,
+  ReachFrequencyPrediction,
+  ReachFrequencyResult,
+  ValueRuleSet,
   AdObjectMutationParams,
   AdObjectParams,
   AdSet,
@@ -99,6 +132,12 @@ import type {
   InboxApproval,
   InboxConversation,
   InboxItem,
+  KnowledgeSource,
+  KnowledgeSourceStatus,
+  KnowledgeMatch,
+  CreateKnowledgeSourceInput,
+  UpdateKnowledgeSourceInput,
+  SearchKnowledgeParams,
   InboxPage,
   InboxPlatform,
   InboxRefreshResult,
@@ -106,6 +145,7 @@ import type {
   InboxReplyResult,
   InboxThread,
   Label,
+  ListActivityParams,
   Platform,
   LeadFormSource,
   LeadsPage,
@@ -124,8 +164,36 @@ import type {
   RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
+  CreateDiscordEventInput,
+  CreateDiscordRoleInput,
+  CreateDiscordThreadInput,
+  DiscordChannel,
+  DiscordIdentity,
+  DiscordMember,
+  DiscordMessage,
+  DiscordMessageRef,
+  DiscordRole,
+  DiscordScheduledEvent,
+  AddGoogleBusinessMediaInput,
+  CreateGoogleBusinessPlaceActionInput,
+  GoogleBusinessAttributeInput,
+  GoogleBusinessAttributesParams,
+  GoogleBusinessPayload,
+  GoogleBusinessPerformanceParams,
+  GoogleBusinessSearchKeywordsParams,
+  StartGoogleBusinessVerificationInput,
+  UpdateGoogleBusinessLocationInput,
+  UpdateGoogleBusinessPlaceActionInput,
   SlackChannel,
   SlackIdentity,
+  MetaIceBreaker,
+  MetaIceBreakers,
+  MetaPersistentMenuEntry,
+  MetaPersistentMenu,
+  MetaGreetingText,
+  MetaGreeting,
+  WebhookSubscription,
+  InboxHandover,
   SlackMember,
   TargetingOption,
   TelegramBotCommand,
@@ -133,8 +201,37 @@ import type {
   TelegramConnectCode,
   TelegramConnectStatus,
   TargetingSearchType,
+  Broadcast,
+  BroadcastPage,
+  BroadcastRecipientPage,
+  Contact,
+  ContactConversation,
+  ContactField,
+  ContactImportResult,
+  ContactPage,
+  ConversationAnalytics,
+  CreateContactFieldInput,
+  CreateContactInput,
+  ListContactsParams,
+  ListConversationAnalyticsParams,
+  CreateBroadcastInput,
+  CreateSequenceInput,
+  EnrollInput,
+  EnrollmentPage,
+  ListBroadcastsParams,
+  ListPageParams,
+  ListRecipientsParams,
+  Sequence,
+  SequencePage,
+  UpdateBroadcastInput,
+  UpdateContactFieldInput,
+  UpdateContactInput,
+  UpdateSequenceInput,
   UpdateInboxItemInput,
   UpdatePostInput,
+  UpdateDiscordEventInput,
+  UpdateDiscordIdentityInput,
+  UpdateDiscordRoleInput,
   UpdateSlackIdentityInput,
   ValidateLengthResult,
   ValidateMediaResult,
@@ -160,9 +257,15 @@ export class FoPost {
   readonly labels: LabelsResource;
   readonly ai: AiResource;
   readonly inbox: InboxResource;
+  readonly contacts: ContactsResource;
+  readonly broadcasts: BroadcastsResource;
+  readonly sequences: SequencesResource;
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly knowledge: KnowledgeResource;
+  readonly activity: ActivityResource;
+  readonly googleBusiness: GoogleBusinessResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -173,13 +276,54 @@ export class FoPost {
     this.labels = new LabelsResource(this.http);
     this.ai = new AiResource(this.http);
     this.inbox = new InboxResource(this.http);
+    this.contacts = new ContactsResource(this.http);
+    this.broadcasts = new BroadcastsResource(this.http);
+    this.sequences = new SequencesResource(this.http);
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.knowledge = new KnowledgeResource(this.http);
+    this.activity = new ActivityResource(this.http);
+    this.googleBusiness = new GoogleBusinessResource(this.http);
   }
 }
 
 // ─── Resources ─────────────────────────────────────────────────────
+
+class ActivityResource {
+  constructor(private http: HttpClient) {}
+
+  /**
+   * What happened in a workspace, newest first. Omit `workspaceId` to read
+   * every workspace the key can reach. `kind: 'security'` is the audit log.
+   */
+  async list(params: ListActivityParams = {}): Promise<ActivityPage> {
+    const raw = await this.http.get<{
+      data: Array<Record<string, unknown>>;
+      meta: { next_cursor: string | null };
+    }>('/v1/activity', {
+      workspace_id: params.workspaceId,
+      kind: params.kind,
+      from: params.from,
+      to: params.to,
+      cursor: params.cursor,
+      limit: params.limit,
+    });
+    return {
+      data: raw.data.map((r) => ({
+        id: r.id as string,
+        workspaceId: (r.workspace_id as string | null) ?? null,
+        kind: r.kind as ActivityEvent['kind'],
+        refType: (r.ref_type as string | null) ?? null,
+        refId: (r.ref_id as string | null) ?? null,
+        summary: r.summary as string,
+        actor: r.actor as ActivityEvent['actor'],
+        time: r.time as string,
+      })),
+      meta: { nextCursor: raw.meta?.next_cursor ?? null },
+    };
+  }
+}
 
 /** The API takes bare account ids; accept the { id } form too. */
 function accountIds(accounts: Array<string | { id: string }>): string[] {
@@ -333,6 +477,237 @@ class AccountsResource {
     if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
     return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
   }
+
+  // ─── Meta messaging settings (Facebook Pages, Instagram) ────────
+
+  /** The prompts shown before the first message. Networks without them answer 400. */
+  getIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.get<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** Replaces the ice breakers. Up to four. */
+  setIceBreakers(id: string, iceBreakers: MetaIceBreaker[]): Promise<MetaIceBreakers> {
+    return this.http.put<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`, {
+      ice_breakers: iceBreakers,
+    });
+  }
+
+  deleteIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.delete<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** The always-visible Messenger menu. Facebook Pages only. */
+  getPersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.get<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** Replaces the menu, one entry per locale, up to three items each. */
+  setPersistentMenu(id: string, menu: MetaPersistentMenuEntry[]): Promise<MetaPersistentMenu> {
+    return this.http.put<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`, {
+      persistent_menu: menu,
+    });
+  }
+
+  deletePersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.delete<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** The text shown before a Messenger conversation starts. Facebook Pages only. */
+  getGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.get<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** Replaces the greeting, one entry per locale, each up to 160 characters. */
+  setGreeting(id: string, greeting: MetaGreetingText[]): Promise<MetaGreeting> {
+    return this.http.put<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`, { greeting });
+  }
+
+  deleteGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.delete<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** What the network is delivering to the FoPost webhook for this account. */
+  getWebhookSubscription(id: string): Promise<WebhookSubscription> {
+    return this.http.get<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
+  }
+
+  /** Subscribes to every field this account needs, lapsed or not. */
+  resubscribeWebhook(id: string): Promise<WebhookSubscription> {
+    return this.http.post<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
+  }
+  // ── Discord (bot connections; a webhook one answers 409 webhook_connection) ──
+
+  /** Text channels the bot can post to, with `is_current` on this account's. */
+  listDiscordChannels(id: string): Promise<DiscordChannel[]> {
+    return this.http.get<DiscordChannel[]>(`/v1/accounts/${id}/discord/channels`);
+  }
+
+  /** Moves the account to another channel in the same server. */
+  switchDiscordChannel(id: string, channelId: string): Promise<DiscordChannel> {
+    return this.http.patch<DiscordChannel>(`/v1/accounts/${id}/discord/channels/current`, {
+      channel_id: channelId,
+    });
+  }
+
+  getDiscordIdentity(id: string): Promise<DiscordIdentity> {
+    return this.http.get<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`);
+  }
+
+  /** Omitted fields keep their value and null clears one. */
+  updateDiscordIdentity(id: string, input: UpdateDiscordIdentityInput): Promise<DiscordIdentity> {
+    const body: Record<string, unknown> = {};
+    if (input.username !== undefined) body.username = input.username;
+    if (input.avatarUrl !== undefined) body.avatar_url = input.avatarUrl;
+    return this.http.patch<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`, body);
+  }
+
+  listDiscordPins(id: string): Promise<DiscordMessage[]> {
+    return this.http.get<DiscordMessage[]>(`/v1/accounts/${id}/discord/messages/pinned`);
+  }
+
+  deleteDiscordMessage(id: string, messageId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}`,
+    );
+  }
+
+  pinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.post<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  unpinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.delete<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  /** Publishes an announcement-channel message to every server following it. */
+  crosspostDiscordMessage(id: string, messageId: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/crosspost`,
+    );
+  }
+
+  createDiscordThread(
+    id: string,
+    messageId: string,
+    input: CreateDiscordThreadInput,
+  ): Promise<{ id: string; name: string; parent_id: string | null }> {
+    return this.http.post(`/v1/accounts/${id}/discord/messages/${messageId}/thread`, {
+      name: input.name,
+      ...(input.autoArchiveDuration !== undefined
+        ? { auto_archive_duration: input.autoArchiveDuration }
+        : {}),
+    });
+  }
+
+  /** Sends one message to a member; `memberId` is a `DiscordMember.id`. */
+  sendDiscordDm(id: string, memberId: string, content: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(`/v1/accounts/${id}/discord/dm`, {
+      member_id: memberId,
+      content,
+    });
+  }
+
+  listDiscordEvents(id: string): Promise<DiscordScheduledEvent[]> {
+    return this.http.get<DiscordScheduledEvent[]>(`/v1/accounts/${id}/discord/events`);
+  }
+
+  getDiscordEvent(id: string, eventId: string): Promise<DiscordScheduledEvent> {
+    return this.http.get<DiscordScheduledEvent>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  createDiscordEvent(id: string, input: CreateDiscordEventInput): Promise<DiscordScheduledEvent> {
+    return this.http.post<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events`,
+      discordEventBody(input),
+    );
+  }
+
+  updateDiscordEvent(
+    id: string,
+    eventId: string,
+    input: UpdateDiscordEventInput,
+  ): Promise<DiscordScheduledEvent> {
+    return this.http.patch<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events/${eventId}`,
+      discordEventBody(input),
+    );
+  }
+
+  deleteDiscordEvent(id: string, eventId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  /** `query` searches by username or nickname prefix. */
+  listDiscordMembers(
+    id: string,
+    options: { query?: string; limit?: number } = {},
+  ): Promise<DiscordMember[]> {
+    return this.http.get<DiscordMember[]>(`/v1/accounts/${id}/discord/members`, {
+      q: options.query,
+      limit: options.limit,
+    });
+  }
+
+  getDiscordMember(id: string, memberId: string): Promise<DiscordMember> {
+    return this.http.get<DiscordMember>(`/v1/accounts/${id}/discord/members/${memberId}`);
+  }
+
+  listDiscordRoles(id: string): Promise<DiscordRole[]> {
+    return this.http.get<DiscordRole[]>(`/v1/accounts/${id}/discord/roles`);
+  }
+
+  createDiscordRole(id: string, input: CreateDiscordRoleInput): Promise<DiscordRole> {
+    return this.http.post<DiscordRole>(`/v1/accounts/${id}/discord/roles`, input);
+  }
+
+  updateDiscordRole(
+    id: string,
+    roleId: string,
+    input: UpdateDiscordRoleInput,
+  ): Promise<DiscordRole> {
+    return this.http.patch<DiscordRole>(`/v1/accounts/${id}/discord/roles/${roleId}`, input);
+  }
+
+  deleteDiscordRole(id: string, roleId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/roles/${roleId}`);
+  }
+
+  addDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.put<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+
+  removeDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.delete<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+}
+
+/** Camel-cased event input as the API's snake_case body. */
+function discordEventBody(input: UpdateDiscordEventInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (input.name !== undefined) body.name = input.name;
+  if (input.description !== undefined) body.description = input.description;
+  if (input.startTime !== undefined) body.start_time = input.startTime;
+  if (input.endTime !== undefined) body.end_time = input.endTime;
+  if (input.channelId !== undefined) body.channel_id = input.channelId;
+  if (input.location !== undefined) body.location = input.location;
+  if (input.status !== undefined) body.status = input.status;
+  return body;
 }
 
 class AccountGroupsResource {
@@ -587,6 +962,22 @@ class InboxResource {
     });
   }
 
+  /**
+   * Passes a Messenger thread to another Meta app, or takes it back when
+   * `appId` is omitted. Needs `publish`.
+   */
+  handover(
+    conversationId: string,
+    accountId: string,
+    options: { appId?: string; metadata?: string } = {},
+  ): Promise<InboxHandover> {
+    return this.http.post<InboxHandover>(`/v1/inbox/conversations/${conversationId}/handover`, {
+      account_id: accountId,
+      ...(options.appId === undefined ? {} : { app_id: options.appId }),
+      ...(options.metadata === undefined ? {} : { metadata: options.metadata }),
+    });
+  }
+
   /** Replies an automation or the agent drafted that a person still has to send. */
   listApprovals(params: { workspaceId?: string } = {}): Promise<InboxApproval[]> {
     return this.http.get<InboxApproval[]>('/v1/inbox/approvals', {
@@ -601,6 +992,63 @@ class InboxResource {
 
   rejectReply(id: number): Promise<{ id: number; outcome: string }> {
     return this.http.post(`/v1/inbox/approvals/${id}/reject`);
+  }
+}
+
+/**
+ * The workspace's own answers, pages and files. Adding a source queues it for
+ * indexing, so it comes back `pending` and turns `ready` once searchable.
+ */
+class KnowledgeResource {
+  constructor(private http: HttpClient) {}
+
+  list(params: { workspaceId?: string } = {}): Promise<KnowledgeSource[]> {
+    return this.http.get<KnowledgeSource[]>('/v1/knowledge/sources', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  create(input: CreateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.post<KnowledgeSource>('/v1/knowledge/sources', {
+      kind: input.kind,
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      media_id: input.mediaId,
+      brand_voice_id: input.brandVoiceId,
+      workspace_id: input.workspaceId,
+    });
+  }
+
+  update(id: string, input: UpdateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.patch<KnowledgeSource>(`/v1/knowledge/sources/${id}`, {
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+
+  delete(id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.http.delete<{ id: string; deleted: boolean }>(`/v1/knowledge/sources/${id}`);
+  }
+
+  /** Read the source again — a `url` source is re-fetched. Returns once queued. */
+  sync(id: string): Promise<{ id: string; status: KnowledgeSourceStatus }> {
+    return this.http.post<{ id: string; status: KnowledgeSourceStatus }>(
+      `/v1/knowledge/sources/${id}/sync`,
+      {},
+    );
+  }
+
+  /** The passages closest to a question. Empty when nothing stored answers it. */
+  search(params: SearchKnowledgeParams): Promise<KnowledgeMatch[]> {
+    return this.http.get<KnowledgeMatch[]>('/v1/knowledge/search', {
+      q: params.q,
+      top_k: params.topK,
+      brand_voice_id: params.brandVoiceId,
+      workspace_id: params.workspaceId,
+    });
   }
 }
 
@@ -972,6 +1420,352 @@ class AdsResource {
       metaQuery(params),
     );
   }
+
+  // ─── Goals ──────────────────────────────────────────────────────
+
+  /**
+   * The goals this connection's network can run right now. Ask rather than
+   * assume: a goal the deployment is not set up for is absent here and is
+   * refused if you send it anyway.
+   */
+  goals(params: AdObjectParams): Promise<AdGoal[]> {
+    return this.http.get<AdGoal[]>('/v1/ads/goals', metaQuery(params));
+  }
+
+  // ─── Product catalogs ───────────────────────────────────────────
+
+  /** Catalogs the connection's business portfolios reach. Read live, never stored. */
+  catalogs(params: AdObjectParams): Promise<ProductCatalogsResult> {
+    return this.http.get<ProductCatalogsResult>('/v1/ads/catalogs', metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createCatalog(input: CreateCatalogInput): Promise<ProductCatalog> {
+    return this.http.post<ProductCatalog>('/v1/ads/catalogs', input);
+  }
+
+  getCatalog(id: string, params: AdObjectParams): Promise<ProductCatalog> {
+    return this.http.get<ProductCatalog>(`/v1/ads/catalogs/${id}`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateCatalog(
+    id: string,
+    params: AdObjectMutationParams,
+    input: { name: string },
+  ): Promise<ProductCatalog> {
+    return this.http.request<ProductCatalog>(
+      'PATCH',
+      `/v1/ads/catalogs/${id}`,
+      { ...input, ...params },
+      metaQuery(params),
+    );
+  }
+
+  /** Deletes every product, feed and set in it. Needs `publish` as well as `ads`. */
+  deleteCatalog(id: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/catalogs/${id}`, undefined, metaQuery(params));
+  }
+
+  /** One page of products; pass `nextCursor` back as `after`. */
+  catalogProducts(
+    id: string,
+    params: AdObjectParams & { after?: string },
+  ): Promise<CatalogProductsPage> {
+    return this.http.get<CatalogProductsPage>(`/v1/ads/catalogs/${id}/products`, {
+      ...metaQuery(params),
+      after: params.after,
+    });
+  }
+
+  /** Up to 500 upserts and deletes in one batch. Needs `publish` as well as `ads`. */
+  writeCatalogProducts(
+    id: string,
+    params: AdObjectMutationParams,
+    products: CatalogProductWrite[],
+  ): Promise<CatalogBatchResult> {
+    return this.http.post<CatalogBatchResult>(`/v1/ads/catalogs/${id}/products`, {
+      ...params,
+      products,
+    });
+  }
+
+  productFeeds(id: string, params: AdObjectParams): Promise<ProductFeed[]> {
+    return this.http.get<ProductFeed[]>(`/v1/ads/catalogs/${id}/feeds`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createProductFeed(id: string, input: CreateProductFeedInput): Promise<ProductFeed> {
+    return this.http.post<ProductFeed>(`/v1/ads/catalogs/${id}/feeds`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteProductFeed(id: string, feedId: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/catalogs/${id}/feeds/${feedId}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+
+  /** Each run the network made of the feed. */
+  feedUploads(id: string, feedId: string, params: AdObjectParams): Promise<ProductFeedUpload[]> {
+    return this.http.get<ProductFeedUpload[]>(
+      `/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`,
+      metaQuery(params),
+    );
+  }
+
+  /** Fetches the feed now. Needs the `publish` scope as well as `ads`. */
+  startFeedUpload(
+    id: string,
+    feedId: string,
+    params: AdObjectMutationParams & { url?: string },
+  ): Promise<{ id: string }> {
+    return this.http.post(`/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`, params);
+  }
+
+  /** A catalog ad runs from a product set, not the whole catalog. */
+  productSets(id: string, params: AdObjectParams): Promise<ProductSet[]> {
+    return this.http.get<ProductSet[]>(`/v1/ads/catalogs/${id}/product-sets`, metaQuery(params));
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  createProductSet(id: string, input: ProductSetInput): Promise<ProductSet> {
+    return this.http.post<ProductSet>(`/v1/ads/catalogs/${id}/product-sets`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  updateProductSet(id: string, setId: string, input: ProductSetInput): Promise<ProductSet> {
+    return this.http.request<ProductSet>(
+      'PATCH',
+      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
+      input,
+      metaQuery(input),
+    );
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  deleteProductSet(id: string, setId: string, params: AdObjectMutationParams): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
+      undefined,
+      metaQuery(params),
+    );
+  }
+
+  // ─── Reach and frequency ────────────────────────────────────────
+
+  reachFrequency(params: AdObjectParams & { adAccountId: string }): Promise<ReachFrequencyResult> {
+    return this.http.get<ReachFrequencyResult>('/v1/ads/reach-frequency', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Prices a flight. Nothing is bought until you reserve it. */
+  createReachFrequency(input: CreateReachFrequencyInput): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>('/v1/ads/reach-frequency', input);
+  }
+
+  getReachFrequency(
+    id: string,
+    params: AdObjectParams & { adAccountId: string },
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.get<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}`, {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Holds the inventory the prediction priced. Needs `publish` as well as `ads`. */
+  reserveReachFrequency(
+    id: string,
+    input: ReachFrequencyActionInput,
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}/reserve`, input);
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  cancelReachFrequency(
+    id: string,
+    input: ReachFrequencyActionInput,
+  ): Promise<ReachFrequencyPrediction> {
+    return this.http.post<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}/cancel`, input);
+  }
+
+  // ─── Ad Library ─────────────────────────────────────────────────
+
+  /**
+   * The public ad archive: ads anyone is running, by keyword or by Page.
+   * Read live on every call and stored nowhere, so an ad that stops running
+   * is simply absent from the next search.
+   */
+  adLibrary(params: AdLibraryParams): Promise<AdLibraryPage> {
+    return this.http.get<AdLibraryPage>('/v1/ads/library', {
+      ...metaQuery(params),
+      countries: params.countries.join(','),
+      q: params.q,
+      page_ids: params.pageIds?.join(','),
+      active_status: params.activeStatus,
+      limit: params.limit,
+      after: params.after,
+    });
+  }
+
+  // ─── Partnership ads ────────────────────────────────────────────
+
+  /** Creators who allowlisted this Page to run partnership ads on their posts. */
+  partnershipCreators(params: AdObjectParams & { pageId: string }): Promise<PartnershipCreator[]> {
+    return this.http.get<PartnershipCreator[]>('/v1/ads/partnership/creators', {
+      ...metaQuery(params),
+      page_id: params.pageId,
+    });
+  }
+
+  requestPartnership(input: PartnershipInput): Promise<PartnershipCreator[]> {
+    return this.http.post<PartnershipCreator[]>('/v1/ads/partnership/creators', input);
+  }
+
+  revokePartnership(
+    creatorId: string,
+    params: AdObjectMutationParams & { pageId: string },
+  ): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/partnership/creators/${creatorId}`, undefined, {
+      ...metaQuery(params),
+      page_id: params.pageId,
+    });
+  }
+
+  // ─── Ad account settings ────────────────────────────────────────
+
+  /** Who changed what on the ad account, and when. */
+  accountActivity(
+    params: AdObjectParams & { adAccountId: string; since?: string; until?: string },
+  ): Promise<AdActivityResult> {
+    return this.http.get<AdActivityResult>('/v1/ads/account/activity', {
+      ...accountQuery(params),
+      since: params.since,
+      until: params.until,
+    });
+  }
+
+  labels(params: AdObjectParams & { adAccountId: string }): Promise<AdLabel[]> {
+    return this.http.get<AdLabel[]>('/v1/ads/account/labels', accountQuery(params));
+  }
+
+  createLabel(input: AdLabelInput): Promise<AdLabel> {
+    return this.http.post<AdLabel>('/v1/ads/account/labels', input);
+  }
+
+  updateLabel(id: string, input: AdLabelInput): Promise<AdLabel> {
+    return this.http.request<AdLabel>(
+      'PATCH',
+      `/v1/ads/account/labels/${id}`,
+      input,
+      metaQuery(input),
+    );
+  }
+
+  deleteLabel(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/labels/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  /** Keeps whatever labels the object already carries. */
+  applyLabel(id: string, input: ApplyAdLabelInput): Promise<unknown> {
+    return this.http.post(`/v1/ads/account/labels/${id}/apply`, input);
+  }
+
+  studies(params: AdObjectParams & { adAccountId: string }): Promise<AdStudy[]> {
+    return this.http.get<AdStudy[]>('/v1/ads/account/studies', accountQuery(params));
+  }
+
+  /** Splits traffic evenly across the cells for the length of the flight. */
+  createStudy(input: CreateAdStudyInput): Promise<AdStudy> {
+    return this.http.post<AdStudy>('/v1/ads/account/studies', input);
+  }
+
+  getStudy(id: string, params: AdObjectParams & { adAccountId: string }): Promise<AdStudy> {
+    return this.http.get<AdStudy>(`/v1/ads/account/studies/${id}`, accountQuery(params));
+  }
+
+  deleteStudy(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/studies/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  /** How many iOS 14 campaigns the account may run at once, per app. */
+  iosCampaignLimits(
+    params: AdObjectParams & { adAccountId: string },
+  ): Promise<IosCampaignLimits[]> {
+    return this.http.get<IosCampaignLimits[]>('/v1/ads/account/ios-limits', accountQuery(params));
+  }
+
+  highDemandPeriods(params: AdObjectParams & { adAccountId: string }): Promise<HighDemandPeriod[]> {
+    return this.http.get<HighDemandPeriod[]>(
+      '/v1/ads/account/high-demand-periods',
+      accountQuery(params),
+    );
+  }
+
+  /** Tells the network to expect heavier spend over a window, so pacing allows for it. */
+  createHighDemandPeriod(input: CreateHighDemandPeriodInput): Promise<HighDemandPeriod> {
+    return this.http.post<HighDemandPeriod>('/v1/ads/account/high-demand-periods', input);
+  }
+
+  deleteHighDemandPeriod(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/high-demand-periods/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+
+  valueRuleSets(params: AdObjectParams & { adAccountId: string }): Promise<ValueRuleSet[]> {
+    return this.http.get<ValueRuleSet[]>('/v1/ads/account/value-rule-sets', accountQuery(params));
+  }
+
+  /** Weights conversions so some audiences count for more than others. */
+  createValueRuleSet(input: CreateValueRuleSetInput): Promise<ValueRuleSet> {
+    return this.http.post<ValueRuleSet>('/v1/ads/account/value-rule-sets', input);
+  }
+
+  deleteValueRuleSet(
+    id: string,
+    params: AdObjectMutationParams & { adAccountId: string },
+  ): Promise<unknown> {
+    return this.http.request(
+      'DELETE',
+      `/v1/ads/account/value-rule-sets/${id}`,
+      undefined,
+      accountQuery(params),
+    );
+  }
+}
+
+function accountQuery(params: { workspaceId?: string; connectionId: string; adAccountId: string }) {
+  return { ...metaQuery(params), ad_account_id: params.adAccountId };
 }
 
 /**
@@ -1231,5 +2025,498 @@ class MediaResource {
       throw new FoPostError(text || `Upload failed: HTTP ${res.status}`, res.status);
     }
     return this.complete(presigned.uploadId);
+  }
+}
+
+/**
+ * The people behind the inbox. A contact is one human however many handles
+ * they write from: an inbound item files its author, a reply files whoever
+ * you answered, and both fold into whatever is already on file.
+ */
+class ContactsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Most recently active first. Paginated: the result carries `pagination`. */
+  list(params: ListContactsParams = {}): Promise<ContactPage> {
+    return this.http.get<ContactPage>('/v1/contacts', {
+      workspace_id: params.workspaceId,
+      search: params.search,
+      platform: params.platform,
+      source: params.source,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Contact> {
+    return this.http.get<Contact>(`/v1/contacts/${id}`);
+  }
+
+  /**
+   * Folds into the contact that already holds the first channel, so this
+   * cannot duplicate someone the inbox has already met.
+   */
+  create(input: CreateContactInput): Promise<Contact> {
+    return this.http.post<Contact>('/v1/contacts', {
+      workspace_id: input.workspaceId,
+      channels: input.channels,
+      display_name: input.displayName,
+      note: input.note,
+      fields: input.fields,
+    });
+  }
+
+  update(id: string, input: UpdateContactInput): Promise<Contact> {
+    return this.http.request<Contact>('PATCH', `/v1/contacts/${id}`, {
+      display_name: input.displayName,
+      channels: input.channels,
+      note: input.note,
+      fields: input.fields,
+    });
+  }
+
+  /** The messages stay in the inbox; a later one files them again. */
+  delete(id: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/contacts/${id}`);
+  }
+
+  /** The threads this person appears in, newest first. */
+  conversations(id: string, params: { limit?: number } = {}): Promise<ContactConversation[]> {
+    return this.http.get<ContactConversation[]>(`/v1/contacts/${id}/conversations`, {
+      limit: params.limit,
+    });
+  }
+
+  /**
+   * Import from CSV text. `platform` and `handle` are required columns; any
+   * other column is read as a custom field key and reported when unknown.
+   */
+  import(workspaceId: string, csv: string): Promise<ContactImportResult> {
+    return this.http.post<ContactImportResult>('/v1/contacts/import', {
+      workspace_id: workspaceId,
+      csv,
+    });
+  }
+
+  /** The columns this workspace keeps about its contacts, in display order. */
+  listFields(workspaceId: string): Promise<ContactField[]> {
+    return this.http.get<ContactField[]>('/v1/contacts/fields', {
+      workspace_id: workspaceId,
+    });
+  }
+
+  createField(workspaceId: string, input: CreateContactFieldInput): Promise<ContactField> {
+    return this.http.post<ContactField>(
+      `/v1/contacts/fields?workspace_id=${encodeURIComponent(workspaceId)}`,
+      input,
+    );
+  }
+
+  /** The key and the type are fixed once created; the name and options are not. */
+  updateField(id: string, input: UpdateContactFieldInput): Promise<ContactField> {
+    return this.http.request<ContactField>('PATCH', `/v1/contacts/fields/${id}`, input);
+  }
+
+  /** Removes the field and every answer to it. */
+  deleteField(id: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/contacts/fields/${id}`);
+  }
+
+  /**
+   * Inbox analytics per thread: what each one carried and how long it waited
+   * for a reply. Needs the `analytics` scope, not `inbox`.
+   */
+  conversationAnalytics(
+    params: ListConversationAnalyticsParams = {},
+  ): Promise<ConversationAnalytics> {
+    return this.http.get<ConversationAnalytics>('/v1/analytics/inbox/conversations', {
+      workspace_id: params.workspaceId,
+      accountId: params.accountId,
+      days: params.days,
+      sort: params.sort,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+}
+
+/**
+ * Broadcasts: one message into every conversation the workspace already has
+ * with a segment of its contacts.
+ *
+ * Nothing is sent into a closed messaging window. Messenger and Instagram
+ * take a business-initiated message only within 24 hours of the contact's
+ * last one, so recipients outside it are skipped with `window_closed` rather
+ * than attempted — which is why the number sent is often lower than the
+ * audience.
+ */
+class BroadcastsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Newest first. Paginated: the result carries `pagination`. */
+  list(params: ListBroadcastsParams = {}): Promise<BroadcastPage> {
+    return this.http.get<BroadcastPage>('/v1/broadcasts', {
+      workspace_id: params.workspaceId,
+      status: params.status,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Broadcast> {
+    return this.http.get<Broadcast>(`/v1/broadcasts/${id}`);
+  }
+
+  /** Creates it without sending. Give `scheduledAt` to have it go out on its own. */
+  create(input: CreateBroadcastInput): Promise<Broadcast> {
+    return this.http.post<Broadcast>('/v1/broadcasts', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      name: input.name,
+      text: input.text,
+      media_id: input.mediaId,
+      audience: input.audience,
+      scheduled_at: input.scheduledAt,
+    });
+  }
+
+  /** Only a draft or scheduled broadcast can be edited. */
+  update(id: string, input: UpdateBroadcastInput): Promise<Broadcast> {
+    return this.http.patch<Broadcast>(`/v1/broadcasts/${id}`, {
+      name: input.name,
+      text: input.text,
+      media_id: input.mediaId,
+      audience: input.audience,
+      scheduled_at: input.scheduledAt,
+    });
+  }
+
+  /**
+   * Freeze the audience into a recipient list and start sending. `recipients`
+   * is how many contacts matched, not how many will be messaged — the
+   * messaging window decides that. Needs the `publish` scope as well as
+   * `inbox`.
+   */
+  send(id: string): Promise<{ id: string; status: string; recipients: number }> {
+    return this.http.post<{ id: string; status: string; recipients: number }>(
+      `/v1/broadcasts/${id}/send`,
+      {},
+    );
+  }
+
+  /**
+   * Stop it where it stands. Anyone not yet written to stays unsent; messages
+   * already delivered are not recalled. Needs the `publish` scope.
+   */
+  cancel(id: string): Promise<{ id: string; status: string }> {
+    return this.http.post<{ id: string; status: string }>(`/v1/broadcasts/${id}/cancel`, {});
+  }
+
+  /** One row per contact, with what became of their message. */
+  recipients(id: string, params: ListRecipientsParams = {}): Promise<BroadcastRecipientPage> {
+    return this.http.get<BroadcastRecipientPage>(`/v1/broadcasts/${id}/recipients`, {
+      status: params.status,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /**
+   * Removes the broadcast and its recipient records. Messages already sent
+   * stay in the conversations they went to.
+   */
+  delete(id: string): Promise<{ message: string }> {
+    return this.http.delete<{ message: string }>(`/v1/broadcasts/${id}`);
+  }
+}
+
+/**
+ * Drip sequences: a series of messages, each a delay after the one before,
+ * walked per enrolled contact.
+ *
+ * The messaging window applies to every step. A step that comes due outside
+ * it is skipped rather than sent, and the enrollment carries on — so someone
+ * can complete a sequence having received only some of its messages.
+ */
+class SequencesResource {
+  constructor(private http: HttpClient) {}
+
+  list(
+    params: { workspaceId?: string; page?: number; perPage?: number } = {},
+  ): Promise<SequencePage> {
+    return this.http.get<SequencePage>('/v1/sequences', {
+      workspace_id: params.workspaceId,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Sequence> {
+    return this.http.get<Sequence>(`/v1/sequences/${id}`);
+  }
+
+  /** Creating a sequence enrolls nobody. */
+  create(input: CreateSequenceInput): Promise<Sequence> {
+    return this.http.post<Sequence>('/v1/sequences', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      name: input.name,
+      steps: input.steps,
+      status: input.status,
+    });
+  }
+
+  /**
+   * Pausing stops every enrollment from firing without ending any of them;
+   * resuming picks them up where they stood.
+   */
+  update(id: string, input: UpdateSequenceInput): Promise<Sequence> {
+    return this.http.patch<Sequence>(`/v1/sequences/${id}`, {
+      name: input.name,
+      steps: input.steps,
+      status: input.status,
+    });
+  }
+
+  /**
+   * Put contacts on the sequence. Re-enrolling someone restarts their walk
+   * from the first step rather than running two in parallel. Needs the
+   * `publish` scope as well as `inbox`.
+   */
+  enroll(id: string, input: EnrollInput): Promise<{ id: string; enrolled: number }> {
+    return this.http.post<{ id: string; enrolled: number }>(`/v1/sequences/${id}/enroll`, {
+      contact_ids: input.contactIds,
+      audience: input.audience,
+    });
+  }
+
+  /** Nothing further fires for them. Needs the `publish` scope. */
+  unenroll(id: string, contactIds: string[]): Promise<{ id: string; stopped: number }> {
+    return this.http.post<{ id: string; stopped: number }>(`/v1/sequences/${id}/unenroll`, {
+      contact_ids: contactIds,
+    });
+  }
+
+  /** Who is on it, what step they are at, and when the next one is due. */
+  enrollments(id: string, params: ListPageParams = {}): Promise<EnrollmentPage> {
+    return this.http.get<EnrollmentPage>(`/v1/sequences/${id}/enrollments`, {
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /** Removes the sequence and every enrollment on it. */
+  delete(id: string): Promise<{ message: string }> {
+    return this.http.delete<{ message: string }>(`/v1/sequences/${id}`);
+  }
+}
+
+/**
+ * Google Business Profile management for one connected location.
+ *
+ * Google grants Business Profile API access per project. Until the grant
+ * lands on a deployment every method here raises a 503 `configuration_error`.
+ */
+class GoogleBusinessResource {
+  constructor(private http: HttpClient) {}
+
+  getLocation(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/location`);
+  }
+
+  /** Only the fields present in `input` change. */
+  updateLocation(
+    accountId: string,
+    input: UpdateGoogleBusinessLocationInput,
+  ): Promise<GoogleBusinessPayload> {
+    const body: Record<string, unknown> = {};
+    if (input.title !== undefined) body.title = input.title;
+    if (input.description !== undefined) body.description = input.description;
+    if (input.websiteUri !== undefined) body.website_uri = input.websiteUri;
+    if (input.primaryPhone !== undefined) body.primary_phone = input.primaryPhone;
+    if (input.additionalPhones !== undefined) body.additional_phones = input.additionalPhones;
+    if (input.storeCode !== undefined) body.store_code = input.storeCode;
+    if (input.regularHours !== undefined) {
+      body.regular_hours = input.regularHours.map((p) => ({
+        open_day: p.openDay,
+        open_time: p.openTime,
+        close_day: p.closeDay,
+        close_time: p.closeTime,
+      }));
+    }
+    return this.http.patch<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/location`, body);
+  }
+
+  getAttributes(
+    accountId: string,
+    params: GoogleBusinessAttributesParams = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/attributes`, {
+      available: params.available,
+      category_name: params.categoryName,
+      region_code: params.regionCode,
+      language_code: params.languageCode,
+    });
+  }
+
+  /** Only the named attributes change; every other one is left alone. */
+  updateAttributes(
+    accountId: string,
+    attributes: GoogleBusinessAttributeInput[],
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.patch<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/attributes`, {
+      attributes: attributes.map((a) => ({
+        name: a.name,
+        ...(a.values === undefined ? {} : { values: a.values }),
+        ...(a.uriValues === undefined ? {} : { uri_values: a.uriValues }),
+      })),
+    });
+  }
+
+  getMenus(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/menus`);
+  }
+
+  /** Google has no per-section patch, so the whole menu set is replaced. */
+  replaceMenus(accountId: string, menus: unknown[]): Promise<GoogleBusinessPayload> {
+    return this.http.put<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/menus`, { menus });
+  }
+
+  getServices(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/services`);
+  }
+
+  replaceServices(accountId: string, serviceItems: unknown[]): Promise<GoogleBusinessPayload> {
+    return this.http.put<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/services`, {
+      service_items: serviceItems,
+    });
+  }
+
+  listMedia(
+    accountId: string,
+    params: { pageSize?: number; pageToken?: string } = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/media`, {
+      page_size: params.pageSize,
+      page_token: params.pageToken,
+    });
+  }
+
+  /** The photo is a media-library asset in the same workspace, JPEG or PNG. */
+  addMedia(accountId: string, input: AddGoogleBusinessMediaInput): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/media`, {
+      media_id: input.mediaId,
+      category: input.category,
+      description: input.description,
+    });
+  }
+
+  deleteMedia(accountId: string, mediaKey: string): Promise<GoogleBusinessPayload> {
+    return this.http.delete<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/media/${mediaKey}`,
+    );
+  }
+
+  listPlaceActions(accountId: string): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/place-actions`);
+  }
+
+  createPlaceAction(
+    accountId: string,
+    input: CreateGoogleBusinessPlaceActionInput,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/place-actions`, {
+      uri: input.uri,
+      place_action_type: input.placeActionType,
+      ...(input.isPreferred === undefined ? {} : { is_preferred: input.isPreferred }),
+    });
+  }
+
+  updatePlaceAction(
+    accountId: string,
+    linkId: string,
+    input: UpdateGoogleBusinessPlaceActionInput,
+  ): Promise<GoogleBusinessPayload> {
+    const body: Record<string, unknown> = {};
+    if (input.uri !== undefined) body.uri = input.uri;
+    if (input.isPreferred !== undefined) body.is_preferred = input.isPreferred;
+    return this.http.patch<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/place-actions/${linkId}`,
+      body,
+    );
+  }
+
+  deletePlaceAction(accountId: string, linkId: string): Promise<GoogleBusinessPayload> {
+    return this.http.delete<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/place-actions/${linkId}`,
+    );
+  }
+
+  getVerificationOptions(
+    accountId: string,
+    params: { languageCode?: string } = {},
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/verification`, {
+      language_code: params.languageCode,
+    });
+  }
+
+  /** The response names the pending verification to complete with the PIN. */
+  startVerification(
+    accountId: string,
+    input: StartGoogleBusinessVerificationInput,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/verification/start`,
+      {
+        method: input.method,
+        language_code: input.languageCode,
+        phone_number: input.phoneNumber,
+        email_address: input.emailAddress,
+        mailer_contact_name: input.mailerContactName,
+      },
+    );
+  }
+
+  completeVerification(
+    accountId: string,
+    input: { verificationName: string; pin: string },
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.post<GoogleBusinessPayload>(
+      `/v1/accounts/${accountId}/gbp/verification/complete`,
+      { verification_name: input.verificationName, pin: input.pin },
+    );
+  }
+
+  /** Daily impressions, calls, direction requests and clicks for the range. */
+  getPerformance(
+    accountId: string,
+    params: GoogleBusinessPerformanceParams,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/performance`, {
+      start_date: params.startDate,
+      end_date: params.endDate,
+      daily_metrics: params.dailyMetrics,
+    });
+  }
+
+  /** The search terms people used to find the listing, by month. */
+  getSearchKeywords(
+    accountId: string,
+    params: GoogleBusinessSearchKeywordsParams,
+  ): Promise<GoogleBusinessPayload> {
+    return this.http.get<GoogleBusinessPayload>(`/v1/accounts/${accountId}/gbp/performance`, {
+      keywords: true,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      page_token: params.pageToken,
+    });
+  }
+
+  /** Hands the location to another workspace; the caller must own both. */
+  assign(accountId: string, input: { workspaceId: string }): Promise<MovedAccount> {
+    return this.http.post<MovedAccount>(`/v1/accounts/${accountId}/gbp/assign`, {
+      workspace_id: input.workspaceId,
+    });
   }
 }

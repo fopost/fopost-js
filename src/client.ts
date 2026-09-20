@@ -16,6 +16,9 @@ export class FoPostError extends Error {
   }
 }
 
+/** A query value; an array repeats the parameter. */
+export type QueryValue = string | number | boolean | undefined | Array<string | number | boolean>;
+
 export type HttpClientOptions = {
   apiKey: string;
   baseUrl?: string;
@@ -44,12 +47,19 @@ export class HttpClient {
     method: string,
     path: string,
     body?: unknown,
-    query?: Record<string, string | number | boolean | undefined>,
+    query?: Record<string, QueryValue>,
   ): Promise<T> {
     const url = new URL(this.baseUrl + path);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
-        if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+        if (v === undefined || v === null) continue;
+        // An array repeats the parameter, which is how the API reads a
+        // multi-valued filter like `daily_metrics`.
+        if (Array.isArray(v)) {
+          for (const item of v) url.searchParams.append(k, String(item));
+          continue;
+        }
+        url.searchParams.set(k, String(v));
       }
     }
 
@@ -88,7 +98,7 @@ export class HttpClient {
     return json as T;
   }
 
-  get<T>(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  get<T>(path: string, query?: Record<string, QueryValue>): Promise<T> {
     return this.request<T>('GET', path, undefined, query);
   }
 
