@@ -6,6 +6,19 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `accounts.listDiscordChannels`, `switchDiscordChannel`, `getDiscordIdentity` and
+  `updateDiscordIdentity` read and change where a Discord bot connection posts and the
+  nickname and avatar it wears.
+- `accounts.listDiscordPins`, `deleteDiscordMessage`, `pinDiscordMessage`,
+  `unpinDiscordMessage`, `crosspostDiscordMessage`, `createDiscordThread` and
+  `sendDiscordDm` act on messages in the connected channel; these also need the
+  `publish` scope.
+- `accounts.listDiscordEvents`, `getDiscordEvent`, `createDiscordEvent`,
+  `updateDiscordEvent` and `deleteDiscordEvent` manage the server's scheduled events.
+- `accounts.listDiscordMembers`, `getDiscordMember`, `listDiscordRoles`,
+  `createDiscordRole`, `updateDiscordRole`, `deleteDiscordRole`, `addDiscordMemberRole`
+  and `removeDiscordMemberRole` manage the server's roster and roles. A Discord
+  connection made with a webhook answers `409 webhook_connection` on all of them.
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon

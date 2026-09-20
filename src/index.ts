@@ -93,6 +93,16 @@ import type {
   RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
+  CreateDiscordEventInput,
+  CreateDiscordRoleInput,
+  CreateDiscordThreadInput,
+  DiscordChannel,
+  DiscordIdentity,
+  DiscordMember,
+  DiscordMessage,
+  DiscordMessageRef,
+  DiscordRole,
+  DiscordScheduledEvent,
   SlackChannel,
   SlackIdentity,
   SlackMember,
@@ -104,6 +114,9 @@ import type {
   TargetingSearchType,
   UpdateInboxItemInput,
   UpdatePostInput,
+  UpdateDiscordEventInput,
+  UpdateDiscordIdentityInput,
+  UpdateDiscordRoleInput,
   UpdateSlackIdentityInput,
   ValidateLengthResult,
   ValidateMediaResult,
@@ -302,6 +315,180 @@ class AccountsResource {
     if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
     return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
   }
+
+  // ── Discord (bot connections; a webhook one answers 409 webhook_connection) ──
+
+  /** Text channels the bot can post to, with `is_current` on this account's. */
+  listDiscordChannels(id: string): Promise<DiscordChannel[]> {
+    return this.http.get<DiscordChannel[]>(`/v1/accounts/${id}/discord/channels`);
+  }
+
+  /** Moves the account to another channel in the same server. */
+  switchDiscordChannel(id: string, channelId: string): Promise<DiscordChannel> {
+    return this.http.patch<DiscordChannel>(`/v1/accounts/${id}/discord/channels/current`, {
+      channel_id: channelId,
+    });
+  }
+
+  getDiscordIdentity(id: string): Promise<DiscordIdentity> {
+    return this.http.get<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`);
+  }
+
+  /** Omitted fields keep their value and null clears one. */
+  updateDiscordIdentity(id: string, input: UpdateDiscordIdentityInput): Promise<DiscordIdentity> {
+    const body: Record<string, unknown> = {};
+    if (input.username !== undefined) body.username = input.username;
+    if (input.avatarUrl !== undefined) body.avatar_url = input.avatarUrl;
+    return this.http.patch<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`, body);
+  }
+
+  listDiscordPins(id: string): Promise<DiscordMessage[]> {
+    return this.http.get<DiscordMessage[]>(`/v1/accounts/${id}/discord/messages/pinned`);
+  }
+
+  deleteDiscordMessage(id: string, messageId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}`,
+    );
+  }
+
+  pinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.post<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  unpinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.delete<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  /** Publishes an announcement-channel message to every server following it. */
+  crosspostDiscordMessage(id: string, messageId: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/crosspost`,
+    );
+  }
+
+  createDiscordThread(
+    id: string,
+    messageId: string,
+    input: CreateDiscordThreadInput,
+  ): Promise<{ id: string; name: string; parent_id: string | null }> {
+    return this.http.post(`/v1/accounts/${id}/discord/messages/${messageId}/thread`, {
+      name: input.name,
+      ...(input.autoArchiveDuration !== undefined
+        ? { auto_archive_duration: input.autoArchiveDuration }
+        : {}),
+    });
+  }
+
+  /** Sends one message to a member; `memberId` is a `DiscordMember.id`. */
+  sendDiscordDm(id: string, memberId: string, content: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(`/v1/accounts/${id}/discord/dm`, {
+      member_id: memberId,
+      content,
+    });
+  }
+
+  listDiscordEvents(id: string): Promise<DiscordScheduledEvent[]> {
+    return this.http.get<DiscordScheduledEvent[]>(`/v1/accounts/${id}/discord/events`);
+  }
+
+  getDiscordEvent(id: string, eventId: string): Promise<DiscordScheduledEvent> {
+    return this.http.get<DiscordScheduledEvent>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  createDiscordEvent(id: string, input: CreateDiscordEventInput): Promise<DiscordScheduledEvent> {
+    return this.http.post<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events`,
+      discordEventBody(input),
+    );
+  }
+
+  updateDiscordEvent(
+    id: string,
+    eventId: string,
+    input: UpdateDiscordEventInput,
+  ): Promise<DiscordScheduledEvent> {
+    return this.http.patch<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events/${eventId}`,
+      discordEventBody(input),
+    );
+  }
+
+  deleteDiscordEvent(id: string, eventId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  /** `query` searches by username or nickname prefix. */
+  listDiscordMembers(
+    id: string,
+    options: { query?: string; limit?: number } = {},
+  ): Promise<DiscordMember[]> {
+    return this.http.get<DiscordMember[]>(`/v1/accounts/${id}/discord/members`, {
+      q: options.query,
+      limit: options.limit,
+    });
+  }
+
+  getDiscordMember(id: string, memberId: string): Promise<DiscordMember> {
+    return this.http.get<DiscordMember>(`/v1/accounts/${id}/discord/members/${memberId}`);
+  }
+
+  listDiscordRoles(id: string): Promise<DiscordRole[]> {
+    return this.http.get<DiscordRole[]>(`/v1/accounts/${id}/discord/roles`);
+  }
+
+  createDiscordRole(id: string, input: CreateDiscordRoleInput): Promise<DiscordRole> {
+    return this.http.post<DiscordRole>(`/v1/accounts/${id}/discord/roles`, input);
+  }
+
+  updateDiscordRole(
+    id: string,
+    roleId: string,
+    input: UpdateDiscordRoleInput,
+  ): Promise<DiscordRole> {
+    return this.http.patch<DiscordRole>(`/v1/accounts/${id}/discord/roles/${roleId}`, input);
+  }
+
+  deleteDiscordRole(id: string, roleId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/roles/${roleId}`);
+  }
+
+  addDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.put<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+
+  removeDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.delete<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+}
+
+/** Camel-cased event input as the API's snake_case body. */
+function discordEventBody(input: UpdateDiscordEventInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (input.name !== undefined) body.name = input.name;
+  if (input.description !== undefined) body.description = input.description;
+  if (input.startTime !== undefined) body.start_time = input.startTime;
+  if (input.endTime !== undefined) body.end_time = input.endTime;
+  if (input.channelId !== undefined) body.channel_id = input.channelId;
+  if (input.location !== undefined) body.location = input.location;
+  if (input.status !== undefined) body.status = input.status;
+  return body;
 }
 
 class AccountGroupsResource {

@@ -155,6 +155,120 @@ export type UpdateSlackIdentityInput = {
   iconEmoji?: string | null;
 };
 
+export type DiscordChannel = {
+  /** Discord channel id. */
+  id: string;
+  name: string;
+  /** Discord channel type: 0 text, 5 announcement, 15 forum. */
+  type: number;
+  parent_id: string | null;
+  nsfw: boolean;
+  /** The channel this account posts to. */
+  is_current: boolean;
+};
+
+/** The nickname and avatar the bot wears in this server; null means its own. */
+export type DiscordIdentity = {
+  username: string | null;
+  avatar_url: string | null;
+};
+
+/** Omitted fields keep their value, null clears one. */
+export type UpdateDiscordIdentityInput = {
+  /** 1-32 characters. */
+  username?: string | null;
+  /** An http(s) URL. */
+  avatarUrl?: string | null;
+};
+
+export type DiscordMessage = {
+  id: string;
+  channel_id: string;
+  content: string;
+  author_id: string;
+  author_name: string;
+  pinned: boolean;
+  created_at: string;
+};
+
+export type DiscordScheduledEvent = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Voice or stage channel, or null for an event somewhere else. */
+  channel_id: string | null;
+  location: string | null;
+  start_time: string;
+  end_time: string | null;
+  /** `scheduled`, `active`, `completed` or `canceled`. */
+  status: string;
+  user_count: number | null;
+};
+
+/** Name a channelId, or a location with an endTime. */
+export type CreateDiscordEventInput = {
+  name: string;
+  description?: string;
+  /** ISO 8601. */
+  startTime: string;
+  /** ISO 8601; required for an event at a location. */
+  endTime?: string;
+  channelId?: string;
+  location?: string;
+};
+
+export type UpdateDiscordEventInput = Partial<CreateDiscordEventInput> & {
+  status?: 'scheduled' | 'active' | 'completed' | 'canceled';
+};
+
+export type DiscordMember = {
+  /** Discord user id; pass it as the member id to send a DM or assign a role. */
+  id: string;
+  username: string;
+  display_name: string | null;
+  /** Nickname in this server. */
+  nick: string | null;
+  avatar: string | null;
+  is_bot: boolean;
+  roles: string[];
+  joined_at: string | null;
+};
+
+export type DiscordRole = {
+  id: string;
+  name: string;
+  /** RGB integer; 0 is the default colour. */
+  color: number;
+  /** Shown separately in the member list. */
+  hoist: boolean;
+  mentionable: boolean;
+  /** Owned by an integration; not editable. */
+  managed: boolean;
+  position: number;
+  /** Permission bitfield as a decimal string. */
+  permissions: string;
+};
+
+export type CreateDiscordRoleInput = {
+  name: string;
+  color?: number;
+  hoist?: boolean;
+  mentionable?: boolean;
+  /** Permission bitfield as a decimal string. */
+  permissions?: string;
+};
+
+export type UpdateDiscordRoleInput = Partial<CreateDiscordRoleInput>;
+
+/** A message the bot put somewhere. */
+export type DiscordMessageRef = { id: string; channel_id: string };
+
+export type CreateDiscordThreadInput = {
+  name: string;
+  /** Minutes of inactivity before it archives: 60, 1440, 4320 or 10080. */
+  autoArchiveDuration?: 60 | 1440 | 4320 | 10080;
+};
+
 /** Account groups come back in the API's snake_case shape. */
 export type AccountGroup = {
   /** Public account group id (uuid). */
