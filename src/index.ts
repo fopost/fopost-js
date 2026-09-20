@@ -78,6 +78,11 @@ import type {
   Platform,
   LeadFormSource,
   LeadsPage,
+  AdBusinessCenter,
+  AdCommentsPage,
+  AdIdentity,
+  SparkPost,
+  UploadConversionsInput,
   ListInboxConversationsParams,
   ListInboxParams,
   ListAccountsParams,
@@ -699,6 +704,77 @@ class AdsResource {
       page_id: params.pageId,
       after: params.after,
     });
+  }
+
+  /**
+   * TikTok's Business Centers. The only network-named reads in this resource,
+   * because no other network groups ad accounts this way.
+   */
+  tiktokBusinessCenters(params: AdObjectParams): Promise<AdBusinessCenter[]> {
+    return this.http.get<AdBusinessCenter[]>('/v1/ads/tiktok/business-centers', metaQuery(params));
+  }
+
+  /** The TikTok identities an ad can run as; an identity id is a `pageId`. */
+  tiktokIdentities(params: AdObjectParams & { adAccountId: string }): Promise<AdIdentity[]> {
+    return this.http.get<AdIdentity[]>('/v1/ads/tiktok/identities', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+    });
+  }
+
+  /** Posts already live under an identity, each a candidate Spark ad. */
+  sparkPosts(
+    params: AdObjectParams & { adAccountId: string; identityId: string },
+  ): Promise<SparkPost[]> {
+    return this.http.get<SparkPost[]>('/v1/ads/spark-posts', {
+      ...metaQuery(params),
+      ad_account_id: params.adAccountId,
+      identity_id: params.identityId,
+    });
+  }
+
+  /** Offline conversions. Emails and phone numbers are hashed before they leave FoPost. */
+  uploadConversions(input: UploadConversionsInput): Promise<{ accepted: number }> {
+    return this.http.post<{ accepted: number }>('/v1/ads/conversions', input);
+  }
+
+  /** Comments on an ad, read live. Pass `nextCursor` back as `after`. */
+  comments(params: AdObjectParams & { adId: string; after?: string }): Promise<AdCommentsPage> {
+    return this.http.get<AdCommentsPage>('/v1/ads/comments', {
+      ...metaQuery(params),
+      ad_id: params.adId,
+      after: params.after,
+    });
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  replyToComment(
+    commentId: string,
+    input: { workspaceId: string; connectionId: string; adId: string; text: string },
+  ): Promise<{ replyId: string }> {
+    return this.http.post<{ replyId: string }>(
+      `/v1/ads/comments/${commentId}/reply`,
+      input,
+    );
+  }
+
+  /** Needs the `publish` scope as well as `ads`. */
+  setCommentHidden(
+    commentId: string,
+    input: { workspaceId: string; connectionId: string; adId: string; hidden: boolean },
+  ): Promise<unknown> {
+    return this.http.post(`/v1/ads/comments/${commentId}/hide`, input);
+  }
+
+  /**
+   * One already gone on the network succeeds. Needs the `publish` scope as
+   * well as `ads`.
+   */
+  deleteComment(
+    commentId: string,
+    input: { workspaceId: string; connectionId: string; adId: string },
+  ): Promise<unknown> {
+    return this.http.request('DELETE', `/v1/ads/comments/${commentId}`, input);
   }
 
   /** Campaigns, ad sets and ads on one ad account, read live from Meta. */

@@ -703,8 +703,14 @@ export type BoostPostInput = AdBaseInput & {
 
 export type CreateAdInput = AdBaseInput & {
   pageId: string;
-  /** Up to 125 characters. */
+  /** Up to 125 characters. Ignored when `sparkPostId` is set. */
   text: string;
+  /**
+   * A post already live on the network, from `ads.sparkPosts()`. Runs it as a
+   * Spark ad, so `text`, `headline` and `mediaUrl` are ignored. Needs the
+   * network's `sparkAds` capability.
+   */
+  sparkPostId?: string;
   headline?: string;
   destinationUrl?: string;
   /** A media library asset url. */
@@ -809,6 +815,11 @@ export type CreateAdCampaignInput = {
   goal: AdGoal;
   /** Default true. */
   paused?: boolean;
+  /**
+   * Hands targeting and creative rotation to the network. Needs the network's
+   * `smartPlus` capability.
+   */
+  smartPlus?: boolean;
 };
 
 export type UpdateAdCampaignInput = { name?: string; status?: AdObjectStatus };
@@ -1102,3 +1113,65 @@ export type DirectUploadInput = {
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
 };
+
+/** A Business Center, or the network's equivalent grouping of ad accounts. */
+export type AdBusinessCenter = { id: string; name: string; role: string | null };
+
+/** The account an ad runs as. Meta calls it a Page, TikTok an identity. */
+export type AdIdentity = {
+  id: string;
+  /** The network's own identity kind, e.g. `CUSTOMIZED_USER`. */
+  type: string;
+  name: string;
+  avatarUrl: string | null;
+};
+
+/** A post already live on the network, offered as the source of a Spark ad. */
+export type SparkPost = {
+  id: string;
+  identityId: string;
+  caption: string | null;
+  thumbnailUrl: string | null;
+  createdAt: string | null;
+  views: number | null;
+};
+
+/** One offline conversion. Identifiers are hashed before they leave FoPost. */
+export type ConversionEvent = {
+  eventName: string;
+  /** ISO 8601. */
+  occurredAt: string;
+  email?: string;
+  phone?: string;
+  /** Account currency, minor units. */
+  valueMinor?: number;
+  currency?: string;
+  orderId?: string;
+};
+
+export type UploadConversionsInput = {
+  workspaceId: string;
+  connectionId: string;
+  adAccountId: string;
+  /** A pixel the ad account owns, from `ads.audiences()`. */
+  pixelId: string;
+  /** Up to 1000 per call. */
+  events: ConversionEvent[];
+};
+
+/** A comment on an ad, read live from the network and never stored. */
+export type AdComment = {
+  id: string;
+  adId: string | null;
+  text: string;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
+  createdAt: string | null;
+  likes: number;
+  replyCount: number;
+  hidden: boolean;
+  /** The comment this one answers, when it is not on the ad itself. */
+  parentId: string | null;
+};
+
+export type AdCommentsPage = { comments: AdComment[]; nextCursor: string | null };
