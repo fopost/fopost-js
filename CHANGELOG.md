@@ -6,6 +6,12 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `ads.google` wraps the Google Ads surface: keywords and keyword ideas, search terms,
+  bid strategies, ad schedule, negative keyword lists, assets, Performance Max asset
+  groups, Local Services leads, conversions, and `query` for a raw GAQL read. Changes
+  need the `publish` scope as well as `ads`.
+- `ads.authorizeGoogle` starts a Google Ads connection.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon

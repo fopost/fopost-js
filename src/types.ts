@@ -1102,3 +1102,271 @@ export type DirectUploadInput = {
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
 };
+
+// ─── Ads: Google only ──────────────────────────────────────────────
+
+/**
+ * Every Google Ads call names the connection and the Google Ads customer.
+ * `customerId` is digits only, and has to be an account the connection's
+ * grant reaches: any other answers 404.
+ */
+export type GoogleAdsScope = {
+  workspaceId?: string;
+  connectionId: string;
+  customerId: string;
+};
+
+/** A write also names the workspace, which a read may leave out. */
+export type GoogleAdsWriteScope = GoogleAdsScope & { workspaceId: string };
+
+export type GoogleMatchType = 'EXACT' | 'PHRASE' | 'BROAD';
+
+export type GoogleKeyword = {
+  /** `<customerId>~keyword~<adGroupId>~<criterionId>` */
+  id: string;
+  adGroupId: string;
+  text: string;
+  matchType: string;
+  status: string;
+  /** Account currency, minor units. */
+  cpcBidMinor: number | null;
+  negative: boolean;
+};
+
+export type CreateGoogleKeywordInput = GoogleAdsWriteScope & {
+  adGroupId: string;
+  text: string;
+  matchType: GoogleMatchType;
+  cpcBidMinor?: number;
+};
+
+export type UpdateGoogleKeywordInput = GoogleAdsWriteScope & {
+  status?: 'active' | 'paused';
+  cpcBidMinor?: number;
+};
+
+export type GoogleKeywordIdea = {
+  text: string;
+  avgMonthlySearches: number;
+  competition: string | null;
+  lowTopOfPageBidMinor: number | null;
+  highTopOfPageBidMinor: number | null;
+};
+
+export type GoogleKeywordIdeasInput = GoogleAdsWriteScope & {
+  seeds?: string[];
+  url?: string;
+  languageId?: string;
+  geoTargetIds?: string[];
+};
+
+export type GoogleKeywordMetricsInput = GoogleAdsWriteScope & { keywords: string[] };
+
+export type GoogleSearchTerm = {
+  term: string;
+  adGroupId: string | null;
+  status: string | null;
+  metrics: InsightsMetrics;
+};
+
+export type GoogleBidStrategy = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  campaignCount: number;
+};
+
+export type CreateGoogleBidStrategyInput = GoogleAdsWriteScope & {
+  name: string;
+  type:
+    | 'TARGET_SPEND'
+    | 'MAXIMIZE_CONVERSIONS'
+    | 'MAXIMIZE_CONVERSION_VALUE'
+    | 'TARGET_CPA'
+    | 'TARGET_ROAS';
+  /** Account currency, minor units, where the strategy takes a target. */
+  targetMinor?: number;
+};
+
+export type GoogleDayOfWeek =
+  'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+export type GoogleAdScheduleSlot = {
+  id: string;
+  dayOfWeek: string;
+  startHour: number;
+  endHour: number;
+  bidModifier: number | null;
+};
+
+export type SetGoogleAdScheduleInput = GoogleAdsWriteScope & {
+  campaignId: string;
+  /** Replaces every slot on the campaign: Google has no partial edit for a schedule. */
+  slots: Array<{
+    dayOfWeek: GoogleDayOfWeek;
+    startHour: number;
+    endHour: number;
+    bidModifier?: number;
+  }>;
+};
+
+export type GoogleSharedSet = {
+  id: string;
+  name: string;
+  type: string;
+  memberCount: number;
+};
+
+export type CreateGoogleNegativeKeywordListInput = GoogleAdsWriteScope & { name: string };
+
+export type AddGoogleNegativeKeywordsInput = GoogleAdsWriteScope & {
+  sharedSetId: string;
+  keywords: Array<{ text: string; matchType: GoogleMatchType }>;
+};
+
+export type AttachGoogleNegativeKeywordListInput = GoogleAdsWriteScope & {
+  sharedSetId: string;
+  campaignId: string;
+};
+
+export type GoogleAsset = {
+  id: string;
+  name: string | null;
+  type: string;
+  /** What a sitelink, callout or snippet renders. */
+  text: string | null;
+  finalUrl: string | null;
+};
+
+/** Where an asset is attached; an asset with no links is in the library only. */
+export type GoogleAssetLink = {
+  id: string;
+  assetId: string;
+  level: 'customer' | 'campaign';
+  ownerId: string | null;
+  fieldType: string;
+  status: string;
+};
+
+export type GoogleAssetsResult = { assets: GoogleAsset[]; links: GoogleAssetLink[] };
+
+export type GoogleAssetSpec =
+  | {
+      kind: 'sitelink';
+      text: string;
+      description1?: string;
+      description2?: string;
+      finalUrl: string;
+    }
+  | { kind: 'callout'; text: string }
+  | { kind: 'snippet'; header: string; values: string[] };
+
+export type CreateGoogleAssetInput = GoogleAdsWriteScope & { spec: GoogleAssetSpec };
+
+export type AttachGoogleAssetInput = GoogleAdsWriteScope & {
+  assetId: string;
+  fieldType: 'SITELINK' | 'CALLOUT' | 'STRUCTURED_SNIPPET';
+  /** Attaches to the account when left out. */
+  campaignId?: string;
+};
+
+export type GoogleAssetGroup = {
+  id: string;
+  campaignId: string;
+  name: string;
+  status: string;
+  finalUrls: string[];
+};
+
+export type CreateGoogleAssetGroupInput = GoogleAdsWriteScope & {
+  campaignId: string;
+  name: string;
+  finalUrls: string[];
+  status?: 'active' | 'paused';
+};
+
+export type UpdateGoogleAssetGroupInput = GoogleAdsWriteScope & {
+  name?: string;
+  status?: 'active' | 'paused';
+};
+
+export type GoogleLocalServicesLead = {
+  id: string;
+  category: string | null;
+  service: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  status: string | null;
+  type: string | null;
+  createdAt: string | null;
+};
+
+export type GoogleConversionAction = {
+  id: string;
+  name: string;
+  category: string;
+  status: string;
+  type: string;
+  countingType: string | null;
+  valueMinor: number | null;
+};
+
+export type CreateGoogleConversionActionInput = GoogleAdsWriteScope & {
+  name: string;
+  category:
+    | 'DEFAULT'
+    | 'PURCHASE'
+    | 'SIGNUP'
+    | 'LEAD'
+    | 'PAGE_VIEW'
+    | 'SUBMIT_LEAD_FORM'
+    | 'BOOK_APPOINTMENT'
+    | 'REQUEST_QUOTE';
+  valueMinor?: number;
+  countingType?: 'ONE_PER_CLICK' | 'MANY_PER_CLICK';
+};
+
+export type GoogleClickConversion = {
+  /** One of these three is required: they are what matches the click. */
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
+  conversionActionId: string;
+  /** `yyyy-MM-dd HH:mm:ss+|-HH:mm`, the only shape Google accepts. */
+  conversionDateTime: string;
+  valueMinor?: number;
+  currencyCode?: string;
+  orderId?: string;
+};
+
+export type UploadGoogleConversionsInput = GoogleAdsWriteScope & {
+  conversions: GoogleClickConversion[];
+};
+
+export type GoogleConversionAdjustment = {
+  conversionActionId: string;
+  adjustmentType: 'RESTATEMENT' | 'RETRACTION' | 'ENHANCEMENT';
+  adjustmentDateTime: string;
+  orderId?: string;
+  gclid?: string;
+  conversionDateTime?: string;
+  restatementValueMinor?: number;
+  currencyCode?: string;
+};
+
+export type UploadGoogleConversionAdjustmentsInput = GoogleAdsWriteScope & {
+  adjustments: GoogleConversionAdjustment[];
+};
+
+export type GoogleQueryInput = GoogleAdsScope & {
+  /** A read-only GAQL SELECT. The account read is `customerId`, never the query text. */
+  query: string;
+};
+
+/** Rows exactly as Google returns them. */
+export type GoogleQueryResult = { rows: Array<Record<string, unknown>> };
+
+/** A date range in the account's time zone, `YYYY-MM-DD` and inclusive. */
+export type GoogleDateRange = { since: string; until: string };
