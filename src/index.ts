@@ -95,6 +95,14 @@ import type {
   RewriteInput,
   SlackChannel,
   SlackIdentity,
+  MetaIceBreaker,
+  MetaIceBreakers,
+  MetaPersistentMenuEntry,
+  MetaPersistentMenu,
+  MetaGreetingText,
+  MetaGreeting,
+  WebhookSubscription,
+  InboxHandover,
   SlackMember,
   TargetingOption,
   TelegramBotCommand,
@@ -301,6 +309,64 @@ class AccountsResource {
     if (input.iconUrl !== undefined) body.icon_url = input.iconUrl;
     if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
     return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
+  }
+
+  // ─── Meta messaging settings (Facebook Pages, Instagram) ────────
+
+  /** The prompts shown before the first message. Networks without them answer 400. */
+  getIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.get<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** Replaces the ice breakers. Up to four. */
+  setIceBreakers(id: string, iceBreakers: MetaIceBreaker[]): Promise<MetaIceBreakers> {
+    return this.http.put<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`, {
+      ice_breakers: iceBreakers,
+    });
+  }
+
+  deleteIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.delete<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** The always-visible Messenger menu. Facebook Pages only. */
+  getPersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.get<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** Replaces the menu, one entry per locale, up to three items each. */
+  setPersistentMenu(id: string, menu: MetaPersistentMenuEntry[]): Promise<MetaPersistentMenu> {
+    return this.http.put<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`, {
+      persistent_menu: menu,
+    });
+  }
+
+  deletePersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.delete<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** The text shown before a Messenger conversation starts. Facebook Pages only. */
+  getGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.get<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** Replaces the greeting, one entry per locale, each up to 160 characters. */
+  setGreeting(id: string, greeting: MetaGreetingText[]): Promise<MetaGreeting> {
+    return this.http.put<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`, { greeting });
+  }
+
+  deleteGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.delete<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** What the network is delivering to the FoPost webhook for this account. */
+  getWebhookSubscription(id: string): Promise<WebhookSubscription> {
+    return this.http.get<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
+  }
+
+  /** Subscribes to every field this account needs, lapsed or not. */
+  resubscribeWebhook(id: string): Promise<WebhookSubscription> {
+    return this.http.post<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
   }
 }
 
@@ -554,6 +620,25 @@ class InboxResource {
       account_id: accountId,
       ...(on === undefined ? {} : { on }),
     });
+  }
+
+  /**
+   * Passes a Messenger thread to another Meta app, or takes it back when
+   * `appId` is omitted. Needs `publish`.
+   */
+  handover(
+    conversationId: string,
+    accountId: string,
+    options: { appId?: string; metadata?: string } = {},
+  ): Promise<InboxHandover> {
+    return this.http.post<InboxHandover>(
+      `/v1/inbox/conversations/${conversationId}/handover`,
+      {
+        account_id: accountId,
+        ...(options.appId === undefined ? {} : { app_id: options.appId }),
+        ...(options.metadata === undefined ? {} : { metadata: options.metadata }),
+      },
+    );
   }
 
   /** Replies an automation or the agent drafted that a person still has to send. */
