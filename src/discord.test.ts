@@ -143,6 +143,7 @@ describe('accounts discord', () => {
         type: 0,
         parent_id: null,
         nsfw: false,
+        can_post: true,
         is_current: true,
       },
     ];

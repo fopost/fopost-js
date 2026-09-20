@@ -1961,7 +1961,9 @@ class BroadcastsResource {
 class SequencesResource {
   constructor(private http: HttpClient) {}
 
-  list(params: { workspaceId?: string; page?: number; perPage?: number } = {}): Promise<SequencePage> {
+  list(
+    params: { workspaceId?: string; page?: number; perPage?: number } = {},
+  ): Promise<SequencePage> {
     return this.http.get<SequencePage>('/v1/sequences', {
       workspace_id: params.workspaceId,
       page: params.page,

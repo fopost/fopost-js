@@ -6,6 +6,9 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `DiscordChannel.can_post` says whether the bot may actually post in a channel; a
+  channel permission in Discord can shut it out even though the server allows it.
+  `switchDiscordChannel` answers `409 channel_not_writable` for such a channel.
 - `accounts.listDiscordChannels`, `switchDiscordChannel`, `getDiscordIdentity` and
   `updateDiscordIdentity` read and change where a Discord bot connection posts and the
   nickname and avatar it wears.

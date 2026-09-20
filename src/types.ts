@@ -218,6 +218,8 @@ export type DiscordChannel = {
   type: number;
   parent_id: string | null;
   nsfw: boolean;
+  /** False when a channel permission in Discord shuts the bot out of this channel. */
+  can_post: boolean;
   /** The channel this account posts to. */
   is_current: boolean;
 };
