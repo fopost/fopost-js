@@ -1102,3 +1102,37 @@ export type DirectUploadInput = {
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
 };
+
+// ─── Activity ──────────────────────────────────────────────────────
+
+/** `security` is the audit log: it is append-only and never expires. */
+export type ActivityKind =
+  'publish' | 'connection' | 'webhook' | 'inbox' | 'automation' | 'billing' | 'security';
+
+export type ActivityEvent = {
+  id: string;
+  workspaceId: string | null;
+  kind: ActivityKind;
+  refType: string | null;
+  refId: string | null;
+  summary: string;
+  actor: { type: 'user' | 'api_key' | 'agent' | 'system'; name: string | null };
+  time: string;
+};
+
+export type ListActivityParams = {
+  workspaceId?: string;
+  kind?: ActivityKind;
+  /** ISO 8601. Only events at or after this time. */
+  from?: string;
+  /** ISO 8601. Only events at or before this time. */
+  to?: string;
+  /** `meta.nextCursor` from the previous page. */
+  cursor?: string;
+  limit?: number;
+};
+
+export type ActivityPage = {
+  data: ActivityEvent[];
+  meta: { nextCursor: string | null };
+};
