@@ -19,6 +19,8 @@ import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
   AccountGroup,
+  ActivityEvent,
+  ActivityPage,
   Ad,
   AdAccountTree,
   AdCampaign,
@@ -112,6 +114,7 @@ import type {
   InboxReplyResult,
   InboxThread,
   Label,
+  ListActivityParams,
   Platform,
   LeadFormSource,
   LeadsPage,
@@ -220,6 +223,7 @@ export class FoPost {
   readonly validate: ValidateResource;
   readonly media: MediaResource;
   readonly knowledge: KnowledgeResource;
+  readonly activity: ActivityResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -237,10 +241,46 @@ export class FoPost {
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
     this.knowledge = new KnowledgeResource(this.http);
+    this.activity = new ActivityResource(this.http);
   }
 }
 
 // ─── Resources ─────────────────────────────────────────────────────
+
+class ActivityResource {
+  constructor(private http: HttpClient) {}
+
+  /**
+   * What happened in a workspace, newest first. Omit `workspaceId` to read
+   * every workspace the key can reach. `kind: 'security'` is the audit log.
+   */
+  async list(params: ListActivityParams = {}): Promise<ActivityPage> {
+    const raw = await this.http.get<{
+      data: Array<Record<string, unknown>>;
+      meta: { next_cursor: string | null };
+    }>('/v1/activity', {
+      workspace_id: params.workspaceId,
+      kind: params.kind,
+      from: params.from,
+      to: params.to,
+      cursor: params.cursor,
+      limit: params.limit,
+    });
+    return {
+      data: raw.data.map((r) => ({
+        id: r.id as string,
+        workspaceId: (r.workspace_id as string | null) ?? null,
+        kind: r.kind as ActivityEvent['kind'],
+        refType: (r.ref_type as string | null) ?? null,
+        refId: (r.ref_id as string | null) ?? null,
+        summary: r.summary as string,
+        actor: r.actor as ActivityEvent['actor'],
+        time: r.time as string,
+      })),
+      meta: { nextCursor: raw.meta?.next_cursor ?? null },
+    };
+  }
+}
 
 /** The API takes bare account ids; accept the { id } form too. */
 function accountIds(accounts: Array<string | { id: string }>): string[] {
