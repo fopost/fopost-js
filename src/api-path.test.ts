@@ -43,6 +43,35 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.listSlackMembers('a1');
   await fopost.accounts.getSlackIdentity('a1');
   await fopost.accounts.updateSlackIdentity('a1', { username: 'x' });
+  await fopost.accounts.listDiscordChannels('a1');
+  await fopost.accounts.switchDiscordChannel('a1', 'c2');
+  await fopost.accounts.getDiscordIdentity('a1');
+  await fopost.accounts.updateDiscordIdentity('a1', { username: 'x' });
+  await fopost.accounts.listDiscordPins('a1');
+  await fopost.accounts.deleteDiscordMessage('a1', 'm1');
+  await fopost.accounts.pinDiscordMessage('a1', 'm1');
+  await fopost.accounts.unpinDiscordMessage('a1', 'm1');
+  await fopost.accounts.crosspostDiscordMessage('a1', 'm1');
+  await fopost.accounts.createDiscordThread('a1', 'm1', { name: 't' });
+  await fopost.accounts.sendDiscordDm('a1', 'u7', 'hi');
+  await fopost.accounts.listDiscordEvents('a1');
+  await fopost.accounts.getDiscordEvent('a1', 'e1');
+  await fopost.accounts.createDiscordEvent('a1', {
+    name: 'e',
+    startTime: '2026-10-01T18:00:00.000Z',
+    endTime: '2026-10-01T19:00:00.000Z',
+    location: 'https://example.com/live',
+  });
+  await fopost.accounts.updateDiscordEvent('a1', 'e1', { name: 'e' });
+  await fopost.accounts.deleteDiscordEvent('a1', 'e1');
+  await fopost.accounts.listDiscordMembers('a1', { query: 'ada' });
+  await fopost.accounts.getDiscordMember('a1', 'u7');
+  await fopost.accounts.listDiscordRoles('a1');
+  await fopost.accounts.createDiscordRole('a1', { name: 'Beta' });
+  await fopost.accounts.updateDiscordRole('a1', 'r1', { name: 'Beta' });
+  await fopost.accounts.deleteDiscordRole('a1', 'r1');
+  await fopost.accounts.addDiscordMemberRole('a1', 'r1', 'u7');
+  await fopost.accounts.removeDiscordMemberRole('a1', 'r1', 'u7');
   await fopost.accountGroups.list({ workspaceId: 'ws' });
   await fopost.accountGroups.get('g1');
   await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
@@ -83,7 +112,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(48);
+    expect(urls.length).toBe(72);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
