@@ -6,6 +6,10 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `InboxItem.moderationStatus` carries the platform's own state for a comment
+  (`published`, `held`, `spam`, `rejected`), and `InboxAccount.reconnectRequired`
+  flags an account connected before the inbox asked for a permission it needs.
+
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
