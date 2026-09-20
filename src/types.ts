@@ -1247,3 +1247,186 @@ export type ListConversationAnalyticsParams = {
   page?: number;
   perPage?: number;
 };
+
+// ─── Broadcasts and sequences ──────────────────────────────────────
+
+/**
+ * Who a broadcast or an enrollment resolves to, expressed over contacts.
+ * Every clause narrows: a contact has to match all of them.
+ */
+export type AudienceFilter = {
+  /** Contacts with a handle on at least one of these networks. */
+  platforms?: string[];
+  labelIds?: string[];
+  source?: ContactSource;
+  fields?: Array<{
+    key: string;
+    op?: 'is' | 'is_not' | 'contains' | 'is_set' | 'is_not_set';
+    value?: string;
+  }>;
+};
+
+export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled';
+
+export type BroadcastCounts = {
+  total: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  pending: number;
+};
+
+export type Broadcast = {
+  id: string;
+  name: string;
+  text: string;
+  account_id: string | null;
+  audience: Record<string, unknown>;
+  status: BroadcastStatus;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  counts?: BroadcastCounts;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type BroadcastPage = {
+  data: Broadcast[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type RecipientStatus = 'pending' | 'sent' | 'skipped' | 'failed';
+
+/**
+ * Why nothing was sent. `window_closed` means the network's messaging window
+ * had shut — Messenger and Instagram take a business-initiated message only
+ * within 24 hours of the contact's last one, so nothing was attempted.
+ */
+export type SkipReason = 'window_closed' | 'no_conversation' | 'unsupported_platform';
+
+export type BroadcastRecipient = {
+  contact_id: string;
+  display_name: string | null;
+  status: RecipientStatus;
+  skip_reason: SkipReason | null;
+  sent_at: string | null;
+  error: string | null;
+};
+
+export type BroadcastRecipientPage = {
+  data: BroadcastRecipient[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListBroadcastsParams = {
+  workspaceId?: string;
+  status?: BroadcastStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateBroadcastInput = {
+  workspaceId: string;
+  /** The connected account the messages go out from. */
+  accountId: string;
+  /** Internal only; never sent to anyone. */
+  name: string;
+  text: string;
+  mediaId?: string | null;
+  /** Omitted means every contact in the workspace. */
+  audience?: AudienceFilter;
+  /** Send it at this time instead of on demand. */
+  scheduledAt?: string | null;
+};
+
+export type UpdateBroadcastInput = {
+  name?: string;
+  text?: string;
+  mediaId?: string | null;
+  audience?: AudienceFilter;
+  scheduledAt?: string | null;
+};
+
+export type ListRecipientsParams = {
+  status?: RecipientStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type SequenceStatus = 'active' | 'paused';
+
+/** One message and how long after the previous step it goes out. */
+export type SequenceStep = {
+  delay_hours: number;
+  text: string;
+  media_id?: string | null;
+};
+
+export type Sequence = {
+  id: string;
+  name: string;
+  account_id: string | null;
+  steps: SequenceStep[];
+  status: SequenceStatus;
+  created_at: string;
+  enrollments?: {
+    total: number;
+    active: number;
+    completed: number;
+    stopped: number;
+    failed: number;
+  };
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type SequencePage = {
+  data: Sequence[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type CreateSequenceInput = {
+  workspaceId: string;
+  accountId: string;
+  name: string;
+  steps: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+export type UpdateSequenceInput = {
+  name?: string;
+  steps?: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+/** Name contacts outright, or the audience they are drawn from. */
+export type EnrollInput = {
+  contactIds?: string[];
+  audience?: AudienceFilter;
+};
+
+export type EnrollmentStatus = 'active' | 'completed' | 'stopped' | 'failed';
+
+export type Enrollment = {
+  id: string;
+  contact_id: string;
+  display_name: string | null;
+  /** Steps already sent, so also the index of the next one. */
+  step: number;
+  next_at: string | null;
+  status: EnrollmentStatus;
+  last_sent_at: string | null;
+  /** On a skipped step, the reason: `window_closed` or `no_conversation`. */
+  error: string | null;
+};
+
+export type EnrollmentPage = {
+  data: Enrollment[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListPageParams = {
+  page?: number;
+  perPage?: number;
+};

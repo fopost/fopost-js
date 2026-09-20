@@ -102,6 +102,9 @@ import type {
   TelegramConnectCode,
   TelegramConnectStatus,
   TargetingSearchType,
+  Broadcast,
+  BroadcastPage,
+  BroadcastRecipientPage,
   Contact,
   ContactConversation,
   ContactField,
@@ -112,8 +115,19 @@ import type {
   CreateContactInput,
   ListContactsParams,
   ListConversationAnalyticsParams,
+  CreateBroadcastInput,
+  CreateSequenceInput,
+  EnrollInput,
+  EnrollmentPage,
+  ListBroadcastsParams,
+  ListPageParams,
+  ListRecipientsParams,
+  Sequence,
+  SequencePage,
+  UpdateBroadcastInput,
   UpdateContactFieldInput,
   UpdateContactInput,
+  UpdateSequenceInput,
   UpdateInboxItemInput,
   UpdatePostInput,
   UpdateSlackIdentityInput,
@@ -142,6 +156,8 @@ export class FoPost {
   readonly ai: AiResource;
   readonly inbox: InboxResource;
   readonly contacts: ContactsResource;
+  readonly broadcasts: BroadcastsResource;
+  readonly sequences: SequencesResource;
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
@@ -156,6 +172,8 @@ export class FoPost {
     this.ai = new AiResource(this.http);
     this.inbox = new InboxResource(this.http);
     this.contacts = new ContactsResource(this.http);
+    this.broadcasts = new BroadcastsResource(this.http);
+    this.sequences = new SequencesResource(this.http);
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
@@ -1129,5 +1147,174 @@ class ContactsResource {
       page: params.page,
       per_page: params.perPage,
     });
+  }
+}
+
+/**
+ * Broadcasts: one message into every conversation the workspace already has
+ * with a segment of its contacts.
+ *
+ * Nothing is sent into a closed messaging window. Messenger and Instagram
+ * take a business-initiated message only within 24 hours of the contact's
+ * last one, so recipients outside it are skipped with `window_closed` rather
+ * than attempted — which is why the number sent is often lower than the
+ * audience.
+ */
+class BroadcastsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Newest first. Paginated: the result carries `pagination`. */
+  list(params: ListBroadcastsParams = {}): Promise<BroadcastPage> {
+    return this.http.get<BroadcastPage>('/v1/broadcasts', {
+      workspace_id: params.workspaceId,
+      status: params.status,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Broadcast> {
+    return this.http.get<Broadcast>(`/v1/broadcasts/${id}`);
+  }
+
+  /** Creates it without sending. Give `scheduledAt` to have it go out on its own. */
+  create(input: CreateBroadcastInput): Promise<Broadcast> {
+    return this.http.post<Broadcast>('/v1/broadcasts', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      name: input.name,
+      text: input.text,
+      media_id: input.mediaId,
+      audience: input.audience,
+      scheduled_at: input.scheduledAt,
+    });
+  }
+
+  /** Only a draft or scheduled broadcast can be edited. */
+  update(id: string, input: UpdateBroadcastInput): Promise<Broadcast> {
+    return this.http.patch<Broadcast>(`/v1/broadcasts/${id}`, {
+      name: input.name,
+      text: input.text,
+      media_id: input.mediaId,
+      audience: input.audience,
+      scheduled_at: input.scheduledAt,
+    });
+  }
+
+  /**
+   * Freeze the audience into a recipient list and start sending. `recipients`
+   * is how many contacts matched, not how many will be messaged — the
+   * messaging window decides that. Needs the `publish` scope as well as
+   * `inbox`.
+   */
+  send(id: string): Promise<{ id: string; status: string; recipients: number }> {
+    return this.http.post<{ id: string; status: string; recipients: number }>(
+      `/v1/broadcasts/${id}/send`,
+      {},
+    );
+  }
+
+  /**
+   * Stop it where it stands. Anyone not yet written to stays unsent; messages
+   * already delivered are not recalled. Needs the `publish` scope.
+   */
+  cancel(id: string): Promise<{ id: string; status: string }> {
+    return this.http.post<{ id: string; status: string }>(`/v1/broadcasts/${id}/cancel`, {});
+  }
+
+  /** One row per contact, with what became of their message. */
+  recipients(id: string, params: ListRecipientsParams = {}): Promise<BroadcastRecipientPage> {
+    return this.http.get<BroadcastRecipientPage>(`/v1/broadcasts/${id}/recipients`, {
+      status: params.status,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /**
+   * Removes the broadcast and its recipient records. Messages already sent
+   * stay in the conversations they went to.
+   */
+  delete(id: string): Promise<{ message: string }> {
+    return this.http.delete<{ message: string }>(`/v1/broadcasts/${id}`);
+  }
+}
+
+/**
+ * Drip sequences: a series of messages, each a delay after the one before,
+ * walked per enrolled contact.
+ *
+ * The messaging window applies to every step. A step that comes due outside
+ * it is skipped rather than sent, and the enrollment carries on — so someone
+ * can complete a sequence having received only some of its messages.
+ */
+class SequencesResource {
+  constructor(private http: HttpClient) {}
+
+  list(params: { workspaceId?: string; page?: number; perPage?: number } = {}): Promise<SequencePage> {
+    return this.http.get<SequencePage>('/v1/sequences', {
+      workspace_id: params.workspaceId,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  get(id: string): Promise<Sequence> {
+    return this.http.get<Sequence>(`/v1/sequences/${id}`);
+  }
+
+  /** Creating a sequence enrolls nobody. */
+  create(input: CreateSequenceInput): Promise<Sequence> {
+    return this.http.post<Sequence>('/v1/sequences', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      name: input.name,
+      steps: input.steps,
+      status: input.status,
+    });
+  }
+
+  /**
+   * Pausing stops every enrollment from firing without ending any of them;
+   * resuming picks them up where they stood.
+   */
+  update(id: string, input: UpdateSequenceInput): Promise<Sequence> {
+    return this.http.patch<Sequence>(`/v1/sequences/${id}`, {
+      name: input.name,
+      steps: input.steps,
+      status: input.status,
+    });
+  }
+
+  /**
+   * Put contacts on the sequence. Re-enrolling someone restarts their walk
+   * from the first step rather than running two in parallel. Needs the
+   * `publish` scope as well as `inbox`.
+   */
+  enroll(id: string, input: EnrollInput): Promise<{ id: string; enrolled: number }> {
+    return this.http.post<{ id: string; enrolled: number }>(`/v1/sequences/${id}/enroll`, {
+      contact_ids: input.contactIds,
+      audience: input.audience,
+    });
+  }
+
+  /** Nothing further fires for them. Needs the `publish` scope. */
+  unenroll(id: string, contactIds: string[]): Promise<{ id: string; stopped: number }> {
+    return this.http.post<{ id: string; stopped: number }>(`/v1/sequences/${id}/unenroll`, {
+      contact_ids: contactIds,
+    });
+  }
+
+  /** Who is on it, what step they are at, and when the next one is due. */
+  enrollments(id: string, params: ListPageParams = {}): Promise<EnrollmentPage> {
+    return this.http.get<EnrollmentPage>(`/v1/sequences/${id}/enrollments`, {
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  /** Removes the sequence and every enrollment on it. */
+  delete(id: string): Promise<{ message: string }> {
+    return this.http.delete<{ message: string }>(`/v1/sequences/${id}`);
   }
 }
