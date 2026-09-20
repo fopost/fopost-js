@@ -68,6 +68,12 @@ import type {
   InboxApproval,
   InboxConversation,
   InboxItem,
+  KnowledgeSource,
+  KnowledgeSourceStatus,
+  KnowledgeMatch,
+  CreateKnowledgeSourceInput,
+  UpdateKnowledgeSourceInput,
+  SearchKnowledgeParams,
   InboxPage,
   InboxPlatform,
   InboxRefreshResult,
@@ -93,8 +99,26 @@ import type {
   RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
+  CreateDiscordEventInput,
+  CreateDiscordRoleInput,
+  CreateDiscordThreadInput,
+  DiscordChannel,
+  DiscordIdentity,
+  DiscordMember,
+  DiscordMessage,
+  DiscordMessageRef,
+  DiscordRole,
+  DiscordScheduledEvent,
   SlackChannel,
   SlackIdentity,
+  MetaIceBreaker,
+  MetaIceBreakers,
+  MetaPersistentMenuEntry,
+  MetaPersistentMenu,
+  MetaGreetingText,
+  MetaGreeting,
+  WebhookSubscription,
+  InboxHandover,
   SlackMember,
   TargetingOption,
   TelegramBotCommand,
@@ -130,6 +154,9 @@ import type {
   UpdateSequenceInput,
   UpdateInboxItemInput,
   UpdatePostInput,
+  UpdateDiscordEventInput,
+  UpdateDiscordIdentityInput,
+  UpdateDiscordRoleInput,
   UpdateSlackIdentityInput,
   ValidateLengthResult,
   ValidateMediaResult,
@@ -161,6 +188,7 @@ export class FoPost {
   readonly ads: AdsResource;
   readonly validate: ValidateResource;
   readonly media: MediaResource;
+  readonly knowledge: KnowledgeResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -177,6 +205,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.knowledge = new KnowledgeResource(this.http);
   }
 }
 
@@ -334,6 +363,237 @@ class AccountsResource {
     if (input.iconEmoji !== undefined) body.icon_emoji = input.iconEmoji;
     return this.http.patch<SlackIdentity>(`/v1/accounts/${id}/slack/identity`, body);
   }
+
+  // ─── Meta messaging settings (Facebook Pages, Instagram) ────────
+
+  /** The prompts shown before the first message. Networks without them answer 400. */
+  getIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.get<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** Replaces the ice breakers. Up to four. */
+  setIceBreakers(id: string, iceBreakers: MetaIceBreaker[]): Promise<MetaIceBreakers> {
+    return this.http.put<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`, {
+      ice_breakers: iceBreakers,
+    });
+  }
+
+  deleteIceBreakers(id: string): Promise<MetaIceBreakers> {
+    return this.http.delete<MetaIceBreakers>(`/v1/accounts/${id}/messaging/ice-breakers`);
+  }
+
+  /** The always-visible Messenger menu. Facebook Pages only. */
+  getPersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.get<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** Replaces the menu, one entry per locale, up to three items each. */
+  setPersistentMenu(id: string, menu: MetaPersistentMenuEntry[]): Promise<MetaPersistentMenu> {
+    return this.http.put<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`, {
+      persistent_menu: menu,
+    });
+  }
+
+  deletePersistentMenu(id: string): Promise<MetaPersistentMenu> {
+    return this.http.delete<MetaPersistentMenu>(`/v1/accounts/${id}/messaging/persistent-menu`);
+  }
+
+  /** The text shown before a Messenger conversation starts. Facebook Pages only. */
+  getGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.get<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** Replaces the greeting, one entry per locale, each up to 160 characters. */
+  setGreeting(id: string, greeting: MetaGreetingText[]): Promise<MetaGreeting> {
+    return this.http.put<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`, { greeting });
+  }
+
+  deleteGreeting(id: string): Promise<MetaGreeting> {
+    return this.http.delete<MetaGreeting>(`/v1/accounts/${id}/messaging/greeting`);
+  }
+
+  /** What the network is delivering to the FoPost webhook for this account. */
+  getWebhookSubscription(id: string): Promise<WebhookSubscription> {
+    return this.http.get<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
+  }
+
+  /** Subscribes to every field this account needs, lapsed or not. */
+  resubscribeWebhook(id: string): Promise<WebhookSubscription> {
+    return this.http.post<WebhookSubscription>(`/v1/accounts/${id}/webhook-subscription`);
+  }
+  // ── Discord (bot connections; a webhook one answers 409 webhook_connection) ──
+
+  /** Text channels the bot can post to, with `is_current` on this account's. */
+  listDiscordChannels(id: string): Promise<DiscordChannel[]> {
+    return this.http.get<DiscordChannel[]>(`/v1/accounts/${id}/discord/channels`);
+  }
+
+  /** Moves the account to another channel in the same server. */
+  switchDiscordChannel(id: string, channelId: string): Promise<DiscordChannel> {
+    return this.http.patch<DiscordChannel>(`/v1/accounts/${id}/discord/channels/current`, {
+      channel_id: channelId,
+    });
+  }
+
+  getDiscordIdentity(id: string): Promise<DiscordIdentity> {
+    return this.http.get<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`);
+  }
+
+  /** Omitted fields keep their value and null clears one. */
+  updateDiscordIdentity(id: string, input: UpdateDiscordIdentityInput): Promise<DiscordIdentity> {
+    const body: Record<string, unknown> = {};
+    if (input.username !== undefined) body.username = input.username;
+    if (input.avatarUrl !== undefined) body.avatar_url = input.avatarUrl;
+    return this.http.patch<DiscordIdentity>(`/v1/accounts/${id}/discord/identity`, body);
+  }
+
+  listDiscordPins(id: string): Promise<DiscordMessage[]> {
+    return this.http.get<DiscordMessage[]>(`/v1/accounts/${id}/discord/messages/pinned`);
+  }
+
+  deleteDiscordMessage(id: string, messageId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}`,
+    );
+  }
+
+  pinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.post<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  unpinDiscordMessage(id: string, messageId: string): Promise<{ pinned: boolean }> {
+    return this.http.delete<{ pinned: boolean }>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/pin`,
+    );
+  }
+
+  /** Publishes an announcement-channel message to every server following it. */
+  crosspostDiscordMessage(id: string, messageId: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(
+      `/v1/accounts/${id}/discord/messages/${messageId}/crosspost`,
+    );
+  }
+
+  createDiscordThread(
+    id: string,
+    messageId: string,
+    input: CreateDiscordThreadInput,
+  ): Promise<{ id: string; name: string; parent_id: string | null }> {
+    return this.http.post(`/v1/accounts/${id}/discord/messages/${messageId}/thread`, {
+      name: input.name,
+      ...(input.autoArchiveDuration !== undefined
+        ? { auto_archive_duration: input.autoArchiveDuration }
+        : {}),
+    });
+  }
+
+  /** Sends one message to a member; `memberId` is a `DiscordMember.id`. */
+  sendDiscordDm(id: string, memberId: string, content: string): Promise<DiscordMessageRef> {
+    return this.http.post<DiscordMessageRef>(`/v1/accounts/${id}/discord/dm`, {
+      member_id: memberId,
+      content,
+    });
+  }
+
+  listDiscordEvents(id: string): Promise<DiscordScheduledEvent[]> {
+    return this.http.get<DiscordScheduledEvent[]>(`/v1/accounts/${id}/discord/events`);
+  }
+
+  getDiscordEvent(id: string, eventId: string): Promise<DiscordScheduledEvent> {
+    return this.http.get<DiscordScheduledEvent>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  createDiscordEvent(id: string, input: CreateDiscordEventInput): Promise<DiscordScheduledEvent> {
+    return this.http.post<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events`,
+      discordEventBody(input),
+    );
+  }
+
+  updateDiscordEvent(
+    id: string,
+    eventId: string,
+    input: UpdateDiscordEventInput,
+  ): Promise<DiscordScheduledEvent> {
+    return this.http.patch<DiscordScheduledEvent>(
+      `/v1/accounts/${id}/discord/events/${eventId}`,
+      discordEventBody(input),
+    );
+  }
+
+  deleteDiscordEvent(id: string, eventId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/events/${eventId}`);
+  }
+
+  /** `query` searches by username or nickname prefix. */
+  listDiscordMembers(
+    id: string,
+    options: { query?: string; limit?: number } = {},
+  ): Promise<DiscordMember[]> {
+    return this.http.get<DiscordMember[]>(`/v1/accounts/${id}/discord/members`, {
+      q: options.query,
+      limit: options.limit,
+    });
+  }
+
+  getDiscordMember(id: string, memberId: string): Promise<DiscordMember> {
+    return this.http.get<DiscordMember>(`/v1/accounts/${id}/discord/members/${memberId}`);
+  }
+
+  listDiscordRoles(id: string): Promise<DiscordRole[]> {
+    return this.http.get<DiscordRole[]>(`/v1/accounts/${id}/discord/roles`);
+  }
+
+  createDiscordRole(id: string, input: CreateDiscordRoleInput): Promise<DiscordRole> {
+    return this.http.post<DiscordRole>(`/v1/accounts/${id}/discord/roles`, input);
+  }
+
+  updateDiscordRole(
+    id: string,
+    roleId: string,
+    input: UpdateDiscordRoleInput,
+  ): Promise<DiscordRole> {
+    return this.http.patch<DiscordRole>(`/v1/accounts/${id}/discord/roles/${roleId}`, input);
+  }
+
+  deleteDiscordRole(id: string, roleId: string): Promise<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`/v1/accounts/${id}/discord/roles/${roleId}`);
+  }
+
+  addDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.put<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+
+  removeDiscordMemberRole(
+    id: string,
+    roleId: string,
+    memberId: string,
+  ): Promise<{ assigned: boolean }> {
+    return this.http.delete<{ assigned: boolean }>(
+      `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
+    );
+  }
+}
+
+/** Camel-cased event input as the API's snake_case body. */
+function discordEventBody(input: UpdateDiscordEventInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (input.name !== undefined) body.name = input.name;
+  if (input.description !== undefined) body.description = input.description;
+  if (input.startTime !== undefined) body.start_time = input.startTime;
+  if (input.endTime !== undefined) body.end_time = input.endTime;
+  if (input.channelId !== undefined) body.channel_id = input.channelId;
+  if (input.location !== undefined) body.location = input.location;
+  if (input.status !== undefined) body.status = input.status;
+  return body;
 }
 
 class AccountGroupsResource {
@@ -588,6 +848,22 @@ class InboxResource {
     });
   }
 
+  /**
+   * Passes a Messenger thread to another Meta app, or takes it back when
+   * `appId` is omitted. Needs `publish`.
+   */
+  handover(
+    conversationId: string,
+    accountId: string,
+    options: { appId?: string; metadata?: string } = {},
+  ): Promise<InboxHandover> {
+    return this.http.post<InboxHandover>(`/v1/inbox/conversations/${conversationId}/handover`, {
+      account_id: accountId,
+      ...(options.appId === undefined ? {} : { app_id: options.appId }),
+      ...(options.metadata === undefined ? {} : { metadata: options.metadata }),
+    });
+  }
+
   /** Replies an automation or the agent drafted that a person still has to send. */
   listApprovals(params: { workspaceId?: string } = {}): Promise<InboxApproval[]> {
     return this.http.get<InboxApproval[]>('/v1/inbox/approvals', {
@@ -602,6 +878,63 @@ class InboxResource {
 
   rejectReply(id: number): Promise<{ id: number; outcome: string }> {
     return this.http.post(`/v1/inbox/approvals/${id}/reject`);
+  }
+}
+
+/**
+ * The workspace's own answers, pages and files. Adding a source queues it for
+ * indexing, so it comes back `pending` and turns `ready` once searchable.
+ */
+class KnowledgeResource {
+  constructor(private http: HttpClient) {}
+
+  list(params: { workspaceId?: string } = {}): Promise<KnowledgeSource[]> {
+    return this.http.get<KnowledgeSource[]>('/v1/knowledge/sources', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  create(input: CreateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.post<KnowledgeSource>('/v1/knowledge/sources', {
+      kind: input.kind,
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      media_id: input.mediaId,
+      brand_voice_id: input.brandVoiceId,
+      workspace_id: input.workspaceId,
+    });
+  }
+
+  update(id: string, input: UpdateKnowledgeSourceInput): Promise<KnowledgeSource> {
+    return this.http.patch<KnowledgeSource>(`/v1/knowledge/sources/${id}`, {
+      title: input.title,
+      content: input.content,
+      url: input.url,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+
+  delete(id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.http.delete<{ id: string; deleted: boolean }>(`/v1/knowledge/sources/${id}`);
+  }
+
+  /** Read the source again — a `url` source is re-fetched. Returns once queued. */
+  sync(id: string): Promise<{ id: string; status: KnowledgeSourceStatus }> {
+    return this.http.post<{ id: string; status: KnowledgeSourceStatus }>(
+      `/v1/knowledge/sources/${id}/sync`,
+      {},
+    );
+  }
+
+  /** The passages closest to a question. Empty when nothing stored answers it. */
+  search(params: SearchKnowledgeParams): Promise<KnowledgeMatch[]> {
+    return this.http.get<KnowledgeMatch[]>('/v1/knowledge/search', {
+      q: params.q,
+      top_k: params.topK,
+      brand_voice_id: params.brandVoiceId,
+      workspace_id: params.workspaceId,
+    });
   }
 }
 

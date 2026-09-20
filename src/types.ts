@@ -116,6 +116,61 @@ export type TelegramBotCommands = {
   commands: TelegramBotCommand[];
 };
 
+// ─── Meta messaging settings ───────────────────────────────────
+
+/** A tappable prompt Messenger or Instagram shows before the first message. */
+export type MetaIceBreaker = {
+  /** Up to 80 characters. */
+  question: string;
+  /** What your webhook receives when it is tapped. */
+  payload: string;
+};
+
+export type MetaIceBreakers = {
+  ice_breakers: MetaIceBreaker[];
+};
+
+/** A persistent-menu item: a postback your webhook receives, or an http(s) link. */
+export type MetaMenuItem =
+  | { type: 'postback'; title: string; payload: string }
+  | { type: 'web_url'; title: string; url: string };
+
+/** One locale's menu; `default` is the fallback every language uses. */
+export type MetaPersistentMenuEntry = {
+  locale: string;
+  call_to_actions: MetaMenuItem[];
+  composer_input_disabled?: boolean;
+};
+
+export type MetaPersistentMenu = {
+  persistent_menu: MetaPersistentMenuEntry[];
+};
+
+export type MetaGreetingText = {
+  locale: string;
+  /** Up to 160 characters. */
+  text: string;
+};
+
+export type MetaGreeting = {
+  greeting: MetaGreetingText[];
+};
+
+/** What the network is delivering to the FoPost webhook for one account. */
+export type WebhookSubscription = {
+  /** False when the subscription lapsed or a required field is missing. */
+  subscribed: boolean;
+  fields: string[];
+  missing_fields: string[];
+};
+
+/** The outcome of a Messenger thread hand-over. */
+export type InboxHandover = {
+  /** The app control was passed to, or null when it was taken back. */
+  app_id: string | null;
+  control: 'passed' | 'taken';
+};
+
 export type SlackChannel = {
   /** Slack channel id. */
   id: string;
@@ -153,6 +208,120 @@ export type UpdateSlackIdentityInput = {
   iconUrl?: string | null;
   /** An emoji code, e.g. `:rocket:`. */
   iconEmoji?: string | null;
+};
+
+export type DiscordChannel = {
+  /** Discord channel id. */
+  id: string;
+  name: string;
+  /** Discord channel type: 0 text, 5 announcement, 15 forum. */
+  type: number;
+  parent_id: string | null;
+  nsfw: boolean;
+  /** The channel this account posts to. */
+  is_current: boolean;
+};
+
+/** The nickname and avatar the bot wears in this server; null means its own. */
+export type DiscordIdentity = {
+  username: string | null;
+  avatar_url: string | null;
+};
+
+/** Omitted fields keep their value, null clears one. */
+export type UpdateDiscordIdentityInput = {
+  /** 1-32 characters. */
+  username?: string | null;
+  /** An http(s) URL. */
+  avatarUrl?: string | null;
+};
+
+export type DiscordMessage = {
+  id: string;
+  channel_id: string;
+  content: string;
+  author_id: string;
+  author_name: string;
+  pinned: boolean;
+  created_at: string;
+};
+
+export type DiscordScheduledEvent = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Voice or stage channel, or null for an event somewhere else. */
+  channel_id: string | null;
+  location: string | null;
+  start_time: string;
+  end_time: string | null;
+  /** `scheduled`, `active`, `completed` or `canceled`. */
+  status: string;
+  user_count: number | null;
+};
+
+/** Name a channelId, or a location with an endTime. */
+export type CreateDiscordEventInput = {
+  name: string;
+  description?: string;
+  /** ISO 8601. */
+  startTime: string;
+  /** ISO 8601; required for an event at a location. */
+  endTime?: string;
+  channelId?: string;
+  location?: string;
+};
+
+export type UpdateDiscordEventInput = Partial<CreateDiscordEventInput> & {
+  status?: 'scheduled' | 'active' | 'completed' | 'canceled';
+};
+
+export type DiscordMember = {
+  /** Discord user id; pass it as the member id to send a DM or assign a role. */
+  id: string;
+  username: string;
+  display_name: string | null;
+  /** Nickname in this server. */
+  nick: string | null;
+  avatar: string | null;
+  is_bot: boolean;
+  roles: string[];
+  joined_at: string | null;
+};
+
+export type DiscordRole = {
+  id: string;
+  name: string;
+  /** RGB integer; 0 is the default colour. */
+  color: number;
+  /** Shown separately in the member list. */
+  hoist: boolean;
+  mentionable: boolean;
+  /** Owned by an integration; not editable. */
+  managed: boolean;
+  position: number;
+  /** Permission bitfield as a decimal string. */
+  permissions: string;
+};
+
+export type CreateDiscordRoleInput = {
+  name: string;
+  color?: number;
+  hoist?: boolean;
+  mentionable?: boolean;
+  /** Permission bitfield as a decimal string. */
+  permissions?: string;
+};
+
+export type UpdateDiscordRoleInput = Partial<CreateDiscordRoleInput>;
+
+/** A message the bot put somewhere. */
+export type DiscordMessageRef = { id: string; channel_id: string };
+
+export type CreateDiscordThreadInput = {
+  name: string;
+  /** Minutes of inactivity before it archives: 60, 1440, 4320 or 10080. */
+  autoArchiveDuration?: 60 | 1440 | 4320 | 10080;
 };
 
 /** Account groups come back in the API's snake_case shape. */
@@ -1101,6 +1270,78 @@ export type DirectUploadInput = {
   filename: string;
   mimeType: string;
   data: Blob | Uint8Array | ArrayBuffer;
+};
+
+// ─── Knowledge base ────────────────────────────────────────────────
+//
+// What a workspace has told FoPost about itself, used to ground a drafted
+// reply in its own answers rather than an invented one.
+
+export type KnowledgeSourceKind = 'faq' | 'text' | 'url' | 'file';
+export type KnowledgeSourceStatus = 'pending' | 'syncing' | 'ready' | 'failed';
+
+export type KnowledgeSource = {
+  /** Public knowledge source id (uuid). */
+  id: string;
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Only a `ready` source is searched. */
+  status: KnowledgeSourceStatus;
+  /** Why the last sync failed, in plain words. */
+  statusMessage: string | null;
+  /** Set for `url` sources. */
+  url: string | null;
+  /** Set for `file` sources: the media library item read. */
+  mediaId: string | null;
+  /** Null means the source serves the whole workspace. */
+  brandVoiceId: string | null;
+  /** Searchable passages the last sync produced. */
+  chunkCount: number;
+  /** The typed text, for `faq` and `text` sources only. */
+  content: string | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** One retrieved passage, with the source it came from so a reply can cite it. */
+export type KnowledgeMatch = {
+  sourceId: string;
+  sourceTitle: string;
+  sourceKind: KnowledgeSourceKind;
+  sourceUrl: string | null;
+  text: string;
+  /** Similarity to the question, 0-1. */
+  score: number;
+};
+
+export type CreateKnowledgeSourceInput = {
+  kind: KnowledgeSourceKind;
+  title: string;
+  /** Required for `faq` and `text`. */
+  content?: string;
+  /** Required for `url`. */
+  url?: string;
+  /** Required for `file`: a plain-text or CSV media library item. */
+  mediaId?: string;
+  brandVoiceId?: string | null;
+  workspaceId?: string;
+};
+
+export type UpdateKnowledgeSourceInput = {
+  title?: string;
+  content?: string;
+  url?: string;
+  brandVoiceId?: string | null;
+};
+
+export type SearchKnowledgeParams = {
+  /** The question, in plain words. */
+  q: string;
+  /** How many passages, default 5, max 20. */
+  topK?: number;
+  brandVoiceId?: string;
+  workspaceId?: string;
 };
 
 // ─── Contacts ──────────────────────────────────────────────────────
