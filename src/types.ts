@@ -276,7 +276,7 @@ export type RepurposeUrlInput = {
 
 // ─── Inbox ─────────────────────────────────────────────────────────
 
-export type InboxItemType = 'comment' | 'mention' | 'dm';
+export type InboxItemType = 'comment' | 'mention' | 'dm' | 'review';
 export type InboxItemState = 'unread' | 'read' | 'resolved' | 'snoozed';
 
 export type InboxAccountRef = {
@@ -325,6 +325,8 @@ export type InboxItem = {
   authorHandle: string | null;
   authorAvatarUrl: string | null;
   text: string | null;
+  /** Stars on a review, 1-5. Null on every other type. */
+  rating: number | null;
   attachments: InboxAttachment[];
   permalink: string | null;
   postExternalId: string | null;
@@ -364,6 +366,8 @@ export type InboxThread = {
   lastCommentAt: string | null;
   lastCommentText: string | null;
   lastCommentAuthor: string | null;
+  /** Stars, on a review thread. Null on comments and mentions. */
+  rating: number | null;
   post: InboxPostContext | null;
   account: InboxAccountRef | null;
 };
@@ -448,8 +452,11 @@ export type ListInboxParams = {
 
 export type ListInboxThreadsParams = {
   workspaceId?: string;
-  /** `comments` (default) for threads under our posts, `mentions` for posts we were tagged in. */
-  kind?: 'comments' | 'mentions';
+  /**
+   * `comments` (default) for threads under our posts, `mentions` for posts we
+   * were tagged in, `reviews` for ratings left on the business.
+   */
+  kind?: 'comments' | 'mentions' | 'reviews';
   platform?: Platform;
   accountId?: string;
   state?: InboxItemState;
