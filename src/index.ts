@@ -184,6 +184,25 @@ import type {
   StartGoogleBusinessVerificationInput,
   UpdateGoogleBusinessLocationInput,
   UpdateGoogleBusinessPlaceActionInput,
+  BlueskyLanguages,
+  CreatePinterestBoardInput,
+  CreateYouTubePlaylistInput,
+  InstagramAudio,
+  InstagramAudioSearchParams,
+  InstagramPublishingLimit,
+  InstagramStory,
+  InstagramStoryInsights,
+  LinkedInMention,
+  PinterestBoard,
+  TikTokCreatorInfo,
+  TikTokMusic,
+  TikTokPlace,
+  TikTokSearchParams,
+  TikTokVideoSource,
+  UploadYouTubeCaptionsInput,
+  YouTubeCaptionTrack,
+  YouTubePlaylist,
+  YouTubeTranscript,
   SlackChannel,
   SlackIdentity,
   MetaIceBreaker,
@@ -694,6 +713,144 @@ class AccountsResource {
     return this.http.delete<{ assigned: boolean }>(
       `/v1/accounts/${id}/discord/roles/${roleId}/members/${memberId}`,
     );
+  }
+  // ─── Per-network extras ────────────────────────────────────────
+
+  /** Boards this Pinterest connection can pin to. */
+  listPinterestBoards(id: string): Promise<PinterestBoard[]> {
+    return this.http.get<PinterestBoard[]>(`/v1/accounts/${id}/pinterest/boards`);
+  }
+
+  createPinterestBoard(id: string, input: CreatePinterestBoardInput): Promise<PinterestBoard> {
+    return this.http.post<PinterestBoard>(`/v1/accounts/${id}/pinterest/boards`, {
+      name: input.name,
+      description: input.description,
+      privacy: input.privacy,
+    });
+  }
+
+  /** The channel's playlists, with the stored default marked. */
+  listYouTubePlaylists(id: string): Promise<YouTubePlaylist[]> {
+    return this.http.get<YouTubePlaylist[]>(`/v1/accounts/${id}/youtube/playlists`);
+  }
+
+  createYouTubePlaylist(id: string, input: CreateYouTubePlaylistInput): Promise<YouTubePlaylist> {
+    return this.http.post<YouTubePlaylist>(`/v1/accounts/${id}/youtube/playlists`, {
+      title: input.title,
+      description: input.description,
+      privacy: input.privacy,
+    });
+  }
+
+  /** The playlist a new video joins when the post picks none; null clears it. */
+  setDefaultYouTubePlaylist(
+    id: string,
+    playlistId: string | null,
+  ): Promise<{ playlist_id: string | null }> {
+    return this.http.put<{ playlist_id: string | null }>(
+      `/v1/accounts/${id}/youtube/playlists/default`,
+      { playlist_id: playlistId },
+    );
+  }
+
+  listYouTubeCaptions(id: string, videoId: string): Promise<YouTubeCaptionTrack[]> {
+    return this.http.get<YouTubeCaptionTrack[]>(
+      `/v1/accounts/${id}/youtube/videos/${videoId}/captions`,
+    );
+  }
+
+  /** `body` is the subtitle file; YouTube reads SRT and WebVTT and sniffs which. */
+  uploadYouTubeCaptions(
+    id: string,
+    videoId: string,
+    input: UploadYouTubeCaptionsInput,
+  ): Promise<YouTubeCaptionTrack> {
+    return this.http.post<YouTubeCaptionTrack>(
+      `/v1/accounts/${id}/youtube/videos/${videoId}/captions`,
+      {
+        language: input.language,
+        name: input.name,
+        body: input.body,
+        is_draft: input.isDraft,
+      },
+    );
+  }
+
+  readYouTubeTranscript(id: string, captionId: string): Promise<YouTubeTranscript> {
+    return this.http.get<YouTubeTranscript>(`/v1/accounts/${id}/youtube/captions/${captionId}`);
+  }
+
+  /** What a post from this Bluesky connection is written in when it does not say. */
+  getBlueskyLanguages(id: string): Promise<BlueskyLanguages> {
+    return this.http.get<BlueskyLanguages>(`/v1/accounts/${id}/bluesky/languages`);
+  }
+
+  /** Up to three BCP-47 tags; an empty list clears the default. */
+  setBlueskyLanguages(id: string, languages: string[]): Promise<BlueskyLanguages> {
+    return this.http.put<BlueskyLanguages>(`/v1/accounts/${id}/bluesky/languages`, { languages });
+  }
+
+  /** The switches TikTok enforces at publish time, set on the account itself. */
+  getTikTokCreatorInfo(id: string): Promise<TikTokCreatorInfo> {
+    return this.http.get<TikTokCreatorInfo>(`/v1/accounts/${id}/tiktok/creator-info`);
+  }
+
+  /**
+   * TikTok's Commercial Music Library. Needs the Marketing API product on the
+   * TikTok app; without it the call throws a 403 rather than answering empty.
+   */
+  searchTikTokMusic(id: string, params: TikTokSearchParams): Promise<TikTokMusic[]> {
+    return this.http.get<TikTokMusic[]>(`/v1/accounts/${id}/tiktok/music`, {
+      q: params.q,
+      limit: params.limit,
+    });
+  }
+
+  /** Places a post can be tagged with. Same TikTok product as the music library. */
+  searchTikTokLocations(id: string, params: TikTokSearchParams): Promise<TikTokPlace[]> {
+    return this.http.get<TikTokPlace[]>(`/v1/accounts/${id}/tiktok/locations`, {
+      q: params.q,
+      limit: params.limit,
+    });
+  }
+
+  /** Resolves a share link to one of this account's own videos, for repurposing. */
+  lookupTikTokVideo(id: string, url: string): Promise<TikTokVideoSource> {
+    return this.http.post<TikTokVideoSource>(`/v1/accounts/${id}/tiktok/video-download`, { url });
+  }
+
+  /** Tracks a Reel can carry; with no query Instagram answers with what is trending. */
+  searchInstagramAudio(
+    id: string,
+    params: InstagramAudioSearchParams = {},
+  ): Promise<InstagramAudio[]> {
+    return this.http.get<InstagramAudio[]>(`/v1/accounts/${id}/instagram/audio`, {
+      q: params.q,
+      audio_type: params.audioType,
+    });
+  }
+
+  /** How many posts are left before Instagram refuses the next one. */
+  getInstagramPublishingLimit(id: string): Promise<InstagramPublishingLimit> {
+    return this.http.get<InstagramPublishingLimit>(`/v1/accounts/${id}/instagram/publishing-limit`);
+  }
+
+  /** Stories still inside their 24 hours, posted through FoPost or not. */
+  listInstagramStories(id: string, params: { insights?: boolean } = {}): Promise<InstagramStory[]> {
+    return this.http.get<InstagramStory[]>(`/v1/accounts/${id}/instagram/stories`, {
+      insights: params.insights,
+    });
+  }
+
+  getInstagramStoryInsights(id: string, storyId: string): Promise<InstagramStoryInsights> {
+    return this.http.get<InstagramStoryInsights>(
+      `/v1/accounts/${id}/instagram/stories/${storyId}/insights`,
+    );
+  }
+
+  /** Organizations a LinkedIn post can mention. People are not searchable. */
+  searchLinkedInMentions(id: string, q: string): Promise<LinkedInMention[]> {
+    return this.http.get<LinkedInMention[]>(`/v1/accounts/${id}/linkedin/mentions`, { q });
   }
 }
 
