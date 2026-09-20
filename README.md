@@ -144,6 +144,66 @@ try {
 | `googleBusiness` | `getLocation`, `updateLocation`, `getAttributes`, `updateAttributes`, `getMenus`, `replaceMenus`, `getServices`, `replaceServices`, `listMedia`, `addMedia`, `deleteMedia`, `listPlaceActions`, `createPlaceAction`, `updatePlaceAction`, `deletePlaceAction`, `getVerificationOptions`, `startVerification`, `completeVerification`, `getPerformance`, `getSearchKeywords`, `assign`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `validate`       | `post`, `length`, `media`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
+## Chat adapter
+
+`@fopost/sdk/chat-adapter` wraps the inbox conversation and reply endpoints in a send/receive interface, so a chatbot framework can treat FoPost as one channel across every network that carries DMs.
+
+```ts
+import { FoPost } from '@fopost/sdk';
+import { createChatAdapter } from '@fopost/sdk/chat-adapter';
+
+const chat = createChatAdapter({
+  client: new FoPost({ apiKey: process.env.FOPOST_API_KEY! }),
+  workspaceId,
+  webhookSecret: process.env.FOPOST_WEBHOOK_SECRET,
+});
+```
+
+**Inbound** is the `inbox.message_received` webhook. Subscribe an endpoint to it in FoPost, then hand the raw body and the request headers to `parseWebhook`. It verifies the signature, refuses a replay, and returns the event; the event carries ids only, so `receiveOne` reads the text back:
+
+```ts
+export async function POST(request: Request) {
+  const body = await request.text();
+  const event = await chat.parseWebhook(body, request.headers);
+  const message = await chat.receiveOne(event);
+  if (!message) return new Response(null, { status: 204 });
+
+  await chat.typing(message.conversationId!, message.accountId!);
+  await chat.send({ replyTo: message.id, text: await yourBot(message.text) });
+  await chat.markRead(message);
+  return new Response(null, { status: 204 });
+}
+```
+
+No webhook? `receive()` polls the same thing:
+
+```ts
+for (const message of await chat.receive()) {
+  await chat.send({ replyTo: message.id, text: await yourBot(message.text) });
+  await chat.markRead(message);
+}
+```
+
+**Outbound** takes one of three shapes. Reply to a message, reply into a thread, or open one by handle:
+
+```ts
+await chat.send({ replyTo: message.id, text: 'On it.' });
+await chat.send({ conversationId: 'conv_...', text: 'Still here.' });
+await chat.send({ accountId: 'acc_...', handle: 'samrivera', text: 'Following up.' });
+```
+
+| Method                                   | What it does                                                     |
+| ---------------------------------------- | ---------------------------------------------------------------- |
+| `parseWebhook(body, headers)`            | Verifies a delivery and returns the `ChatEvent`                  |
+| `verifyWebhook(body, headers)`           | Signature check on its own; throws on a forged or stale delivery |
+| `receive(params?)`                       | Inbound DMs, unread by default                                   |
+| `receiveOne(event \| id)`                | The full message behind an event id, or `null`                   |
+| `send(message)`                          | Reply, reply into a thread, or open one                          |
+| `typing(conversationId, accountId, on?)` | Typing indicator                                                 |
+| `markRead(message)`                      | Marks the message read                                           |
+
+Sending needs the `publish` scope on top of `inbox`. Every failure is a `ChatAdapterError` with a `code` (`invalid_signature`, `stale_delivery`, `unexpected_event`, `unsupported_target`, and the rest) or the usual `FoPostError` from the API.
+
 ## Contributing
 
 Issues and pull requests are welcome at

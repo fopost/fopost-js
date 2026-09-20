@@ -47,6 +47,11 @@ All notable changes to `@fopost/sdk` are documented here.
   workspace keeps. All need the `inbox` scope.
 - `contacts.conversationAnalytics` reads `/v1/analytics/inbox/conversations`: volume and
   median reply time per thread. Needs the `analytics` scope.
+- `@fopost/sdk/chat-adapter`, a send/receive interface over the inbox for chatbot
+  frameworks. `createChatAdapter({ client })` gives `receive`, `receiveOne`, `send`,
+  `typing` and `markRead`, plus `parseWebhook` and `verifyWebhook`, which verify an
+  `inbox.message_received` delivery (timestamped signature preferred, compatibility
+  signature accepted) and turn it into a `ChatMessage`. Sending needs `publish`.
 
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.

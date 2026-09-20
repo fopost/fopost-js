@@ -39,11 +39,12 @@ CHANGELOG when this package is released.
 
 Three files, no build-time codegen:
 
-| File            | Contents                                                                  |
-| :-------------- | :------------------------------------------------------------------------ |
-| `src/client.ts` | `HttpClient` (fetch wrapper), `FoPostError`, `DEFAULT_BASE_URL`           |
-| `src/index.ts`  | `FoPost` class plus every resource class, all in one file                 |
-| `src/types.ts`  | Public DTOs (`Post`, `Account`, `Workspace`, `Label`, inputs, `Platform`) |
+| File                  | Contents                                                                           |
+| :-------------------- | :--------------------------------------------------------------------------------- |
+| `src/client.ts`       | `HttpClient` (fetch wrapper), `FoPostError`, `DEFAULT_BASE_URL`                    |
+| `src/index.ts`        | `FoPost` class plus every resource class, all in one file                          |
+| `src/types.ts`        | Public DTOs (`Post`, `Account`, `Workspace`, `Label`, inputs, `Platform`)          |
+| `src/chat-adapter.ts` | `@fopost/sdk/chat-adapter` — the second entry point, built and exported separately |
 
 Request flow: a resource method (e.g. `posts.create`) maps its camelCase input onto the
 API's snake_case wire body, then calls `http.post('/v1/posts', body)` →
@@ -51,6 +52,27 @@ API's snake_case wire body, then calls `http.post('/v1/posts', body)` →
 
 Resource classes are declared in `src/index.ts` below the `FoPost` class and are **not
 exported** — only the `FoPost` instance's readonly namespaces reach consumers.
+
+**There are two entry points.** `src/index.ts` is `@fopost/sdk`; `src/chat-adapter.ts` is
+`@fopost/sdk/chat-adapter`, a send/receive interface over the inbox for chatbot frameworks.
+The adapter is a **consumer of the client**, not a peer: it holds a `FoPost` instance and
+calls `client.inbox.*`, imports only types from `./index.js`, and must never reach for
+`HttpClient` or add an endpoint of its own. An endpoint it needs is added to `InboxResource`
+first. `tsup` builds both entries; `package.json` carries the `./chat-adapter` condition in
+`exports` and a `typesVersions` entry so a `node10` resolver finds its types, and
+`release.yml` smoke-tests the subpath out of the packed tarball in both ESM and CJS.
+
+**Webhook verification is Web Crypto, not `node:crypto`.** `crypto.subtle` keeps the package
+dependency-free and works on Node, Deno and workers, which is why `parseWebhook` and
+`verifyWebhook` are async. The adapter prefers `X-FoPost-Signature-256` (HMAC over
+`${timestamp}.${body}`, refused past a 300s tolerance) and falls back to the body-only
+`X-FoPost-Signature`. Digest comparison is constant-time.
+
+**`inbox.message_received` carries ids only.** The payload is `itemId`, `type`, `platform`,
+`accountId`, `receivedAt` — no text, no author. There is no `GET /v1/inbox/:id` and no `id`
+filter on the list, so `receiveOne` scans `lookbackPages` of that account's items and
+answers `null` when it does not find one. If the API ever grows a single-item read, that is
+the thing to switch to.
 
 **No public escape hatch.** `FoPost.http` is `private`, so an endpoint the SDK does not
 wrap cannot be called without adding a method here. If you add one, `HttpClient.request`
