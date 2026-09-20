@@ -1343,3 +1343,331 @@ export type SearchKnowledgeParams = {
   brandVoiceId?: string;
   workspaceId?: string;
 };
+
+// ─── Contacts ──────────────────────────────────────────────────────
+
+/** One handle on one network. `handle` is lower-cased with no leading @. */
+export type ContactChannel = {
+  platform: string;
+  handle: string;
+  /** The platform's own id for this person, when the network gave us one. */
+  externalId?: string | null;
+};
+
+export type ContactSource = 'inbox' | 'radar' | 'import';
+
+export type Contact = {
+  id: string;
+  display_name: string | null;
+  channels: ContactChannel[];
+  source: ContactSource;
+  note: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+  /** Custom field values, keyed by field key. */
+  fields: Record<string, string>;
+  labels: Array<{ id: string; name: string; color: string }>;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type ContactPage = {
+  data: Contact[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListContactsParams = {
+  workspaceId?: string;
+  /** Matches a display name or any of their handles. */
+  search?: string;
+  platform?: string;
+  source?: ContactSource;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateContactInput = {
+  workspaceId: string;
+  channels: ContactChannel[];
+  displayName?: string;
+  note?: string;
+  fields?: Record<string, string>;
+};
+
+export type UpdateContactInput = {
+  displayName?: string | null;
+  channels?: ContactChannel[];
+  note?: string | null;
+  /** A null or empty value clears that field. */
+  fields?: Record<string, string | null>;
+};
+
+/** One thread a contact appears in. `key` is how the inbox groups it. */
+export type ContactConversation = {
+  key: string;
+  account_id: string;
+  account_username: string | null;
+  platform: string;
+  messages: number;
+  received: number;
+  sent: number;
+  last_message_at: string | null;
+  last_item_id: string | null;
+};
+
+export type ContactImportResult = {
+  created: number;
+  /** Rows that folded into a contact already on file. */
+  merged: number;
+  skipped: Array<{ row: number; reason: string }>;
+  /** Columns that named neither a reserved field nor a custom field. */
+  unknownColumns: string[];
+};
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+
+export type ContactField = {
+  id: string;
+  /** Lower-case key; also the CSV column header. Fixed once created. */
+  key: string;
+  name: string;
+  type: CustomFieldType;
+  /** Allowed values when `type` is `select`. */
+  options: string[];
+  position: number;
+};
+
+export type CreateContactFieldInput = {
+  key: string;
+  name: string;
+  type?: CustomFieldType;
+  options?: string[];
+};
+
+export type UpdateContactFieldInput = {
+  name?: string;
+  options?: string[];
+  position?: number;
+};
+
+// ─── Conversation analytics ────────────────────────────────────────
+
+export type ConversationAnalyticsRow = {
+  /**
+   * An opaque, stable handle for the thread, not the id or handle the inbox
+   * groups on. It lines the same conversation up between two calls; to reach
+   * the thread itself, read the person through `contacts.conversations()`,
+   * which needs the `inbox` scope rather than `analytics`.
+   */
+  key: string;
+  accountId: string;
+  platform: string;
+  received: number;
+  sent: number;
+  answered: number;
+  open: number;
+  /** Median minutes to the first reply in this thread. */
+  medianResponseMinutes: number | null;
+  firstMessageAt: string | null;
+  lastMessageAt: string | null;
+};
+
+export type ConversationAnalytics = {
+  conversations: ConversationAnalyticsRow[];
+  total: number;
+  page: number;
+  perPage: number;
+};
+
+export type ListConversationAnalyticsParams = {
+  workspaceId?: string;
+  accountId?: string;
+  /** Reporting period, 1 to 365. Defaults to 7. */
+  days?: number;
+  sort?: 'volume' | 'slowest' | 'recent';
+  page?: number;
+  perPage?: number;
+};
+
+// ─── Broadcasts and sequences ──────────────────────────────────────
+
+/**
+ * Who a broadcast or an enrollment resolves to, expressed over contacts.
+ * Every clause narrows: a contact has to match all of them.
+ */
+export type AudienceFilter = {
+  /** Contacts with a handle on at least one of these networks. */
+  platforms?: string[];
+  labelIds?: string[];
+  source?: ContactSource;
+  fields?: Array<{
+    key: string;
+    op?: 'is' | 'is_not' | 'contains' | 'is_set' | 'is_not_set';
+    value?: string;
+  }>;
+};
+
+export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled';
+
+export type BroadcastCounts = {
+  total: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  pending: number;
+};
+
+export type Broadcast = {
+  id: string;
+  name: string;
+  text: string;
+  account_id: string | null;
+  audience: Record<string, unknown>;
+  status: BroadcastStatus;
+  scheduled_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  counts?: BroadcastCounts;
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type BroadcastPage = {
+  data: Broadcast[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type RecipientStatus = 'pending' | 'sent' | 'skipped' | 'failed';
+
+/**
+ * Why nothing was sent. `window_closed` means the network's messaging window
+ * had shut — Messenger and Instagram take a business-initiated message only
+ * within 24 hours of the contact's last one, so nothing was attempted.
+ */
+export type SkipReason = 'window_closed' | 'no_conversation' | 'unsupported_platform';
+
+export type BroadcastRecipient = {
+  contact_id: string;
+  display_name: string | null;
+  status: RecipientStatus;
+  skip_reason: SkipReason | null;
+  sent_at: string | null;
+  error: string | null;
+};
+
+export type BroadcastRecipientPage = {
+  data: BroadcastRecipient[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListBroadcastsParams = {
+  workspaceId?: string;
+  status?: BroadcastStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type CreateBroadcastInput = {
+  workspaceId: string;
+  /** The connected account the messages go out from. */
+  accountId: string;
+  /** Internal only; never sent to anyone. */
+  name: string;
+  text: string;
+  mediaId?: string | null;
+  /** Omitted means every contact in the workspace. */
+  audience?: AudienceFilter;
+  /** Send it at this time instead of on demand. */
+  scheduledAt?: string | null;
+};
+
+export type UpdateBroadcastInput = {
+  name?: string;
+  text?: string;
+  mediaId?: string | null;
+  audience?: AudienceFilter;
+  scheduledAt?: string | null;
+};
+
+export type ListRecipientsParams = {
+  status?: RecipientStatus;
+  page?: number;
+  perPage?: number;
+};
+
+export type SequenceStatus = 'active' | 'paused';
+
+/** One message and how long after the previous step it goes out. */
+export type SequenceStep = {
+  delay_hours: number;
+  text: string;
+  media_id?: string | null;
+};
+
+export type Sequence = {
+  id: string;
+  name: string;
+  account_id: string | null;
+  steps: SequenceStep[];
+  status: SequenceStatus;
+  created_at: string;
+  enrollments?: {
+    total: number;
+    active: number;
+    completed: number;
+    stopped: number;
+    failed: number;
+  };
+  /** Only on a listing that spans workspaces. */
+  workspace_id?: string;
+};
+
+export type SequencePage = {
+  data: Sequence[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type CreateSequenceInput = {
+  workspaceId: string;
+  accountId: string;
+  name: string;
+  steps: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+export type UpdateSequenceInput = {
+  name?: string;
+  steps?: SequenceStep[];
+  status?: SequenceStatus;
+};
+
+/** Name contacts outright, or the audience they are drawn from. */
+export type EnrollInput = {
+  contactIds?: string[];
+  audience?: AudienceFilter;
+};
+
+export type EnrollmentStatus = 'active' | 'completed' | 'stopped' | 'failed';
+
+export type Enrollment = {
+  id: string;
+  contact_id: string;
+  display_name: string | null;
+  /** Steps already sent, so also the index of the next one. */
+  step: number;
+  next_at: string | null;
+  status: EnrollmentStatus;
+  last_sent_at: string | null;
+  /** On a skipped step, the reason: `window_closed` or `no_conversation`. */
+  error: string | null;
+};
+
+export type EnrollmentPage = {
+  data: Enrollment[];
+  pagination: { page: number; per_page: number; total: number };
+};
+
+export type ListPageParams = {
+  page?: number;
+  perPage?: number;
+};

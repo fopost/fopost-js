@@ -23,6 +23,24 @@ All notable changes to `@fopost/sdk` are documented here.
   `delete`, `sync` and `search`. A source is an FAQ, a note, a URL on your own site or
   a plain-text/CSV media item; `search` returns the passages closest to a question, and
   is what grounds a drafted inbox reply in your own answers. Needs the `inbox` scope.
+- `broadcasts` namespace: one message into every conversation the workspace already has
+  with a segment of its contacts. `list`, `get`, `create`, `update`, `delete`, `send`,
+  `cancel`, and `recipients`. Reading needs the `inbox` scope; `send` and `cancel` also
+  need `publish`.
+- `sequences` namespace: a series of messages on a delay. `list`, `get`, `create`,
+  `update`, `delete`, `enroll`, `unenroll`, and `enrollments`. `enroll` and `unenroll`
+  need `publish` as well as `inbox`.
+- Both honour each network's messaging window server-side. Messenger and Instagram take a
+  business-initiated message only within 24 hours of the contact's last one, so recipients
+  outside it come back `skipped` with `skip_reason: 'window_closed'` and nothing is
+  attempted — the number sent is often lower than the audience.
+
+- `contacts` namespace: the people behind the inbox. `list`, `get`, `create`, `update`,
+  `delete`, `conversations` (the threads one person appears in), `import` (CSV), and
+  `listFields`/`createField`/`updateField`/`deleteField` for the custom columns a
+  workspace keeps. All need the `inbox` scope.
+- `contacts.conversationAnalytics` reads `/v1/analytics/inbox/conversations`: volume and
+  median reply time per thread. Needs the `analytics` scope.
 
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
