@@ -23,6 +23,14 @@ All notable changes to `@fopost/sdk` are documented here.
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
 - `accounts.getSlackIdentity` and `updateSlackIdentity` read and set the name and icon
   a Slack account posts under. All need the `accounts` scope.
+- Meta messaging settings on `accounts`: `getIceBreakers`, `setIceBreakers` and
+  `deleteIceBreakers` (Facebook Pages and Instagram), plus `getPersistentMenu`,
+  `setPersistentMenu`, `deletePersistentMenu`, `getGreeting`, `setGreeting` and
+  `deleteGreeting` (Facebook Pages). Networks without a field answer 400.
+- `accounts.getWebhookSubscription` reports whether the network is still delivering
+  events for an account, and `resubscribeWebhook` puts a lapsed subscription back.
+- `inbox.handover` passes a Messenger thread to another Meta app, or takes it back
+  when no `appId` is given. Needs `inbox` and `publish`.
 
 ## 0.6.0
 

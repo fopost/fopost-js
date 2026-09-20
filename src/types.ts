@@ -116,6 +116,61 @@ export type TelegramBotCommands = {
   commands: TelegramBotCommand[];
 };
 
+// ─── Meta messaging settings ───────────────────────────────────
+
+/** A tappable prompt Messenger or Instagram shows before the first message. */
+export type MetaIceBreaker = {
+  /** Up to 80 characters. */
+  question: string;
+  /** What your webhook receives when it is tapped. */
+  payload: string;
+};
+
+export type MetaIceBreakers = {
+  ice_breakers: MetaIceBreaker[];
+};
+
+/** A persistent-menu item: a postback your webhook receives, or an http(s) link. */
+export type MetaMenuItem =
+  | { type: 'postback'; title: string; payload: string }
+  | { type: 'web_url'; title: string; url: string };
+
+/** One locale's menu; `default` is the fallback every language uses. */
+export type MetaPersistentMenuEntry = {
+  locale: string;
+  call_to_actions: MetaMenuItem[];
+  composer_input_disabled?: boolean;
+};
+
+export type MetaPersistentMenu = {
+  persistent_menu: MetaPersistentMenuEntry[];
+};
+
+export type MetaGreetingText = {
+  locale: string;
+  /** Up to 160 characters. */
+  text: string;
+};
+
+export type MetaGreeting = {
+  greeting: MetaGreetingText[];
+};
+
+/** What the network is delivering to the FoPost webhook for one account. */
+export type WebhookSubscription = {
+  /** False when the subscription lapsed or a required field is missing. */
+  subscribed: boolean;
+  fields: string[];
+  missing_fields: string[];
+};
+
+/** The outcome of a Messenger thread hand-over. */
+export type InboxHandover = {
+  /** The app control was passed to, or null when it was taken back. */
+  app_id: string | null;
+  control: 'passed' | 'taken';
+};
+
 export type SlackChannel = {
   /** Slack channel id. */
   id: string;
