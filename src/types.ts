@@ -17,6 +17,7 @@ export type Platform =
   | 'mastodon'
   | 'lemmy'
   | 'pinterest'
+  | 'snapchat'
   | 'telegram'
   | 'twitch'
   | 'discord'

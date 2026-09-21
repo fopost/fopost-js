@@ -58,6 +58,8 @@ All notable changes to `@fopost/sdk` are documented here.
   groups, Local Services leads, conversions, and `query` for a raw GAQL read. Changes
   need the `publish` scope as well as `ads`.
 - `ads.authorizeGoogle` starts a Google Ads connection.
+- `snapchat` is a recognised `Platform`. Snapchat publishes Stories, Saved Stories and
+  Spotlight to a Public Profile, one MP4 per post.
 
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
