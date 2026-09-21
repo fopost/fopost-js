@@ -32,6 +32,7 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.list({ workspaceId: 'ws' });
   await fopost.accounts.get('a1');
   await fopost.accounts.health('a1');
+  await fopost.accounts.platformMetrics('a1');
   await fopost.accounts.update('a1', { displayName: 'x' });
   await fopost.accounts.move('a1', { workspaceId: 'ws2' });
   await fopost.accounts.createTelegramConnectCode({ workspaceId: 'ws' });
@@ -150,7 +151,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(96);
+    expect(urls.length).toBe(97);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

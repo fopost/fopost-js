@@ -2604,3 +2604,30 @@ export type GoogleQueryResult = { rows: Array<Record<string, unknown>> };
 
 /** A date range in the account's time zone, `YYYY-MM-DD` and inclusive. */
 export type GoogleDateRange = { since: string; until: string };
+/** How to render a per-network metric value. */
+export type PlatformMetricKind = 'count' | 'duration_ms' | 'currency_usd' | 'ratio' | 'series';
+
+export type PlatformMetricRow = {
+  /** The platform's own metric name. Stable — read this, not `label`. */
+  key: string;
+  /** Ours, and subject to rewording. */
+  label: string;
+  kind: PlatformMetricKind;
+  /** A number for every kind but `series`, which is an array of points. */
+  value: unknown;
+};
+
+/** What only this network reports, in its own vocabulary. */
+export type AccountPlatformMetrics = {
+  platform: Platform;
+  account: {
+    /** When the numbers were collected; null when the account has no snapshot yet. */
+    fetchedAt: string | null;
+    metrics: PlatformMetricRow[];
+  };
+  post: {
+    externalPostId: string | null;
+    fetchedAt: string | null;
+    metrics: PlatformMetricRow[];
+  };
+};
