@@ -110,6 +110,22 @@ All notable changes to `@fopost/sdk` are documented here.
   keyed by the platform's own metric names — ad-break earnings, story taps, a retention
   curve, the search terms behind a listing. Needs the `analytics` scope; a network whose
   metric access has not been granted yet answers `503 platform_metrics_unavailable`.
+- LinkedIn is a second ad network behind the same `ads` methods. `ads.providers()`
+  lists the networks a deployment knows, with `capabilities`, `targetingFacets` and
+  `trackingMacros`, and `ads.authorize(provider, input)` starts any of their logins.
+- `AdTargeting.facets` carries the facets a network defines for itself, keyed by the
+  `TargetingSearchType` they were found with — `job_title`, `company_size`,
+  `industry` and the rest of the B2B set.
+- Audiences: the `COMPANY_LIST` and `ENGAGEMENT` subtypes, plus
+  `ads.addAudienceCompanies` to add rows to a company list.
+- Forecasts: `ads.bidPricing` and `ads.supplyForecast`.
+- Conversions: `ads.conversionRules`, `createConversionRule`, `getConversionRule`,
+  `updateConversionRule`, `deleteConversionRule`, `attachConversionRule`,
+  `detachConversionRule`, `conversionMetrics` and `sendConversionEvents`.
+
+### Deprecated
+
+- `ads.authorizeMeta` — use `ads.authorize('meta', input)`. It still works.
 
 ## 0.6.0
 
