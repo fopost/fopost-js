@@ -32,6 +32,7 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.list({ workspaceId: 'ws' });
   await fopost.accounts.get('a1');
   await fopost.accounts.health('a1');
+  await fopost.accounts.platformMetrics('a1');
   await fopost.accounts.update('a1', { displayName: 'x' });
   await fopost.accounts.move('a1', { workspaceId: 'ws2' });
   await fopost.accounts.createTelegramConnectCode({ workspaceId: 'ws' });
@@ -43,6 +44,57 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.accounts.listSlackMembers('a1');
   await fopost.accounts.getSlackIdentity('a1');
   await fopost.accounts.updateSlackIdentity('a1', { username: 'x' });
+  await fopost.accounts.listDiscordChannels('a1');
+  await fopost.accounts.switchDiscordChannel('a1', 'c2');
+  await fopost.accounts.getDiscordIdentity('a1');
+  await fopost.accounts.updateDiscordIdentity('a1', { username: 'x' });
+  await fopost.accounts.listDiscordPins('a1');
+  await fopost.accounts.deleteDiscordMessage('a1', 'm1');
+  await fopost.accounts.pinDiscordMessage('a1', 'm1');
+  await fopost.accounts.unpinDiscordMessage('a1', 'm1');
+  await fopost.accounts.crosspostDiscordMessage('a1', 'm1');
+  await fopost.accounts.createDiscordThread('a1', 'm1', { name: 't' });
+  await fopost.accounts.sendDiscordDm('a1', 'u7', 'hi');
+  await fopost.accounts.listDiscordEvents('a1');
+  await fopost.accounts.getDiscordEvent('a1', 'e1');
+  await fopost.accounts.createDiscordEvent('a1', {
+    name: 'e',
+    startTime: '2026-10-01T18:00:00.000Z',
+    endTime: '2026-10-01T19:00:00.000Z',
+    location: 'https://example.com/live',
+  });
+  await fopost.accounts.updateDiscordEvent('a1', 'e1', { name: 'e' });
+  await fopost.accounts.deleteDiscordEvent('a1', 'e1');
+  await fopost.accounts.listDiscordMembers('a1', { query: 'ada' });
+  await fopost.accounts.getDiscordMember('a1', 'u7');
+  await fopost.accounts.listDiscordRoles('a1');
+  await fopost.accounts.createDiscordRole('a1', { name: 'Beta' });
+  await fopost.accounts.updateDiscordRole('a1', 'r1', { name: 'Beta' });
+  await fopost.accounts.deleteDiscordRole('a1', 'r1');
+  await fopost.accounts.addDiscordMemberRole('a1', 'r1', 'u7');
+  await fopost.accounts.removeDiscordMemberRole('a1', 'r1', 'u7');
+  await fopost.accounts.listPinterestBoards('a1');
+  await fopost.accounts.createPinterestBoard('a1', { name: 'Recipes' });
+  await fopost.accounts.listYouTubePlaylists('a1');
+  await fopost.accounts.createYouTubePlaylist('a1', { title: 'Tutorials' });
+  await fopost.accounts.setDefaultYouTubePlaylist('a1', 'PL1');
+  await fopost.accounts.listYouTubeCaptions('a1', 'v1');
+  await fopost.accounts.uploadYouTubeCaptions('a1', 'v1', { language: 'en', body: 'sub' });
+  await fopost.accounts.readYouTubeTranscript('a1', 'cap1');
+  await fopost.accounts.getBlueskyLanguages('a1');
+  await fopost.accounts.setBlueskyLanguages('a1', ['en']);
+  await fopost.accounts.getTikTokCreatorInfo('a1');
+  await fopost.accounts.searchTikTokMusic('a1', { q: 'sunrise' });
+  await fopost.accounts.searchTikTokLocations('a1', { q: 'cafe' });
+  await fopost.accounts.lookupTikTokVideo(
+    'a1',
+    'https://www.tiktok.com/@a/video/7300000000000000000',
+  );
+  await fopost.accounts.searchInstagramAudio('a1', { q: 'birthday' });
+  await fopost.accounts.getInstagramPublishingLimit('a1');
+  await fopost.accounts.listInstagramStories('a1', { insights: true });
+  await fopost.accounts.getInstagramStoryInsights('a1', 's1');
+  await fopost.accounts.searchLinkedInMentions('a1', 'devtestco');
   await fopost.accountGroups.list({ workspaceId: 'ws' });
   await fopost.accountGroups.get('g1');
   await fopost.accountGroups.create({ workspaceId: 'ws', name: 'g' });
@@ -69,6 +121,22 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.ads.setStatus('ad1', 'ws', 'paused');
   await fopost.ads.accountTree('act_1', { connectionId: 'c1' });
   await fopost.ads.leadsFeed();
+  await fopost.ads.authorizeGoogle({ workspaceId: 'ws' });
+  await fopost.ads.google.keywords({ connectionId: 'c1', customerId: '1234567890' });
+  await fopost.ads.google.createKeyword({
+    workspaceId: 'ws',
+    connectionId: 'c1',
+    customerId: '1234567890',
+    adGroupId: '1234567890~adGroup~77',
+    text: 'shoes',
+    matchType: 'EXACT',
+  });
+  await fopost.ads.google.assets({ connectionId: 'c1', customerId: '1234567890' });
+  await fopost.ads.google.query({
+    connectionId: 'c1',
+    customerId: '1234567890',
+    query: 'SELECT campaign.id FROM campaign',
+  });
   await fopost.media.presign({
     workspaceId: 'ws',
     filename: 'a.png',
@@ -83,7 +151,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(48);
+    expect(urls.length).toBe(97);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

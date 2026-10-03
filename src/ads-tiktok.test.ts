@@ -112,7 +112,10 @@ describe('ads: conversions and comments', () => {
     });
 
     await client.ads.setCommentHidden('cm_1', { ...scope, hidden: true });
-    expect(last(calls)).toMatchObject({ path: '/v1/ads/comments/cm_1/hide', body: { hidden: true } });
+    expect(last(calls)).toMatchObject({
+      path: '/v1/ads/comments/cm_1/hide',
+      body: { hidden: true },
+    });
 
     await client.ads.deleteComment('cm_1', scope);
     // The ad travels in the body, because the path already carries the comment.
