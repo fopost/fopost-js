@@ -43,7 +43,7 @@ describe('ads on a second network', () => {
 
   it('flattens ad-library countries onto the query', async () => {
     const s = spy();
-    await client().ads.adLibrary({ connectionId: 'c1', keyword: 'crm', countries: ['US', 'DE'] });
+    await client().ads.adLibrary({ connectionId: 'c1', q: 'crm', countries: ['US', 'DE'] });
     expect(lastCall(s)[0]).toContain('countries=US%2CDE');
   });
 });
