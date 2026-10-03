@@ -60,6 +60,14 @@ All notable changes to `@fopost/sdk` are documented here.
 - `ads.authorizeGoogle` starts a Google Ads connection.
 - `snapchat` is a recognised `Platform`. Snapchat publishes Stories, Saved Stories and
   Spotlight to a Public Profile, one MP4 per post.
+- TikTok Ads runs on the existing `ads` resource. New reads: `tiktokBusinessCenters`,
+  `tiktokIdentities` and `sparkPosts`. New writes: `uploadConversions` for offline
+  events against a pixel the ad account owns, and `comments`, `replyToComment`,
+  `setCommentHidden`, `deleteComment` for the comments on an ad. The three comment
+  writes need the `publish` scope as well as `ads`.
+- `CreateAdInput.sparkPostId` runs a post already live on the network as a Spark ad,
+  and `CreateAdCampaignInput.smartPlus` hands targeting and creative rotation to the
+  network. Both need the matching capability from `GET /v1/ads/providers`.
 
 - `accounts.listSlackChannels` and `listSlackMembers` list a Slack account's channels
   and workspace members; a member's `id` is the handle for `inbox.startConversation`.
