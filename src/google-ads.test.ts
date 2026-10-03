@@ -90,6 +90,35 @@ describe('ads.google', () => {
     expect(req.body).toMatchObject({ customerId: '1234567890' });
   });
 
+  it('narrows recommendations to the types it was given', async () => {
+    const { calls, client } = recordingClient({ data: [] });
+    await client.ads.google.recommendations({ connectionId: 'conn', customerId: '1234567890' }, [
+      'KEYWORD',
+      'TARGET_CPA_OPT_IN',
+    ]);
+    expect(last(calls).query.types).toBe('KEYWORD,TARGET_CPA_OPT_IN');
+  });
+
+  it('leaves types off entirely when none are given', async () => {
+    const { calls, client } = recordingClient({ data: [] });
+    await client.ads.google.recommendations({ connectionId: 'conn', customerId: '1234567890' });
+    expect(last(calls).query.types).toBeUndefined();
+  });
+
+  it('sends the recommendation ids to apply', async () => {
+    const { calls, client } = recordingClient({ data: { applied: 1 } });
+    const res = await client.ads.google.applyRecommendations({
+      workspaceId: 'ws',
+      connectionId: 'conn',
+      customerId: '1234567890',
+      ids: ['customers/1234567890/recommendations/ABC~1'],
+    });
+    expect(res.applied).toBe(1);
+    const req = last(calls);
+    expect(req.path).toBe('/v1/ads/google/recommendations/apply');
+    expect(req.body).toMatchObject({ ids: ['customers/1234567890/recommendations/ABC~1'] });
+  });
+
   it('starts a Google connection on its own authorize route', async () => {
     const { calls, client } = recordingClient({ data: { url: 'https://accounts.google.com/o/…' } });
     await client.ads.authorizeGoogle({ workspaceId: 'ws' });

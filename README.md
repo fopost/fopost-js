@@ -207,7 +207,9 @@ Sending needs the `publish` scope on top of `inbox`. Every failure is a `ChatAda
 ### Google Ads
 
 Campaigns, ad groups, ads, audiences and insights are on `ads` itself and dispatch by
-connection. What only Google has is under `ads.google`: `keywords`, `createKeyword`,
+connection. What only Google has is under `ads.google`: `recommendations`,
+`optimizationScore`, `applyRecommendations`, `dismissRecommendations`, `keywords`,
+`createKeyword`,
 `updateKeyword`, `deleteKeyword`, `keywordIdeas`, `keywordMetrics`, `searchTerms`,
 `bidStrategies`, `createBidStrategy`, `adSchedule`, `setAdSchedule`,
 `negativeKeywordLists`, `createNegativeKeywordList`, `addNegativeKeywords`,
@@ -215,6 +217,9 @@ connection. What only Google has is under `ads.google`: `keywords`, `createKeywo
 `assetGroups`, `createAssetGroup`, `updateAssetGroup`, `deleteAssetGroup`,
 `localServicesLeads`, `conversionActions`, `createConversionAction`, `uploadConversions`,
 `uploadConversionAdjustments`, and `query` for a raw GAQL read.
+
+Applying a recommendation changes what the live account serves or bids, so
+`applyRecommendations` and `dismissRecommendations` need `publish` on top of `ads`.
 
 ```ts
 const keywords = await fopost.ads.google.keywords({

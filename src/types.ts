@@ -2614,6 +2614,40 @@ export type GoogleQueryInput = GoogleAdsScope & {
 /** Rows exactly as Google returns them. */
 export type GoogleQueryResult = { rows: Array<Record<string, unknown>> };
 
+/**
+ * One of Google's own recommendations for the account. `id` is the Google
+ * resource name rather than the `~` form other objects use, because a
+ * recommendation is not an object you address again: it is what apply and
+ * dismiss take.
+ */
+export type GoogleRecommendation = {
+  id: string;
+  type: string;
+  campaignId: string | null;
+  adGroupId: string | null;
+  dismissed: boolean;
+  /** What Google projects applying it would change; null where it does not estimate. */
+  impact: {
+    baseClicks: number | null;
+    potentialClicks: number | null;
+    /** The account's currency, in minor units. */
+    baseCostMinor: number | null;
+    potentialCostMinor: number | null;
+    baseConversions: number | null;
+    potentialConversions: number | null;
+  } | null;
+};
+
+export type GoogleOptimizationScore = {
+  /** 0 to 1, Google's estimate of how well the account is set up. */
+  score: number | null;
+  /** How much this account's score counts against others under the same manager. */
+  weight: number | null;
+  campaigns: Array<{ id: string; name: string; score: number | null }>;
+};
+
+export type GoogleRecommendationsInput = GoogleAdsWriteScope & { ids: string[] };
+
 /** A date range in the account's time zone, `YYYY-MM-DD` and inclusive. */
 export type GoogleDateRange = { since: string; until: string };
 /** How to render a per-network metric value. */

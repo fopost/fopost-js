@@ -110,8 +110,11 @@ import type {
   GoogleKeywordIdeasInput,
   GoogleKeywordMetricsInput,
   GoogleLocalServicesLead,
+  GoogleOptimizationScore,
   GoogleQueryInput,
   GoogleQueryResult,
+  GoogleRecommendation,
+  GoogleRecommendationsInput,
   GoogleSearchTerm,
   GoogleSharedSet,
   SetGoogleAdScheduleInput,
@@ -2207,6 +2210,37 @@ class GoogleAdsResource {
     input: UploadGoogleConversionAdjustmentsInput,
   ): Promise<{ uploaded: number }> {
     return this.http.post<{ uploaded: number }>('/v1/ads/google/conversions/adjustments', input);
+  }
+
+  /**
+   * Google's own read on what the account should change next. `types` narrows
+   * to the recommendation types you care about.
+   */
+  recommendations(scope: GoogleAdsScope, types?: string[]): Promise<GoogleRecommendation[]> {
+    return this.http.get<GoogleRecommendation[]>('/v1/ads/google/recommendations', {
+      ...googleQuery(scope),
+      ...(types?.length ? { types: types.join(',') } : {}),
+    });
+  }
+
+  optimizationScore(scope: GoogleAdsScope): Promise<GoogleOptimizationScore> {
+    return this.http.get<GoogleOptimizationScore>(
+      '/v1/ads/google/optimization-score',
+      googleQuery(scope),
+    );
+  }
+
+  /**
+   * Applies each recommendation, which changes what the live account serves or
+   * bids. Needs the `publish` scope as well as `ads`.
+   */
+  applyRecommendations(input: GoogleRecommendationsInput): Promise<{ applied: number }> {
+    return this.http.post<{ applied: number }>('/v1/ads/google/recommendations/apply', input);
+  }
+
+  /** Hides each recommendation. Needs the `publish` scope as well as `ads`. */
+  dismissRecommendations(input: GoogleRecommendationsInput): Promise<{ dismissed: number }> {
+    return this.http.post<{ dismissed: number }>('/v1/ads/google/recommendations/dismiss', input);
   }
 
   /** A raw read-only GAQL SELECT. Rows come back exactly as Google returns them. */
