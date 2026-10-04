@@ -43,6 +43,43 @@ await fopost.posts.create({
 });
 ```
 
+## Analytics
+
+```ts
+// How long a post keeps earning, from the repeated readings of each post
+const decay = await fopost.analytics.decay({ days: 30 });
+console.log(decay.halfLifeBucket); // e.g. '1h_3h'
+
+// Whether posting more earned more
+const cadence = await fopost.analytics.frequency({ days: 90 });
+console.log(cadence.best?.label); // e.g. '3-5 a week'
+
+// Every reading held for one post, with what moved between them
+const timeline = await fopost.analytics.timeline(post.id);
+
+// Mirror our metrics into your own store, without refetching everything
+let cursor: string | undefined;
+for (;;) {
+  const page = await fopost.analytics.changes({ since: cursor });
+  save(page.changes);
+  if (!page.hasMore || !page.cursor) break;
+  cursor = page.cursor;
+}
+
+// Refresh one post now instead of waiting for the next collection run
+await fopost.analytics.collectPost(post.id);
+
+// Posts on the account that never went out through FoPost
+const { data } = await fopost.analytics.nativePosts(accounts[0].id);
+```
+
+A post is addressed by its FoPost id or by its permalink, so a post made by
+hand on the network works the same way:
+
+```ts
+await fopost.analytics.timeline('https://x.com/acme/status/1');
+```
+
 ## AI features
 
 ```ts
