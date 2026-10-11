@@ -6,6 +6,19 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `blog` resource: `getSettings`, `updateSettings` (returns `websiteSecret` once, when
+  `websiteUrl` is first set), `rotateWebsiteSecret`, `testWebsite`, `listKeywords`,
+  `planKeywords`, `addKeyword`, `updateKeyword`, `deleteKeyword`, `listArticles`,
+  `requestArticle`, `getArticle`, `updateArticle`, `regenerateArticle`, `publishArticle`,
+  `rejectArticle` and `deleteArticle`. Reads and keyword edits need `posts`; planning,
+  requesting and regenerating spend credits and need `ai`; publishing needs `publish`.
+  An empty balance answers `402` with `upgrade_url` on `err.body`; publishing with no
+  target answers `409 no_target`.
+- `verifyWebhook(rawBody, headers, secret)` (also `webhooks.verify`) at the package root
+  verifies any FoPost webhook delivery over the raw bytes and returns its
+  `{ event, data, timestamp }` envelope, with `ArticlePublishedPayload` typing the
+  `article.published` event. The chat adapter now verifies through the same code.
+
 - `InboxItem.moderationStatus` carries the platform's own state for a comment
   (`published`, `held`, `spam`, `rejected`), and `InboxAccount.reconnectRequired`
   flags an account connected before the inbox asked for a permission it needs.
@@ -122,6 +135,10 @@ All notable changes to `@fopost/sdk` are documented here.
 - Conversions: `ads.conversionRules`, `createConversionRule`, `getConversionRule`,
   `updateConversionRule`, `deleteConversionRule`, `attachConversionRule`,
   `detachConversionRule`, `conversionMetrics` and `sendConversionEvents`.
+
+### Fixed
+
+- A `204` response no longer throws `Unexpected response`; it resolves to `undefined`.
 
 ### Deprecated
 
