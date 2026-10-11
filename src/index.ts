@@ -18,6 +18,20 @@
 import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
+  AddBlogKeywordInput,
+  BlogArticle,
+  BlogArticleFull,
+  BlogKeyword,
+  BlogSettings,
+  BlogSettingsUpdate,
+  BlogWebsiteTest,
+  ListBlogArticlesParams,
+  ListBlogKeywordsParams,
+  PlanBlogKeywordsInput,
+  RequestBlogArticleInput,
+  UpdateBlogArticleInput,
+  UpdateBlogKeywordInput,
+  UpdateBlogSettingsInput,
   AnalyticsScopeParams,
   CollectPostResult,
   ContentDecay,
@@ -294,6 +308,7 @@ import type {
 
 export { FoPostError };
 export * from './types.js';
+export * from './webhooks.js';
 
 export type FoPostOptions = HttpClientOptions;
 
@@ -318,6 +333,7 @@ export class FoPost {
   readonly knowledge: KnowledgeResource;
   readonly activity: ActivityResource;
   readonly googleBusiness: GoogleBusinessResource;
+  readonly blog: BlogResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -338,6 +354,7 @@ export class FoPost {
     this.knowledge = new KnowledgeResource(this.http);
     this.activity = new ActivityResource(this.http);
     this.googleBusiness = new GoogleBusinessResource(this.http);
+    this.blog = new BlogResource(this.http);
   }
 }
 
@@ -3047,5 +3064,149 @@ class GoogleBusinessResource {
     return this.http.post<MovedAccount>(`/v1/accounts/${accountId}/gbp/assign`, {
       workspace_id: input.workspaceId,
     });
+  }
+}
+
+/**
+ * Articles for a website, planned from keywords and written on a cadence.
+ * Reads, settings and keyword edits need the `posts` scope; `planKeywords`,
+ * `requestArticle` and `regenerateArticle` spend credits and need `ai`;
+ * `publishArticle` needs `publish`.
+ */
+class BlogResource {
+  constructor(private http: HttpClient) {}
+
+  getSettings(workspaceId: string): Promise<BlogSettings> {
+    return this.http.get<BlogSettings>('/v1/blog/settings', { workspaceId });
+  }
+
+  /** `websiteSecret` is non-null only on the call that first sets `websiteUrl`. */
+  updateSettings(workspaceId: string, patch: UpdateBlogSettingsInput): Promise<BlogSettingsUpdate> {
+    return this.http.patch<BlogSettingsUpdate>('/v1/blog/settings', { workspaceId, ...patch });
+  }
+
+  /** Issues a new website secret; the old one stops verifying at once. */
+  rotateWebsiteSecret(workspaceId: string): Promise<{ websiteSecret: string }> {
+    return this.http.post<{ websiteSecret: string }>('/v1/blog/settings/website-secret', {
+      workspaceId,
+    });
+  }
+
+  /** Sends a signed `article.test` delivery to `websiteUrl`. A failed reach throws a 502. */
+  testWebsite(workspaceId: string): Promise<BlogWebsiteTest> {
+    return this.http.post<BlogWebsiteTest>('/v1/blog/settings/website-test', { workspaceId });
+  }
+
+  listKeywords(workspaceId: string, params: ListBlogKeywordsParams = {}): Promise<BlogKeyword[]> {
+    return this.http.get<BlogKeyword[]>('/v1/blog/keywords', {
+      workspaceId,
+      status: Array.isArray(params.status) ? params.status.join(',') : params.status,
+      limit: params.limit,
+    });
+  }
+
+  /** Queues keyword research; suggestions land as `suggested` keywords. 402 on an empty balance. */
+  planKeywords(
+    workspaceId: string,
+    input: PlanBlogKeywordsInput = {},
+  ): Promise<{ status: 'queued' }> {
+    return this.http.post<{ status: 'queued' }>('/v1/blog/keywords/plan', {
+      workspaceId,
+      seeds: input.seeds,
+    });
+  }
+
+  addKeyword(workspaceId: string, input: AddBlogKeywordInput): Promise<BlogKeyword> {
+    return this.http.post<BlogKeyword>('/v1/blog/keywords', {
+      workspaceId,
+      keyword: input.keyword,
+      plannedFor: input.plannedFor,
+    });
+  }
+
+  updateKeyword(
+    workspaceId: string,
+    id: string,
+    patch: UpdateBlogKeywordInput,
+  ): Promise<BlogKeyword> {
+    return this.http.request<BlogKeyword>(
+      'PATCH',
+      `/v1/blog/keywords/${id}`,
+      { status: patch.status, plannedFor: patch.plannedFor },
+      { workspaceId },
+    );
+  }
+
+  deleteKeyword(workspaceId: string, id: string): Promise<void> {
+    return this.http.request<void>('DELETE', `/v1/blog/keywords/${id}`, undefined, { workspaceId });
+  }
+
+  listArticles(workspaceId: string, params: ListBlogArticlesParams = {}): Promise<BlogArticle[]> {
+    return this.http.get<BlogArticle[]>('/v1/blog/articles', {
+      workspaceId,
+      status: Array.isArray(params.status) ? params.status.join(',') : params.status,
+      limit: params.limit,
+    });
+  }
+
+  /** Queues the writer; poll `getArticle` until `status` leaves `queued`/`writing`. 402 on an empty balance. */
+  requestArticle(workspaceId: string, input: RequestBlogArticleInput): Promise<BlogArticle> {
+    return this.http.post<BlogArticle>('/v1/blog/articles', {
+      workspaceId,
+      title: input.title,
+      keyword: input.keyword,
+      keywordId: input.keywordId,
+      instructions: input.instructions,
+    });
+  }
+
+  getArticle(workspaceId: string, id: string): Promise<BlogArticleFull> {
+    return this.http.get<BlogArticleFull>(`/v1/blog/articles/${id}`, { workspaceId });
+  }
+
+  /** Only a draft or scheduled article can be edited; anything else answers 409 `invalid_state`. */
+  updateArticle(
+    workspaceId: string,
+    id: string,
+    patch: UpdateBlogArticleInput,
+  ): Promise<BlogArticleFull> {
+    return this.http.request<BlogArticleFull>(
+      'PATCH',
+      `/v1/blog/articles/${id}`,
+      {
+        title: patch.title,
+        slug: patch.slug,
+        excerpt: patch.excerpt,
+        metaTitle: patch.metaTitle,
+        metaDescription: patch.metaDescription,
+        bodyMarkdown: patch.bodyMarkdown,
+        tags: patch.tags,
+        publishAt: patch.publishAt,
+      },
+      { workspaceId },
+    );
+  }
+
+  regenerateArticle(workspaceId: string, id: string): Promise<BlogArticle> {
+    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/regenerate`, undefined, {
+      workspaceId,
+    });
+  }
+
+  /** 409 `no_target` when the settings name nowhere to publish. */
+  publishArticle(workspaceId: string, id: string): Promise<BlogArticle> {
+    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/publish`, undefined, {
+      workspaceId,
+    });
+  }
+
+  rejectArticle(workspaceId: string, id: string): Promise<BlogArticle> {
+    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/reject`, undefined, {
+      workspaceId,
+    });
+  }
+
+  deleteArticle(workspaceId: string, id: string): Promise<void> {
+    return this.http.request<void>('DELETE', `/v1/blog/articles/${id}`, undefined, { workspaceId });
   }
 }
