@@ -63,14 +63,17 @@ export class HttpClient {
       }
     }
 
+    // FormData sets its own multipart Content-Type with the boundary.
+    const isForm = body instanceof FormData;
+    const headers: Record<string, string> = {
+      'X-API-Key': this.apiKey,
+      'User-Agent': '@fopost/sdk',
+    };
+    if (!isForm) headers['Content-Type'] = 'application/json';
     const res = await this.fetchImpl(url.toString(), {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': this.apiKey,
-        'User-Agent': '@fopost/sdk',
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      headers,
+      body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
 
     const contentType = res.headers.get('content-type') ?? '';
