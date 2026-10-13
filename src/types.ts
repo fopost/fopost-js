@@ -545,9 +545,13 @@ export type Post = {
   scheduleAt: string | null;
   title: string | null;
   summary: string | null;
+  content?: ContentBlock[];
   createdAt: string;
   updatedAt: string;
 };
+
+/** A file to attach to a post: a Blob/File, or raw bytes with a name and MIME type. */
+export type PostFileInput = Blob | { data: Blob | Uint8Array; filename: string; mimeType: string };
 
 export type CreatePostInput = {
   workspaceId: string;
@@ -563,6 +567,11 @@ export type CreatePostInput = {
   labels?: string[];
   /** Article title / email subject on platforms that take one (Hashnode, WordPress, ...) */
   title?: string;
+  /**
+   * Up to 5 files, stored in the workspace library and attached to the first content
+   * block. Small files travel with the request; larger ones go through direct upload.
+   */
+  files?: PostFileInput[];
 };
 
 export type UpdatePostInput = Partial<Omit<CreatePostInput, 'workspaceId' | 'accountGroupId'>>;

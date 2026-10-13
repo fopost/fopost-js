@@ -193,6 +193,9 @@ import type {
   Post,
   PresignUploadInput,
   PresignedUpload,
+  PostFileInput,
+  ContentBlock,
+  MediaItem,
   UploadLimits,
   RenamedAccount,
   RepurposeUrlInput,
@@ -322,7 +325,6 @@ export class FoPost {
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
-    this.posts = new PostsResource(this.http);
     this.accounts = new AccountsResource(this.http);
     this.accountGroups = new AccountGroupsResource(this.http);
     this.workspaces = new WorkspacesResource(this.http);
@@ -335,6 +337,7 @@ export class FoPost {
     this.ads = new AdsResource(this.http);
     this.validate = new ValidateResource(this.http);
     this.media = new MediaResource(this.http);
+    this.posts = new PostsResource(this.http, this.media);
     this.analytics = new AnalyticsResource(this.http);
     this.knowledge = new KnowledgeResource(this.http);
     this.activity = new ActivityResource(this.http);
@@ -384,8 +387,47 @@ function accountIds(accounts: Array<string | { id: string }>): string[] {
   return accounts.map((a) => (typeof a === 'string' ? a : a.id));
 }
 
+function toForm(body: Record<string, unknown>, files: NormalizedFile[]): FormData {
+  const form = new FormData();
+  form.append('post', JSON.stringify(body));
+  for (const f of files) {
+    const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.mimeType });
+    form.append('files', blob, f.filename);
+  }
+  return form;
+}
+
+const MULTIPART_MAX_FILE_BYTES = 100 * 1024 * 1024;
+
+type NormalizedFile = { data: Blob | Uint8Array; filename: string; mimeType: string; size: number };
+
+function normalizeFile(file: PostFileInput): NormalizedFile {
+  if (file instanceof Blob) {
+    const name = (file as Blob & { name?: string }).name;
+    return { data: file, filename: name || 'file', mimeType: file.type, size: file.size };
+  }
+  const size = file.data instanceof Blob ? file.data.size : file.data.byteLength;
+  return { data: file.data, filename: file.filename, mimeType: file.mimeType, size };
+}
+
+function mediaTypeFor(mimeType: string): MediaItem['type'] {
+  if (mimeType === 'image/gif') return 'gif';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'image';
+}
+
+function withMedia(content: ContentBlock[] | undefined, items: MediaItem[]): ContentBlock[] {
+  const blocks = content && content.length > 0 ? [...content] : [{}];
+  const first = blocks[0];
+  blocks[0] = { ...first, media: [...(first.media ?? []), ...items] };
+  return blocks;
+}
+
 class PostsResource {
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private media: MediaResource,
+  ) {}
 
   list(params: ListPostsParams): Promise<Post[]> {
     return this.http.get<Post[]>('/v1/posts', {
@@ -400,8 +442,8 @@ class PostsResource {
     return this.http.get<Post>(`/v1/posts/${id}`);
   }
 
-  create(input: CreatePostInput): Promise<Post> {
-    return this.http.post<Post>('/v1/posts', {
+  async create(input: CreatePostInput): Promise<Post> {
+    const body: Record<string, unknown> = {
       workspace_id: input.workspaceId,
       status: input.status ?? 'draft',
       content: input.content,
@@ -410,10 +452,19 @@ class PostsResource {
       account_group_id: input.accountGroupId,
       labels: input.labels,
       title: input.title,
-    });
+    };
+    const files = (input.files ?? []).map(normalizeFile);
+    if (files.length === 0) return this.http.post<Post>('/v1/posts', body);
+
+    if (await this.fitsMultipart(files, input.workspaceId)) {
+      return this.http.post<Post>('/v1/posts', toForm(body, files));
+    }
+    const items = await this.uploadAll(files, input.workspaceId);
+    body.content = withMedia(input.content, items);
+    return this.http.post<Post>('/v1/posts', body);
   }
 
-  update(id: string, input: UpdatePostInput): Promise<Post> {
+  async update(id: string, input: UpdatePostInput): Promise<Post> {
     const body: Record<string, unknown> = {};
     if (input.status !== undefined) body.status = input.status;
     if (input.content !== undefined) body.content = input.content;
@@ -421,7 +472,46 @@ class PostsResource {
     if (input.accounts !== undefined) body.accounts = accountIds(input.accounts);
     if (input.labels !== undefined) body.labels = input.labels;
     if (input.title !== undefined) body.title = input.title;
+    const files = (input.files ?? []).map(normalizeFile);
+    if (files.length === 0) return this.http.put<Post>(`/v1/posts/${id}`, body);
+
+    if (await this.fitsMultipart(files)) {
+      return this.http.put<Post>(`/v1/posts/${id}`, toForm(body, files));
+    }
+    // Direct upload needs the workspace, and the block to append to when no content is sent.
+    const post = await this.get(id);
+    const items = await this.uploadAll(files, post.workspaceId);
+    body.content = withMedia(input.content ?? post.content ?? [], items);
     return this.http.put<Post>(`/v1/posts/${id}`, body);
+  }
+
+  private async fitsMultipart(files: NormalizedFile[], workspaceId?: string): Promise<boolean> {
+    let ceiling = MULTIPART_MAX_FILE_BYTES;
+    try {
+      ceiling = (await this.media.limits(workspaceId)).multipartMaxFileBytes;
+    } catch {
+      // Fall back to the documented multipart ceiling.
+    }
+    return files.every((f) => f.size <= ceiling);
+  }
+
+  private async uploadAll(files: NormalizedFile[], workspaceId: string): Promise<MediaItem[]> {
+    const items: MediaItem[] = [];
+    for (const f of files) {
+      const uploaded = await this.media.uploadDirect({
+        workspaceId,
+        filename: f.filename,
+        mimeType: f.mimeType,
+        data: f.data,
+      });
+      items.push({
+        type: mediaTypeFor(f.mimeType),
+        name: uploaded.name,
+        url: uploaded.url,
+        size: uploaded.size,
+      });
+    }
+    return items;
   }
 
   delete(id: string): Promise<void> {
