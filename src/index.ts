@@ -193,6 +193,7 @@ import type {
   Post,
   PresignUploadInput,
   PresignedUpload,
+  UploadLimits,
   RenamedAccount,
   RepurposeUrlInput,
   RewriteInput,
@@ -2527,6 +2528,11 @@ class AnalyticsResource {
 class MediaResource {
   constructor(private http: HttpClient) {}
 
+  /** The per-file ceiling for this account, what set it, and the multipart ceiling. */
+  limits(workspaceId?: string): Promise<UploadLimits> {
+    return this.http.get<UploadLimits>('/v1/media/limits', { workspaceId });
+  }
+
   presign(input: PresignUploadInput): Promise<PresignedUpload> {
     return this.http.post<PresignedUpload>('/v1/media/presign', input);
   }
@@ -2538,12 +2544,8 @@ class MediaResource {
   /** Presign, PUT the bytes to storage, then complete. */
   async uploadDirect(input: DirectUploadInput): Promise<UploadedMedia> {
     const size = input.data instanceof Blob ? input.data.size : input.data.byteLength;
-    const presigned = await this.presign({
-      workspaceId: input.workspaceId,
-      filename: input.filename,
-      mimeType: input.mimeType,
-      size,
-    });
+    const { data: _data, ...rest } = input;
+    const presigned = await this.presign({ ...rest, size });
     const res = await this.http.fetchImpl(presigned.uploadUrl, {
       method: presigned.method,
       headers: { ...presigned.headers, 'Content-Length': String(size) },
