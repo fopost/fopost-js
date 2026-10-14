@@ -18,6 +18,15 @@ All notable changes to `@fopost/sdk` are documented here.
   verifies any FoPost webhook delivery over the raw bytes and returns its
   `{ event, data, timestamp }` envelope, with `ArticlePublishedPayload` typing the
   `article.published` event. The chat adapter now verifies through the same code.
+- `media.limits(workspaceId?)` reads `GET /v1/media/limits`: the per-file ceiling the
+  account may upload (`maxFileBytes`), what set it, the next tier, the multipart ceiling
+  and the allowed types, as `UploadLimits`.
+- `posts.create` and `posts.update` take `files`. Files within the multipart ceiling go in
+  one `multipart/form-data` request (`post` JSON field plus `files` parts); larger files
+  go through `media.uploadDirect` and are attached to the first content block by url.
+- `PresignUploadInput` and `DirectUploadInput` accept `folderId`, `origin`, `brandRole`,
+  `brandVoiceId` and `personConsent`; `PresignedUpload` carries `maxFileBytes`.
+- `Post.content` is typed, so a fetched post exposes its blocks.
 
 - `InboxItem.moderationStatus` carries the platform's own state for a comment
   (`published`, `held`, `spam`, `rejected`), and `InboxAccount.reconnectRequired`
@@ -135,6 +144,12 @@ All notable changes to `@fopost/sdk` are documented here.
 - Conversions: `ads.conversionRules`, `createConversionRule`, `getConversionRule`,
   `updateConversionRule`, `deleteConversionRule`, `attachConversionRule`,
   `detachConversionRule`, `conversionMetrics` and `sendConversionEvents`.
+
+### Changed
+
+- Direct uploads are no longer documented as capped at 50 MB; the ceiling is the
+  account's `maxFileBytes`, and an oversize file is a `413 file_too_large` whose body
+  carries `max_file_bytes`, `file_bytes` and `upgrade_url`.
 
 ### Fixed
 

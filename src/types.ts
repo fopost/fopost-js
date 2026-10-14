@@ -545,9 +545,13 @@ export type Post = {
   scheduleAt: string | null;
   title: string | null;
   summary: string | null;
+  content?: ContentBlock[];
   createdAt: string;
   updatedAt: string;
 };
+
+/** A file to attach to a post: a Blob/File, or raw bytes with a name and MIME type. */
+export type PostFileInput = Blob | { data: Blob | Uint8Array; filename: string; mimeType: string };
 
 export type CreatePostInput = {
   workspaceId: string;
@@ -563,6 +567,11 @@ export type CreatePostInput = {
   labels?: string[];
   /** Article title / email subject on platforms that take one (Hashnode, WordPress, ...) */
   title?: string;
+  /**
+   * Up to 5 files, stored in the workspace library and attached to the first content
+   * block. Small files travel with the request; larger ones go through direct upload.
+   */
+  files?: PostFileInput[];
 };
 
 export type UpdatePostInput = Partial<Omit<CreatePostInput, 'workspaceId' | 'accountGroupId'>>;
@@ -2097,11 +2106,38 @@ export type ValidateMediaResult = {
 
 // ─── Media ─────────────────────────────────────────────────────────
 
-export type PresignUploadInput = {
+export type UploadLimits = {
+  /** The largest file this account may upload by any route. */
+  maxFileBytes: number;
+  source: 'accounts' | 'add_on' | 'bypass';
+  connectedAccounts: number;
+  largeUploadsEnabled: boolean;
+  nextTier: { upToAccounts: number | null; maxFileBytes: number } | null;
+  /** What a multipart request carries per file; larger files use direct upload. */
+  multipartMaxFileBytes: number;
+  maxFilesPerUpload: number;
+  directUploadAvailable: boolean;
+  allowedTypes: string[];
+};
+
+export type BrandRole = 'logo' | 'product' | 'person' | 'background';
+
+export type PersonConsent = { subject: string; statement: string };
+
+export type UploadLibraryFields = {
+  folderId?: string;
+  origin?: 'chat';
+  brandRole?: BrandRole;
+  brandVoiceId?: string;
+  /** Required when brandRole is 'person'. */
+  personConsent?: PersonConsent;
+};
+
+export type PresignUploadInput = UploadLibraryFields & {
   workspaceId: string;
   filename: string;
   mimeType: string;
-  /** Bytes, 1 to 52428800. */
+  /** Bytes, up to the account's maxFileBytes (see media.limits). */
   size: number;
 };
 
@@ -2111,6 +2147,7 @@ export type PresignedUpload = {
   method: 'PUT';
   headers: { 'Content-Type': string };
   expiresAt: string;
+  maxFileBytes: number;
 };
 
 export type UploadedMedia = {
@@ -2122,7 +2159,7 @@ export type UploadedMedia = {
   size: number;
 };
 
-export type DirectUploadInput = {
+export type DirectUploadInput = UploadLibraryFields & {
   workspaceId: string;
   filename: string;
   mimeType: string;
