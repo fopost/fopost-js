@@ -3112,3 +3112,195 @@ export type AdComment = {
 };
 
 export type AdCommentsPage = { comments: AdComment[]; nextCursor: string | null };
+
+// ─── Blog ──────────────────────────────────────────────────────────
+// Wire fields are camelCase on these routes, so the shapes are the wire shapes.
+
+export type BlogArticleStatus =
+  'queued' | 'writing' | 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'rejected';
+
+export type BlogKeywordStatus = 'suggested' | 'planned' | 'written' | 'dismissed';
+
+export type BlogKeywordSource = 'provider' | 'user' | 'agent';
+
+export type BlogArticleOrigin = 'plan' | 'user' | 'agent';
+
+/** Where published articles go: your FoPost-hosted blog, a connected account, or your own site. */
+export type BlogTargetKind = 'product_blog' | 'account' | 'website';
+
+export type BlogImageTier = 'draft' | 'standard' | 'best';
+
+export type BlogSettings = {
+  siteUrl?: string | null;
+  topic?: string | null;
+  audience?: string | null;
+  language: string;
+  locationCode?: number;
+  /** Articles planned per week; 0 turns planning off. */
+  cadencePerWeek: number;
+  /** Days a draft waits for review before it may auto-publish. */
+  reviewHoldDays: number;
+  autoPublish: boolean;
+  imageTier?: BlogImageTier;
+  inBodyImages?: number;
+  minWords?: number;
+  maxWords?: number;
+  brandVoiceId?: string | null;
+  targetKind?: BlogTargetKind | null;
+  targetAccountId?: string | null;
+  targetPlatform?: string | null;
+  websiteUrl?: string | null;
+  hasWebsiteSecret: boolean;
+  /** Whether search volume and difficulty can be fetched on this deployment. */
+  keywordDataAvailable?: boolean;
+  updatedAt?: string;
+};
+
+export type UpdateBlogSettingsInput = {
+  siteUrl?: string | null;
+  topic?: string | null;
+  audience?: string | null;
+  language?: string;
+  locationCode?: number;
+  /** 0 to 7. */
+  cadencePerWeek?: number;
+  /** 0 to 14. */
+  reviewHoldDays?: number;
+  autoPublish?: boolean;
+  imageTier?: BlogImageTier;
+  /** 0 to 3. */
+  inBodyImages?: number;
+  minWords?: number;
+  maxWords?: number;
+  brandVoiceId?: string | null;
+  targetKind?: BlogTargetKind | null;
+  targetAccountId?: string | null;
+  /** Where published articles are POSTed as a signed webhook; setting it issues a secret, returned once. */
+  websiteUrl?: string | null;
+};
+
+/** `websiteSecret` is set only on the call that first sets `websiteUrl`. Store it then. */
+export type BlogSettingsUpdate = { data: BlogSettings; websiteSecret: string | null };
+
+export type BlogWebsiteTest = { ok: boolean; status: number | null; error: string | null };
+
+export type BlogKeyword = {
+  id: string;
+  keyword: string;
+  searchVolume?: number | null;
+  /** 0 to 100. */
+  difficulty?: number | null;
+  cpc?: number | null;
+  intent?: string | null;
+  source: BlogKeywordSource;
+  status: BlogKeywordStatus;
+  /** YYYY-MM-DD. */
+  plannedFor?: string | null;
+  createdAt: string;
+};
+
+export type ListBlogKeywordsParams = {
+  status?: BlogKeywordStatus | BlogKeywordStatus[];
+  /** Up to 500. */
+  limit?: number;
+};
+
+export type PlanBlogKeywordsInput = { seeds?: string[] };
+
+export type AddBlogKeywordInput = {
+  keyword: string;
+  /** YYYY-MM-DD. */
+  plannedFor?: string;
+};
+
+export type UpdateBlogKeywordInput = {
+  status?: BlogKeywordStatus;
+  plannedFor?: string | null;
+};
+
+export type BlogArticleImage = {
+  mediaId: string;
+  url: string;
+  alt: string;
+  /** Index of the outline heading the image sits under; absent on the featured image. */
+  position?: number;
+};
+
+export type BlogArticle = {
+  id: string;
+  title: string;
+  slug: string;
+  keyword?: string | null;
+  excerpt?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  featuredImage?: BlogArticleImage | null;
+  tags: string[];
+  wordCount: number;
+  status: BlogArticleStatus;
+  origin: BlogArticleOrigin;
+  reviewUntil?: string | null;
+  publishAt?: string | null;
+  publishedAt?: string | null;
+  publishedUrl?: string | null;
+  error?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BlogArticleFull = BlogArticle & {
+  instructions?: string | null;
+  outline?: string[];
+  /** The research the writer worked from. */
+  brief?: Record<string, unknown> | null;
+  bodyMarkdown?: string;
+  bodyHtml?: string;
+  images?: BlogArticleImage[];
+};
+
+export type ListBlogArticlesParams = {
+  status?: BlogArticleStatus | BlogArticleStatus[];
+  /** Up to 200. */
+  limit?: number;
+};
+
+/** One of `title`, `keyword` or `keywordId` is required. */
+export type RequestBlogArticleInput = {
+  title?: string;
+  keyword?: string;
+  /** A keyword from the plan; its term becomes the target. */
+  keywordId?: string;
+  /** Up to 4000 characters. */
+  instructions?: string;
+};
+
+export type UpdateBlogArticleInput = {
+  title?: string;
+  /** Lowercase letters, digits and hyphens. */
+  slug?: string;
+  excerpt?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  bodyMarkdown?: string;
+  tags?: string[];
+  /** Puts the draft on the calendar; null returns it to review. */
+  publishAt?: string | null;
+};
+
+/** `data` of an `article.published` or `article.test` delivery. Image URLs are fetchable for 6 hours. */
+export type BlogArticleWebhookPayload = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  bodyMarkdown: string;
+  bodyHtml: string;
+  featuredImage: BlogArticleImage | null;
+  images: BlogArticleImage[];
+  tags: string[];
+  keyword: string | null;
+  wordCount: number;
+  publishedAt: string;
+};

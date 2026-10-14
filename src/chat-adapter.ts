@@ -19,6 +19,13 @@
  */
 
 import type { FoPost } from './index.js';
+import {
+  EVENT_HEADER,
+  WebhookError,
+  verifyWebhookSignature,
+  webhookHeader as header,
+  type WebhookHeaders,
+} from './webhooks.js';
 import type {
   InboxAttachment,
   InboxItem,
@@ -30,13 +37,7 @@ import type {
 /** The webhook event a new direct message raises. */
 export const INBOUND_EVENT = 'inbox.message_received';
 
-/** Refuse a delivery signed longer ago than this. Matches the API's own tolerance. */
-export const SIGNATURE_TOLERANCE_SECONDS = 300;
-
-const SIGNATURE_HEADER = 'x-fopost-signature';
-const TIMESTAMPED_SIGNATURE_HEADER = 'x-fopost-signature-256';
-const TIMESTAMP_HEADER = 'x-fopost-timestamp';
-const EVENT_HEADER = 'x-fopost-event';
+export { SIGNATURE_TOLERANCE_SECONDS } from './webhooks.js';
 
 export type ChatAdapterErrorCode =
   | 'invalid_body'
@@ -119,8 +120,7 @@ export type OutboundMessage =
   | { accountId: string; handle: string; text: string; mediaIds?: string[] };
 
 /** Anything a framework hands us as headers. */
-export type HeaderSource =
-  Headers | Map<string, string> | Record<string, string | string[] | undefined>;
+export type HeaderSource = WebhookHeaders;
 
 // ─── Mapping ───────────────────────────────────────────────────────
 
@@ -144,45 +144,6 @@ export function toChatMessage(item: InboxItem): ChatMessage {
     raw: item,
   };
 }
-
-// ─── Headers and signatures ────────────────────────────────────────
-
-function header(source: HeaderSource, name: string): string | null {
-  if (typeof (source as Headers).get === 'function') {
-    return (source as Headers).get(name) ?? (source as Headers).get(name.toLowerCase()) ?? null;
-  }
-  const record = source as Record<string, string | string[] | undefined>;
-  const key = Object.keys(record).find((k) => k.toLowerCase() === name.toLowerCase());
-  if (key === undefined) return null;
-  const value = record[key];
-  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
-}
-
-const hex = (bytes: ArrayBuffer): string =>
-  [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
-
-async function hmac(secret: string, message: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await globalThis.crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  return hex(await globalThis.crypto.subtle.sign('HMAC', key, encoder.encode(message)));
-}
-
-/** Constant time for equal-length digests, which is the only case that matters. */
-function equals(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-const digest = (value: string | null): string | null =>
-  value === null ? null : value.startsWith('sha256=') ? value.slice(7) : value;
 
 // ─── Adapter ───────────────────────────────────────────────────────
 
@@ -248,29 +209,13 @@ export class ChatAdapter {
     if (!this.webhookSecret) {
       throw new ChatAdapterError('missing_secret', 'Pass webhookSecret to verify a delivery');
     }
-
-    const timestamped = digest(header(headers, TIMESTAMPED_SIGNATURE_HEADER));
-    if (timestamped !== null) {
-      const sentAt = Number(header(headers, TIMESTAMP_HEADER));
-      if (!Number.isFinite(sentAt)) {
-        throw new ChatAdapterError('invalid_signature', 'Signed delivery carries no timestamp');
+    try {
+      await verifyWebhookSignature(body, headers, this.webhookSecret);
+    } catch (err) {
+      if (err instanceof WebhookError && err.code !== 'invalid_body') {
+        throw new ChatAdapterError(err.code, err.message);
       }
-      const age = Math.abs(Date.now() / 1000 - sentAt);
-      if (age > SIGNATURE_TOLERANCE_SECONDS) {
-        throw new ChatAdapterError('stale_delivery', `Delivery is ${Math.round(age)}s old`);
-      }
-      if (!equals(timestamped, await hmac(this.webhookSecret, `${sentAt}.${body}`))) {
-        throw new ChatAdapterError('invalid_signature', 'Signature does not match the body');
-      }
-      return;
-    }
-
-    const plain = digest(header(headers, SIGNATURE_HEADER));
-    if (plain === null) {
-      throw new ChatAdapterError('invalid_signature', 'Delivery carries no signature header');
-    }
-    if (!equals(plain, await hmac(this.webhookSecret, body))) {
-      throw new ChatAdapterError('invalid_signature', 'Signature does not match the body');
+      throw err;
     }
   }
 

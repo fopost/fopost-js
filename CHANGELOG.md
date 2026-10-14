@@ -6,6 +6,18 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `blog` resource: `getSettings`, `updateSettings` (returns `websiteSecret` once, when
+  `websiteUrl` is first set), `rotateWebsiteSecret`, `testWebsite`, `listKeywords`,
+  `planKeywords`, `addKeyword`, `updateKeyword`, `deleteKeyword`, `listArticles`,
+  `requestArticle`, `getArticle`, `updateArticle`, `regenerateArticle`, `publishArticle`,
+  `rejectArticle` and `deleteArticle`. Reads and keyword edits need `posts`; planning,
+  requesting and regenerating spend credits and need `ai`; publishing needs `publish`.
+  An empty balance answers `402` with `upgrade_url` on `err.body`; publishing with no
+  target answers `409 no_target`.
+- `verifyWebhook(rawBody, headers, secret)` (also `webhooks.verify`) at the package root
+  verifies any FoPost webhook delivery over the raw bytes and returns its
+  `{ event, data, timestamp }` envelope, with `ArticlePublishedPayload` typing the
+  `article.published` event. The chat adapter now verifies through the same code.
 - `media.limits(workspaceId?)` reads `GET /v1/media/limits`: the per-file ceiling the
   account may upload (`maxFileBytes`), what set it, the next tier, the multipart ceiling
   and the allowed types, as `UploadLimits`.
@@ -15,12 +27,6 @@ All notable changes to `@fopost/sdk` are documented here.
 - `PresignUploadInput` and `DirectUploadInput` accept `folderId`, `origin`, `brandRole`,
   `brandVoiceId` and `personConsent`; `PresignedUpload` carries `maxFileBytes`.
 - `Post.content` is typed, so a fetched post exposes its blocks.
-
-### Changed
-
-- Direct uploads are no longer documented as capped at 50 MB; the ceiling is the
-  account's `maxFileBytes`, and an oversize file is a `413 file_too_large` whose body
-  carries `max_file_bytes`, `file_bytes` and `upgrade_url`.
 
 - `InboxItem.moderationStatus` carries the platform's own state for a comment
   (`published`, `held`, `spam`, `rejected`), and `InboxAccount.reconnectRequired`
@@ -138,6 +144,16 @@ All notable changes to `@fopost/sdk` are documented here.
 - Conversions: `ads.conversionRules`, `createConversionRule`, `getConversionRule`,
   `updateConversionRule`, `deleteConversionRule`, `attachConversionRule`,
   `detachConversionRule`, `conversionMetrics` and `sendConversionEvents`.
+
+### Changed
+
+- Direct uploads are no longer documented as capped at 50 MB; the ceiling is the
+  account's `maxFileBytes`, and an oversize file is a `413 file_too_large` whose body
+  carries `max_file_bytes`, `file_bytes` and `upgrade_url`.
+
+### Fixed
+
+- A `204` response no longer throws `Unexpected response`; it resolves to `undefined`.
 
 ### Deprecated
 

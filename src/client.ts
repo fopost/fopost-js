@@ -76,6 +76,9 @@ export class HttpClient {
       body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
 
+    // A delete answers 204 with no body, which the JSON path below would refuse.
+    if (res.status === 204) return undefined as T;
+
     const contentType = res.headers.get('content-type') ?? '';
     if (!contentType.includes('application/json')) {
       if (!res.ok) {
