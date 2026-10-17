@@ -64,6 +64,8 @@ export type Account = {
   platformName?: string;
   active: boolean;
   isPrimary: boolean;
+  /** True when the account was connected before a permission it now needs was asked for. */
+  reconnectRequired?: boolean;
 };
 
 export type ListAccountsParams = {
@@ -498,6 +500,54 @@ export type CreateDiscordThreadInput = {
   autoArchiveDuration?: 60 | 1440 | 4320 | 10080;
 };
 
+// ─── Reddit ────────────────────────────────────────────────────────
+
+/** A subreddit the account is in, or its own profile page. */
+export type RedditSubreddit = {
+  /** Subreddit name, without the `r/` prefix. */
+  name: string;
+  title: string | null;
+  subscribers: number | null;
+  over18: boolean;
+  /** False where the account may read but not submit. */
+  canPost: boolean;
+  /** Whether the subreddit offers post flairs at all. */
+  flairEnabled: boolean;
+  iconUrl: string | null;
+  /** Where posts go when a post names no subreddit. */
+  isDefault: boolean;
+};
+
+export type RedditSubredditRule = {
+  name: string;
+  description: string | null;
+  /** What the rule covers: `link`, `comment` or `all`. */
+  appliesTo: string;
+};
+
+export type RedditSubredditRules = {
+  subreddit: string;
+  rules: RedditSubredditRule[];
+};
+
+/** A post flair, valid only in the subreddit it came from. */
+export type RedditFlair = {
+  id: string;
+  text: string;
+  /** Whether `flair_text` may replace the label. */
+  editable: boolean;
+};
+
+export type RedditFlairs = {
+  subreddit: string;
+  flairs: RedditFlair[];
+};
+
+export type RedditDefaultSubreddit = {
+  /** Null means the account's own profile page. */
+  subreddit: string | null;
+};
+
 /** Account groups come back in the API's snake_case shape. */
 export type AccountGroup = {
   /** Public account group id (uuid). */
@@ -692,6 +742,8 @@ export type InboxItem = {
   canReply: boolean;
   hidden: boolean;
   liked: boolean;
+  /** How the account voted where the network ranks by votes. */
+  vote: RedditVoteDirection | null;
   pinned: boolean;
   /** Our reaction on a DM. */
   reaction: string | null;
@@ -702,6 +754,8 @@ export type InboxItem = {
   /** Also true for our own replies. */
   canDelete: boolean;
   canLike: boolean;
+  /** The network ranks by votes, so a down vote exists. */
+  canVote: boolean;
   canPin: boolean;
   canEdit: boolean;
   canReact: boolean;
@@ -2092,6 +2146,19 @@ export type ValidateLengthResult = {
     ok: boolean;
     signals: ContentSignal[];
   }>;
+};
+
+/** `none` takes an earlier vote back. */
+export type RedditVoteDirection = 'up' | 'down' | 'none';
+
+export type SubredditCheck = {
+  subreddit: string;
+  exists: boolean;
+  can_post: boolean;
+  over_18: boolean;
+  flair_enabled: boolean;
+  /** True when the subreddit exists and takes a post from this account. */
+  ok: boolean;
 };
 
 export type ValidateMediaResult = {
