@@ -6,6 +6,11 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `blogs` reaches content a connected site already owns, by the platform's own ids:
+  `listBlogs`, `listArticles`, `getArticle`, `createArticle`, `updateArticle`,
+  `deleteArticle`, plus `listProducts` and `updateProduct` for a Shopify store.
+  `updateArticle` changes the live article in place and never creates a second post.
+  Reads need the `posts` scope; the writes need `publish` as well.
 - `blog` resource: `getSettings`, `updateSettings` (returns `websiteSecret` once, when
   `websiteUrl` is first set), `rotateWebsiteSecret`, `testWebsite`, `listKeywords`,
   `planKeywords`, `addKeyword`, `updateKeyword`, `deleteKeyword`, `listArticles`,
