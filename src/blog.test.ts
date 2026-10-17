@@ -29,10 +29,18 @@ const last = (calls: Call[]) => {
 describe('blog settings', () => {
   it('reads settings with the workspace in the query', async () => {
     const { calls, client } = recordingClient({
-      data: { language: 'en', cadencePerWeek: 2, reviewHoldDays: 3, autoPublish: false },
+      data: {
+        language: 'en',
+        cadencePerWeek: 2,
+        reviewHoldDays: 3,
+        goal: 'leads',
+        planRun: { status: 'done', error: null, added: 12, finishedAt: '2026-10-18T09:00:00Z' },
+      },
     });
     const settings = await client.blog.getSettings('ws');
     expect(settings.cadencePerWeek).toBe(2);
+    expect(settings.goal).toBe('leads');
+    expect(settings.planRun?.added).toBe(12);
     const req = last(calls);
     expect(req.method).toBe('GET');
     expect(req.path).toBe('/v1/blog/settings');
@@ -47,6 +55,9 @@ describe('blog settings', () => {
     const result = await client.blog.updateSettings('ws', {
       websiteUrl: 'https://yourbrand.com/fopost',
       targetKind: 'website',
+      goal: 'signups',
+      focusTopics: 'scheduling',
+      avoidTopics: null,
     });
     expect(result.websiteSecret).toBe('whsec_once');
     expect(result.data.hasWebsiteSecret).toBe(true);
@@ -57,6 +68,9 @@ describe('blog settings', () => {
       workspaceId: 'ws',
       websiteUrl: 'https://yourbrand.com/fopost',
       targetKind: 'website',
+      goal: 'signups',
+      focusTopics: 'scheduling',
+      avoidTopics: null,
     });
   });
 
@@ -94,6 +108,22 @@ describe('blog keywords', () => {
     expect(req.query).toEqual({ workspaceId: 'ws', status: 'suggested,planned', limit: '50' });
   });
 
+  it('suggests seeds with the workspace, seeds and prompt in the body', async () => {
+    const { calls, client } = recordingClient({
+      seeds: ['social media calendar', 'post scheduler'],
+    });
+    const result = await client.blog.suggestSeeds('ws', {
+      seeds: ['scheduling'],
+      prompt: 'Lean towards agencies.',
+    });
+    expect(result.seeds).toEqual(['social media calendar', 'post scheduler']);
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/blog/keywords/suggest',
+      body: { workspaceId: 'ws', seeds: ['scheduling'], prompt: 'Lean towards agencies.' },
+    });
+  });
+
   it('plans and adds with the workspace in the body', async () => {
     const { calls, client } = recordingClient({ data: { status: 'queued' } });
     const queued = await client.blog.planKeywords('ws', { seeds: ['scheduling'] });
@@ -113,9 +143,12 @@ describe('blog keywords', () => {
   });
 
   it('updates with the workspace in the query and the patch in the body', async () => {
-    const { calls, client } = recordingClient({ data: { id: 'k1', status: 'planned' } });
+    const { calls, client } = recordingClient({
+      data: { id: 'k1', status: 'planned', fitReason: 'Buyers search it before choosing a tool.' },
+    });
     const keyword = await client.blog.updateKeyword('ws', 'k1', { status: 'planned' });
     expect(keyword.status).toBe('planned');
+    expect(keyword.fitReason).toBe('Buyers search it before choosing a tool.');
     const req = last(calls);
     expect(req.method).toBe('PATCH');
     expect(req.path).toBe('/v1/blog/keywords/k1');
@@ -186,6 +219,16 @@ describe('blog articles', () => {
       expect(call.body).toBeUndefined();
       expect(new URL(call.url).searchParams.get('workspaceId')).toBe('ws');
     }
+  });
+
+  it('submits an article for approval with no body of its own', async () => {
+    const { calls, client } = recordingClient({ data: { id: 'a1', status: 'in_review' } });
+    const article = await client.blog.submitArticle('ws', 'a1');
+    expect(article.status).toBe('in_review');
+    const req = last(calls);
+    expect(req).toMatchObject({ method: 'POST', path: '/v1/blog/articles/a1/submit' });
+    expect(req.query).toEqual({ workspaceId: 'ws' });
+    expect(req.body).toBeUndefined();
   });
 
   it('deletes and accepts the empty 204', async () => {

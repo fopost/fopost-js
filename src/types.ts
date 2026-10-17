@@ -3117,7 +3117,15 @@ export type AdCommentsPage = { comments: AdComment[]; nextCursor: string | null 
 // Wire fields are camelCase on these routes, so the shapes are the wire shapes.
 
 export type BlogArticleStatus =
-  'queued' | 'writing' | 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'rejected';
+  | 'queued'
+  | 'writing'
+  | 'draft'
+  | 'in_review'
+  | 'scheduled'
+  | 'publishing'
+  | 'published'
+  | 'failed'
+  | 'rejected';
 
 export type BlogKeywordStatus = 'suggested' | 'planned' | 'written' | 'dismissed';
 
@@ -3130,17 +3138,33 @@ export type BlogTargetKind = 'product_blog' | 'account' | 'website';
 
 export type BlogImageTier = 'draft' | 'standard' | 'best';
 
+/** What the blog is for; steers suggested terms and keyword ranking. */
+export type BlogGoal = 'traffic' | 'leads' | 'sales' | 'signups' | 'authority';
+
+/** The last keyword research run. */
+export type BlogPlanRun = {
+  status: 'queued' | 'running' | 'done' | 'failed';
+  error: string | null;
+  /** New keywords the run found. */
+  added: number | null;
+  finishedAt: string | null;
+};
+
 export type BlogSettings = {
   siteUrl?: string | null;
   topic?: string | null;
   audience?: string | null;
+  goal?: BlogGoal | null;
+  /** What the blog wants to write about. */
+  focusTopics?: string | null;
+  /** What the blog never writes about. */
+  avoidTopics?: string | null;
   language: string;
   locationCode?: number;
   /** Articles planned per week; 0 turns planning off. */
   cadencePerWeek: number;
-  /** Days a draft waits for review before it may auto-publish. */
+  /** Days before its planned date that a picked keyword starts being written. */
   reviewHoldDays: number;
-  autoPublish: boolean;
   imageTier?: BlogImageTier;
   inBodyImages?: number;
   minWords?: number;
@@ -3151,6 +3175,8 @@ export type BlogSettings = {
   targetPlatform?: string | null;
   websiteUrl?: string | null;
   hasWebsiteSecret: boolean;
+  /** Null before the first run. */
+  planRun?: BlogPlanRun | null;
   /** Whether search volume and difficulty can be fetched on this deployment. */
   keywordDataAvailable?: boolean;
   updatedAt?: string;
@@ -3160,13 +3186,15 @@ export type UpdateBlogSettingsInput = {
   siteUrl?: string | null;
   topic?: string | null;
   audience?: string | null;
+  goal?: BlogGoal | null;
+  focusTopics?: string | null;
+  avoidTopics?: string | null;
   language?: string;
   locationCode?: number;
   /** 0 to 7. */
   cadencePerWeek?: number;
   /** 0 to 14. */
   reviewHoldDays?: number;
-  autoPublish?: boolean;
   imageTier?: BlogImageTier;
   /** 0 to 3. */
   inBodyImages?: number;
@@ -3196,6 +3224,8 @@ export type BlogKeyword = {
   status: BlogKeywordStatus;
   /** YYYY-MM-DD. */
   plannedFor?: string | null;
+  /** Why the keyword serves the blog goal. */
+  fitReason?: string | null;
   createdAt: string;
 };
 
@@ -3206,6 +3236,13 @@ export type ListBlogKeywordsParams = {
 };
 
 export type PlanBlogKeywordsInput = { seeds?: string[] };
+
+export type SuggestBlogSeedsInput = {
+  /** Current terms to refine; up to 20. */
+  seeds?: string[];
+  /** Steers the suggestions; up to 500 characters. */
+  prompt?: string;
+};
 
 export type AddBlogKeywordInput = {
   keyword: string;
@@ -3283,7 +3320,7 @@ export type UpdateBlogArticleInput = {
   metaDescription?: string | null;
   bodyMarkdown?: string;
   tags?: string[];
-  /** Puts the draft on the calendar; null returns it to review. */
+  /** Puts an `in_review` article on the calendar; null returns it to review. A draft answers 409. */
   publishAt?: string | null;
 };
 

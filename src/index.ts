@@ -29,6 +29,7 @@ import type {
   ListBlogKeywordsParams,
   PlanBlogKeywordsInput,
   RequestBlogArticleInput,
+  SuggestBlogSeedsInput,
   UpdateBlogArticleInput,
   UpdateBlogKeywordInput,
   UpdateBlogSettingsInput,
@@ -3179,9 +3180,9 @@ class GoogleBusinessResource {
 
 /**
  * Articles for a website, planned from keywords and written on a cadence.
- * Reads, settings and keyword edits need the `posts` scope; `planKeywords`,
- * `requestArticle` and `regenerateArticle` spend credits and need `ai`;
- * `publishArticle` needs `publish`.
+ * Reads, settings, keyword edits and `submitArticle` need the `posts` scope;
+ * `suggestSeeds`, `planKeywords`, `requestArticle` and `regenerateArticle`
+ * spend credits and need `ai`; `publishArticle` needs `publish`.
  */
 class BlogResource {
   constructor(private http: HttpClient) {}
@@ -3215,7 +3216,22 @@ class BlogResource {
     });
   }
 
-  /** Queues keyword research; suggestions land as `suggested` keywords. 402 on an empty balance. */
+  /** About 10 search terms from the blog goal and topics; pass `seeds` to refine them. 402 on an empty balance. */
+  suggestSeeds(
+    workspaceId: string,
+    input: SuggestBlogSeedsInput = {},
+  ): Promise<{ seeds: string[] }> {
+    return this.http.post<{ seeds: string[] }>('/v1/blog/keywords/suggest', {
+      workspaceId,
+      seeds: input.seeds,
+      prompt: input.prompt,
+    });
+  }
+
+  /**
+   * Queues keyword research; results land as `suggested` keywords and the calendar is untouched.
+   * Follow the run in `planRun` on the settings. 402 on an empty balance.
+   */
   planKeywords(
     workspaceId: string,
     input: PlanBlogKeywordsInput = {},
@@ -3234,6 +3250,7 @@ class BlogResource {
     });
   }
 
+  /** Setting `status: 'planned'` picks the keyword; it takes the next free date. */
   updateKeyword(
     workspaceId: string,
     id: string,
@@ -3274,7 +3291,7 @@ class BlogResource {
     return this.http.get<BlogArticleFull>(`/v1/blog/articles/${id}`, { workspaceId });
   }
 
-  /** Only a draft or scheduled article can be edited; anything else answers 409 `invalid_state`. */
+  /** Only a draft, in-review, scheduled, failed or rejected article can be edited; anything else answers 409 `invalid_state`. */
   updateArticle(
     workspaceId: string,
     id: string,
@@ -3303,7 +3320,14 @@ class BlogResource {
     });
   }
 
-  /** 409 `no_target` when the settings name nowhere to publish. */
+  /** Moves a draft, failed or rejected article to `in_review`; 409 from any other state. */
+  submitArticle(workspaceId: string, id: string): Promise<BlogArticle> {
+    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/submit`, undefined, {
+      workspaceId,
+    });
+  }
+
+  /** The article must be `in_review` (a draft answers 409 until submitted); 409 `no_target` when the settings name nowhere to publish. */
   publishArticle(workspaceId: string, id: string): Promise<BlogArticle> {
     return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/publish`, undefined, {
       workspaceId,
