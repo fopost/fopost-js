@@ -4,8 +4,23 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ## Unreleased
 
+### Removed
+
+- **Breaking:** `BlogSettings.autoPublish` and `UpdateBlogSettingsInput.autoPublish` are removed. Nothing
+  publishes without approval: a draft goes to `in_review` through `submitArticle` first.
+
 ### Added
 
+- `blog.suggestSeeds` proposes about 10 search terms from the blog goal and topics (`ai`
+  scope, `402` on an empty balance); pass `seeds` to refine them and `prompt` to steer.
+- `blog.submitArticle` moves a draft, failed or rejected article to `in_review` (`posts`
+  scope, `409` from any other state). `publishArticle` and setting `publishAt` now need an
+  article in review, so a draft answers `409` until it is submitted.
+- `BlogSettings` carries `goal`, `focusTopics`, `avoidTopics` and `planRun` (the last
+  keyword research run); `UpdateBlogSettingsInput` takes `goal`, `focusTopics` and
+  `avoidTopics`. `BlogKeyword` carries `fitReason`, and `BlogArticleStatus` gains
+  `in_review`. `planKeywords` no longer fills the calendar: setting a keyword to `planned`
+  picks it, and `reviewHoldDays` is how many days before its date it starts being written.
 - `blog` resource: `getSettings`, `updateSettings` (returns `websiteSecret` once, when
   `websiteUrl` is first set), `rotateWebsiteSecret`, `testWebsite`, `listKeywords`,
   `planKeywords`, `addKeyword`, `updateKeyword`, `deleteKeyword`, `listArticles`,
