@@ -59,6 +59,20 @@ jobs:
             if (!new FoPost({ apiKey: 'x' }).posts) throw new Error('CJS export broken');
             console.log('CJS ok');
           "
+          node --input-type=module -e "
+            import { FoPost } from '@fopost/sdk';
+            import { createChatAdapter } from '@fopost/sdk/chat-adapter';
+            const chat = createChatAdapter({ client: new FoPost({ apiKey: 'x' }) });
+            if (typeof chat.send !== 'function') throw new Error('chat-adapter ESM export broken');
+            console.log('chat-adapter ESM ok');
+          "
+          node --input-type=commonjs -e "
+            const { FoPost } = require('@fopost/sdk');
+            const { createChatAdapter } = require('@fopost/sdk/chat-adapter');
+            const chat = createChatAdapter({ client: new FoPost({ apiKey: 'x' }) });
+            if (typeof chat.send !== 'function') throw new Error('chat-adapter CJS export broken');
+            console.log('chat-adapter CJS ok');
+          "
 
       - name: Publish
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
