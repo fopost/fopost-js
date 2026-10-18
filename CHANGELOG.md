@@ -2,6 +2,20 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
+## Unreleased
+
+### Added
+
+- `ads` resource: Conversions API, pixels and custom conversions (`ads` scope only).
+  `uploadConversions` takes an optional idempotency key and now returns
+  `ConversionUploadResult` (`id`, `accepted`, `eventCount`, `replayed`); `sendConversions`
+  requires the key and sends it as `Idempotency-Key`. `ConversionEvent` gains `eventId`,
+  `actionSource`, `sourceUrl`, `externalId`, `clientIpAddress`, `clientUserAgent`,
+  `clickId`, `browserId` and `contentIds`. New: `conversionEvents`, `pixels`, `createPixel`,
+  `getPixel`, `updatePixel`, `sharePixel`, `pixelStats`, `eventMatchQuality`,
+  `customConversions`, `createCustomConversion`, `getCustomConversion`,
+  `updateCustomConversion`, `deleteCustomConversion`.
+
 ## 0.6.0
 
 ### Removed
