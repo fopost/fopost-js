@@ -15,6 +15,16 @@ All notable changes to `@fopost/sdk` are documented here.
   `getPixel`, `updatePixel`, `sharePixel`, `pixelStats`, `eventMatchQuality`,
   `customConversions`, `createCustomConversion`, `getCustomConversion`,
   `updateCustomConversion`, `deleteCustomConversion`.
+- `inbox.repost`, `inbox.unrepost`, `inbox.bookmark` and `inbox.unbookmark` act on an X item
+  where `InboxItem.canRepost` or `canBookmark` is true (`inbox` + `publish`); `InboxItem`
+  gains `reposted`, `bookmarked`, `canRepost` and `canBookmark`.
+- `accounts.followXUser` and `accounts.unfollowXUser` follow an X user by numeric id from a
+  connected X account and answer an `XFollowResult` (`inbox` + `publish`).
+- `x.getPost` and `x.search` read a post or a recent search live from X with the account's
+  own token (`inbox`), typed as `XPost`; `search` returns the page whole with `meta.nextToken`.
+- A spent X balance answers `402 platform_balance_spent`. Existing X accounts must be
+  reconnected before repost, bookmark and follow work: an older grant answers
+  `409 reconnect_required`. Every one of these calls is an X API call metered to the workspace.
 
 ## 0.7.0
 

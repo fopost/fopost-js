@@ -421,6 +421,10 @@ import type {
   WhatsappFlowResponse,
   WhatsappEncryptionKeyStatus,
   WhatsappSandboxSession,
+  XFollowResult,
+  XPost,
+  XSearchPage,
+  XSearchParams,
 } from './types.js';
 
 export { FoPostError };
@@ -451,6 +455,7 @@ export class FoPost {
   readonly knowledge: KnowledgeResource;
   readonly activity: ActivityResource;
   readonly googleBusiness: GoogleBusinessResource;
+  readonly x: XResource;
   readonly blog: BlogResource;
   readonly blogs: BlogsResource;
   readonly queue: QueueResource;
@@ -480,6 +485,7 @@ export class FoPost {
     this.knowledge = new KnowledgeResource(this.http);
     this.activity = new ActivityResource(this.http);
     this.googleBusiness = new GoogleBusinessResource(this.http);
+    this.x = new XResource(this.http);
     this.blog = new BlogResource(this.http);
     this.blogs = new BlogsResource(this.http);
     this.queue = new QueueResource(this.http);
@@ -893,6 +899,15 @@ class AccountsResource {
     return this.http.put<RedditDefaultSubreddit>(`/v1/accounts/${id}/reddit/default-subreddit`, {
       subreddit,
     });
+  }
+
+  /** Follows an X user from this account; `userId` is the numeric X user id. Needs `publish`. */
+  followXUser(id: string, userId: string): Promise<XFollowResult> {
+    return this.http.post<XFollowResult>(`/v1/accounts/${id}/x/follow`, { user_id: userId });
+  }
+
+  unfollowXUser(id: string, userId: string): Promise<XFollowResult> {
+    return this.http.post<XFollowResult>(`/v1/accounts/${id}/x/unfollow`, { user_id: userId });
   }
 
   /** Public channels, plus private ones the app was invited to. */
@@ -1675,6 +1690,24 @@ class InboxResource {
 
   unlike(id: string): Promise<InboxItem> {
     return this.http.post<InboxItem>(`/v1/inbox/${id}/unlike`);
+  }
+
+  /** Reposts the item to the account's own timeline, where `canRepost` is true (X). Needs `publish`. */
+  repost(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/repost`);
+  }
+
+  unrepost(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unrepost`);
+  }
+
+  /** Bookmarks the item on the account, where `canBookmark` is true (X). Needs `publish`. */
+  bookmark(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/bookmark`);
+  }
+
+  unbookmark(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unbookmark`);
   }
 
   /**
@@ -3969,6 +4002,31 @@ class BlogResource {
   deleteArticle(workspaceId: string, id: string): Promise<void> {
     return this.http.request<void>('DELETE', `/v1/blog/articles/${id}`, undefined, {
       workspace_id: workspaceId,
+    });
+  }
+}
+
+/**
+ * Live reads from X with a connected account's own token. Every call is an X API
+ * call metered to the workspace; a spent X balance answers 402 `platform_balance_spent`.
+ */
+class XResource {
+  constructor(private http: HttpClient) {}
+
+  /** One X post by its numeric id; 404 when X has no such post. */
+  getPost(postId: string, accountId: string): Promise<XPost> {
+    return this.http.get<XPost>(`/v1/x/posts/${encodeURIComponent(postId)}`, {
+      account_id: accountId,
+    });
+  }
+
+  /** Recent search; page with `meta.nextToken`. */
+  search(params: XSearchParams): Promise<XSearchPage> {
+    return this.http.get<XSearchPage>('/v1/x/search', {
+      account_id: params.accountId,
+      q: params.q,
+      max_results: params.maxResults,
+      next_token: params.nextToken,
     });
   }
 }
