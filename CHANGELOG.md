@@ -16,19 +16,21 @@ All notable changes to `@fopost/sdk` are documented here.
 - `blog.submitArticle` moves a draft, failed or rejected article to `in_review` (`posts`
   scope, `409` from any other state). `publishArticle` and setting `publishAt` now need an
   article in review, so a draft answers `409` until it is submitted.
-- `BlogSettings` carries `goal`, `focusTopics`, `avoidTopics` and `planRun` (the last
+- `BlogSettings` carries `goal`, `focus_topics`, `avoid_topics` and `plan_run` (the last
   keyword research run); `UpdateBlogSettingsInput` takes `goal`, `focusTopics` and
-  `avoidTopics`. `BlogKeyword` carries `fitReason`, and `BlogArticleStatus` gains
+  `avoidTopics`. `BlogKeyword` carries `fit_reason`, and `BlogArticleStatus` gains
   `in_review`. `planKeywords` no longer fills the calendar: setting a keyword to `planned`
-  picks it, and `reviewHoldDays` is how many days before its date it starts being written.
-- `blog` resource: `getSettings`, `updateSettings` (returns `websiteSecret` once, when
+  picks it, and `review_hold_days` is how many days before its date it starts being written.
+- `blog` resource: `getSettings`, `updateSettings` (returns `website_secret` once, when
   `websiteUrl` is first set), `rotateWebsiteSecret`, `testWebsite`, `listKeywords`,
   `planKeywords`, `addKeyword`, `updateKeyword`, `deleteKeyword`, `listArticles`,
   `requestArticle`, `getArticle`, `updateArticle`, `regenerateArticle`, `publishArticle`,
   `rejectArticle` and `deleteArticle`. Reads and keyword edits need `posts`; planning,
   requesting and regenerating spend credits and need `ai`; publishing needs `publish`.
   An empty balance answers `402` with `upgrade_url` on `err.body`; publishing with no
-  target answers `409 no_target`.
+  target answers `409 no_target`. Blog responses are typed in the API's snake_case
+  (`cadence_per_week`, `body_markdown`, `featured_image.media_id`); inputs stay camelCase,
+  and the workspace travels as `workspace_id` on the query string.
 - `verifyWebhook(rawBody, headers, secret)` (also `webhooks.verify`) at the package root
   verifies any FoPost webhook delivery over the raw bytes and returns its
   `{ event, data, timestamp }` envelope, with `ArticlePublishedPayload` typing the
