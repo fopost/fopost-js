@@ -699,6 +699,8 @@ export type CreatePostInput = {
   content: ContentBlock[];
   /** Required when status is 'scheduled'. ISO 8601. */
   scheduleAt?: string;
+  /** `'queue'` takes the next free posting-queue slot instead of `scheduleAt`. */
+  schedule?: 'queue';
   /** Account ids. Objects of the form { id } are accepted too. Optional when accountGroupId is set. */
   accounts?: Array<string | { id: string }>;
   /** Posts to every account in the group, merged with accounts; each account once. */
@@ -3666,3 +3668,981 @@ export type WhatsappSandboxSession = {
   activatedAt: string | null;
   expiresAt: string;
 };
+
+// ─── Posting queue ───────────────────────────────────────────────
+
+export type QueueSlot = {
+  id: string;
+  workspace_id: string;
+  /** null when the slot applies to every account. */
+  account_id: string | null;
+  /** 0 = Sunday … 6 = Saturday. */
+  weekday: number;
+  /** HH:MM, 24-hour, in `timezone`. */
+  time: string;
+  /** IANA zone name. */
+  timezone: string;
+  created_at: string;
+};
+
+export type CreateQueueSlotInput = {
+  workspaceId: string;
+  accountId?: string | null;
+  weekday: number;
+  time: string;
+  timezone: string;
+};
+
+export type UpdateQueueSlotInput = Partial<Omit<CreateQueueSlotInput, 'workspaceId'>>;
+
+/** A queued post moved to a new slot because of a slot change. */
+export type QueueMovedPost = { id: string; from: string; to: string };
+
+export type QueueSlotUpdate = Omit<QueueSlot, 'created_at'> & {
+  created_at?: string;
+  moved: QueueMovedPost[];
+};
+
+export type QueueSlotDeleted = { deleted: boolean; moved: QueueMovedPost[] };
+
+export type QueueNextParams = { workspaceId: string; accountId?: string };
+
+export type QueuePreviewParams = QueueNextParams & {
+  /** How many upcoming slots to return. Default 5, max 20. */
+  count?: number;
+};
+
+// ─── Posts: unpublish, runs, analytics, bulk import ──────────────
+
+export type UnpublishResult = {
+  post_status:
+    | 'draft'
+    | 'scheduled'
+    | 'publishing'
+    | 'published'
+    | 'partially_failed'
+    | 'failed'
+    | 'cancelled'
+    | 'unpublished';
+  /** One entry per network the post was live on. */
+  deliveries: Array<{
+    account_id: string;
+    platform: string;
+    /** False when the network refused to take the post down. */
+    removed: boolean;
+  }>;
+};
+
+export type PublishRunDelivery = {
+  account_id?: string;
+  account_name?: string;
+  username?: string;
+  platform?: string;
+  status?: string;
+  attempt_number?: number;
+  error_code?: string | null;
+  error_message?: string | null;
+  platform_post_id?: string | null;
+  external_url?: string | null;
+  started_at?: string;
+  completed_at?: string | null;
+  duration_ms?: number | null;
+};
+
+export type PublishRun = {
+  id?: string;
+  run_number?: number;
+  status?: 'running' | 'published' | 'partially_failed' | 'failed' | 'cancelled';
+  started_at?: string;
+  completed_at?: string | null;
+  deliveries?: PublishRunDelivery[];
+};
+
+export type PostMetricTotals = {
+  impressions?: number;
+  reach?: number;
+  engagements?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  reposts?: number;
+  clicks?: number;
+  saves?: number;
+  video_views?: number;
+  follows?: number;
+};
+
+export type PostPlatformMetrics = {
+  impressions?: number | null;
+  reach?: number | null;
+  engagements?: number | null;
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  reposts?: number | null;
+  clicks?: number | null;
+  saves?: number | null;
+  video_views?: number | null;
+  watch_time_ms?: number | null;
+  avg_watch_time_ms?: number | null;
+  reactions_breakdown?: Record<string, number> | null;
+  follows?: number | null;
+  fetched_at?: string;
+};
+
+export type PostAnalytics = {
+  post_id: string;
+  totals: PostMetricTotals;
+  platforms: Array<{
+    platform?: string;
+    username?: string;
+    external_post_id?: string | null;
+    permalink?: string | null;
+    thumbnail_url?: string | null;
+    media_type?: string | null;
+    posted_at?: string | null;
+    metrics?: PostPlatformMetrics | null;
+  }>;
+  last_fetched_at: string | null;
+};
+
+export type BulkImportInput = {
+  workspaceId: string;
+  /** The CSV file. */
+  file: PostFileInput;
+};
+
+export type BulkImportRow = {
+  row?: number;
+  content_preview?: string;
+  content_type?: 'post' | 'thread';
+  thread_parts?: number | null;
+  schedule_at?: string | null;
+  repeat?: { times: number; gap: number; unit: string } | null;
+  accounts?: string[];
+  labels?: number;
+  has_media?: boolean;
+  media_count?: number;
+  captions?: number;
+  errors?: string[];
+};
+
+export type BulkImportValidation = {
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  max_rows: number;
+  rows: BulkImportRow[];
+};
+
+export type BulkImportResult = {
+  batch_id: string;
+  created: number;
+  held_for_approval: boolean;
+  posts: Array<{ id?: string; schedule_at?: string | null }>;
+};
+
+// ─── Workspaces ──────────────────────────────────────────────────
+
+export type WorkspaceType =
+  | 'PERSONAL'
+  | 'TEAM'
+  | 'ORGANIZATION'
+  | 'CLIENT'
+  | 'PROJECT'
+  | 'DEPARTMENT'
+  | 'EVENT'
+  | 'TEMPORARY'
+  | 'COMMUNITY'
+  | 'BRAND'
+  | 'AGENCY';
+
+/** The full workspace record, as create and update answer it. */
+export type WorkspaceDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  logo?: string | null;
+  website?: string | null;
+  timezone: string;
+  country?: string | null;
+  description?: string | null;
+  language: string;
+  require_approval: boolean;
+  ai_alt_text_enabled: boolean;
+  brand_color?: string | null;
+  connect_redirect_domains: string[];
+  created_at: string;
+  updated_at?: string;
+};
+
+export type CreateWorkspaceInput = {
+  name: string;
+  type?: WorkspaceType;
+  logo?: string | null;
+  website?: string | null;
+  timezone?: string;
+  country?: string | null;
+  description?: string | null;
+  language?: string;
+};
+
+export type UpdateWorkspaceInput = Partial<CreateWorkspaceInput> & {
+  requireApproval?: boolean;
+  aiAltTextEnabled?: boolean;
+  brandColor?: string | null;
+  connectRedirectDomains?: string[];
+};
+
+export type WorkspaceAnalytics = {
+  workspace_id: string;
+  accounts: Array<{
+    account_id?: string;
+    platform?: string;
+    username?: string;
+    followers?: number | null;
+    following?: number | null;
+    total_posts?: number | null;
+    fetched_at?: string | null;
+  }>;
+  totals: { followers?: number; total_posts?: number };
+};
+
+// ─── Labels ──────────────────────────────────────────────────────
+
+/** A label with its workspace, as get, create and update answer it. */
+export type LabelDetail = {
+  id: string;
+  name: string;
+  color: string;
+  workspace: {
+    id?: string;
+    name?: string;
+    slug?: string;
+    type?: string;
+    logo?: string | null;
+    timezone?: string;
+    language?: string;
+  } | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CreateLabelInput = { workspaceId: string; name: string; color: string };
+
+export type UpdateLabelInput = { name: string; color: string };
+
+// ─── Connect sessions ────────────────────────────────────────────
+
+export type ConnectSessionPlatform =
+  | 'twitter'
+  | 'instagram'
+  | 'linkedin'
+  | 'threads'
+  | 'tiktok'
+  | 'youtube'
+  | 'reddit'
+  | 'tumblr'
+  | 'dribbble';
+
+export type CreateConnectSessionInput = {
+  workspaceId?: string;
+  /** Your own id for the person connecting; echoed back on the session. */
+  externalUserId: string;
+  platforms: ConnectSessionPlatform[];
+  redirectUrl?: string;
+  branding?: { name?: string; logoUrl?: string };
+};
+
+export type ConnectSession = {
+  id: string;
+  status: 'pending' | 'used' | 'expired';
+  external_user_id: string;
+  platforms: ConnectSessionPlatform[];
+  redirect_url?: string | null;
+  branding?: { name?: string | null; logo_url?: string | null };
+  /** The account that was connected, once the session is used. */
+  account_id?: string | null;
+  /** The hosted page to send the person to. */
+  url?: string;
+  expires_at: string;
+  used_at?: string | null;
+  created_at: string;
+};
+
+// ─── Accounts: primary, validation, token, history, communities ──
+
+export type AccountPrimary = { id: string; is_primary: boolean };
+
+export type AccountCredentialCheck = {
+  account_id: string;
+  platform: string;
+  valid: boolean;
+  health_status: 'healthy' | 'expired';
+  username?: string;
+  name?: string;
+  avatar?: string | null;
+  delivery?: 'extension';
+  message?: string;
+};
+
+export type AccountTokenRefresh = { expires_at: string | null };
+
+export type AccountAnalyticsHistory = {
+  account_id: string;
+  platform: string;
+  username: string;
+  history: Array<{
+    followers?: number | null;
+    following?: number | null;
+    total_posts?: number | null;
+    reach?: number | null;
+    profile_views?: number | null;
+    fetched_at?: string;
+  }>;
+};
+
+export type Community = {
+  id?: number;
+  account_id?: string;
+  community_id?: string;
+  name?: string;
+  member_count?: number | null;
+  description?: string | null;
+  image_url?: string | null;
+  last_synced_at?: string;
+  created_at?: string;
+};
+
+export type CommunitySearchResult = {
+  id?: string;
+  name?: string;
+  description?: string;
+  member_count?: number;
+};
+
+export type AddCommunityInput = { communityId: string; name?: string };
+
+// ─── Request logs ────────────────────────────────────────────────
+
+export type ListLogsParams = {
+  workspaceId?: string;
+  days?: number;
+  status?: 'success' | 'failed';
+  method?: string;
+  statusCode?: number;
+  platform?: string;
+  route?: string;
+  /** Free-text search over route, path and message. */
+  q?: string;
+  limit?: number;
+  /** Cursor from `meta.next_cursor`. */
+  before?: number;
+};
+
+export type RequestLog = {
+  id?: number;
+  workspace_id?: string | null;
+  time?: string;
+  auth_method?: 'jwt' | 'api_key';
+  method?: string;
+  route?: string;
+  path?: string;
+  status_code?: number;
+  duration_ms?: number;
+  platform?: string | null;
+  message?: string | null;
+};
+
+export type RequestLogPage = {
+  data: RequestLog[];
+  meta: { next_cursor: string | null; has_more: boolean };
+  summary: {
+    since?: string;
+    total?: number;
+    errors?: number;
+    buckets?: Array<{ at?: string; total?: number; errors?: number }>;
+  };
+};
+
+// ─── Webhooks (REST) ─────────────────────────────────────────────
+
+export type WebhookEventName =
+  | 'post.scheduled'
+  | 'post.published'
+  | 'post.partially_failed'
+  | 'post.failed'
+  | 'post.deleted'
+  | 'delivery.published'
+  | 'delivery.failed'
+  | 'delivery.delayed'
+  | 'account.connected'
+  | 'account.disconnected'
+  | 'account.health_changed'
+  | 'article.published'
+  | 'inbox.comment_received'
+  | 'inbox.mention_received'
+  | 'inbox.message_received'
+  | 'inbox.review_received'
+  | 'automation.triggered'
+  | 'automation.completed'
+  | 'automation.failed';
+
+export type Webhook = {
+  id: string;
+  workspace_id: string | null;
+  name?: string | null;
+  url: string;
+  events: WebhookEventName[];
+  /** Names only; header values are never read back. */
+  header_names: string[];
+  active: boolean;
+  last_triggered_at?: string | null;
+  failure_count?: number;
+  created_at?: string;
+  /** Only on create, and on an update that rotated it. */
+  secret?: string;
+};
+
+export type CreateWebhookInput = {
+  workspaceId: string;
+  name?: string;
+  url: string;
+  events: WebhookEventName[];
+  /** Omit to have one generated; it is returned once on the created webhook. */
+  secret?: string;
+  headers?: Record<string, string>;
+};
+
+export type UpdateWebhookInput = {
+  name?: string | null;
+  url?: string;
+  events?: WebhookEventName[];
+  active?: boolean;
+  secret?: string;
+  /** null clears every custom header. */
+  headers?: Record<string, string> | null;
+};
+
+export type WebhookDelivery = {
+  id?: string;
+  webhook_id?: string;
+  event?: WebhookEventName;
+  delivery_key?: string;
+  attempt?: number;
+  status?: 'success' | 'failed';
+  response_status?: number | null;
+  response_snippet?: string | null;
+  duration_ms?: number;
+  payload_hash?: string;
+  next_retry_at?: string | null;
+  created_at?: string;
+};
+
+export type WebhookDeliveryDetail = WebhookDelivery & { payload?: Record<string, unknown> };
+
+export type ListWebhookDeliveriesParams = { status?: 'success' | 'failed'; limit?: number };
+
+// ─── Analytics overview ──────────────────────────────────────────
+
+export type AnalyticsRangeParams = AnalyticsScopeParams & {
+  days?: number;
+  /** ISO date; with `to`, replaces `days`. */
+  from?: string;
+  to?: string;
+};
+
+export type AnalyticsOverview = {
+  total_accounts?: number;
+  total_followers?: number;
+  total_posts?: number;
+  total_engagement?: number;
+  total_impressions?: number;
+  total_reach?: number;
+  total_likes?: number;
+  total_comments?: number;
+  total_shares?: number;
+  total_reposts?: number;
+  total_saves?: number;
+  total_clicks?: number;
+  total_video_views?: number;
+  total_profile_views?: number;
+  engagement_rate?: number | null;
+  deltas?: {
+    followers?: number | null;
+    posts?: number | null;
+    engagement?: number | null;
+    impressions?: number | null;
+    likes?: number | null;
+    comments?: number | null;
+    shares?: number | null;
+    profile_views?: number | null;
+  };
+  today_stats?: { posts?: number; follower_change?: number; engagement?: number };
+  platforms?: Array<{ platform?: string; accounts?: number; followers?: number }>;
+  accounts?: Array<{
+    account_id?: string;
+    platform?: string;
+    username?: string;
+    name?: string;
+    avatar?: string | null;
+    followers?: number | null;
+    total_posts?: number | null;
+    fetched_at?: string | null;
+    history?: Array<{ date?: string; followers?: number | null }>;
+  }>;
+};
+
+export type AnalyticsTimeSeries = {
+  days: number;
+  series: Array<{
+    date?: string;
+    engagements?: number;
+    impressions?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    followers?: number;
+    posts?: number;
+  }>;
+};
+
+export type TopPostsParams = AnalyticsRangeParams & {
+  limit?: number;
+  /** `recent` orders by date instead of engagement. */
+  sort?: 'recent';
+  /** Label id. */
+  label?: string;
+};
+
+export type TopPost = {
+  rank?: number;
+  post_id?: string | null;
+  external_post_id?: string | null;
+  source?: 'fopost' | 'platform';
+  preview?: string | null;
+  permalink?: string | null;
+  thumbnail_url?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  platforms?: Array<{
+    platform?: string;
+    username?: string;
+    url?: string | null;
+    removed?: boolean;
+  }>;
+  labels?: Array<{ id?: string; name?: string; color?: string }>;
+  metrics?: {
+    engagements?: number;
+    impressions?: number;
+    reach?: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    reposts?: number;
+    clicks?: number;
+    saves?: number;
+    video_views?: number;
+  };
+};
+
+export type LabelAnalytics = {
+  label_id?: string;
+  name?: string;
+  color?: string;
+  post_count?: number;
+  impressions?: number;
+  reach?: number;
+  engagements?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  engagement_rate?: number | null;
+  follower_delta?: number | null;
+};
+
+export type PostsTableParams = AnalyticsRangeParams & { page?: number; perPage?: number };
+
+export type PostsTableRow = {
+  post_id?: string;
+  preview?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  scheduled_at?: string | null;
+  platforms?: Array<{
+    platform?: string;
+    username?: string;
+    url?: string | null;
+    delivery_status?:
+      | 'pending'
+      | 'queued'
+      | 'delayed'
+      | 'publishing'
+      | 'published'
+      | 'failed'
+      | 'cancelled'
+      | 'unpublished';
+  }>;
+  delivery_summary?: { total?: number; published?: number; failed?: number; pending?: number };
+};
+
+export type PostsTable = {
+  data: PostsTableRow[];
+  meta: { page: number; per_page: number; total: number; total_pages: number };
+  summary: {
+    draft?: number;
+    scheduled?: number;
+    published?: number;
+    failed?: number;
+    pending?: number;
+    total?: number;
+  };
+};
+
+export type PostingStreak = {
+  streak: Array<{
+    date?: string;
+    count?: number;
+    published_count?: number;
+    failed_count?: number;
+    scheduled_count?: number;
+  }>;
+};
+
+export type DemographicsAudience = 'followers' | 'engaged' | 'reached';
+
+export type DemographicsParams = AnalyticsScopeParams & { audience?: DemographicsAudience };
+
+export type DemographicBucket = { key: string; value: number; share: number };
+
+export type AudienceDemographics = {
+  audience: DemographicsAudience;
+  dimensions: {
+    age?: DemographicBucket[];
+    gender?: DemographicBucket[];
+    country?: DemographicBucket[];
+    city?: DemographicBucket[];
+  };
+  contributing_accounts: Array<{ account_id?: string; platform?: string; username?: string }>;
+  unsupported_accounts: Array<{ account_id?: string; platform?: string; username?: string }>;
+};
+
+export type InboxAnalyticsParams = AnalyticsScopeParams & {
+  days?: number;
+  /** IANA zone the heatmap and series are bucketed in. */
+  tz?: string;
+};
+
+export type InboxAnalytics = {
+  totals?: {
+    received?: number;
+    sent?: number;
+    answered?: number;
+    open?: number;
+    conversations?: number;
+    median_response_minutes?: number | null;
+  };
+  deltas?: { received?: number | null; sent?: number | null; answered?: number | null };
+  series?: Array<{ date?: string; received?: number; sent?: number; answered?: number }>;
+  by_platform?: Array<{ platform?: string; received?: number; sent?: number }>;
+  by_type?: Array<{ type?: 'comment' | 'mention' | 'reply' | 'dm' | 'review'; count?: number }>;
+  by_account?: Array<{
+    account_id?: string;
+    platform?: string;
+    username?: string;
+    name?: string;
+    avatar?: string | null;
+    received?: number;
+    sent?: number;
+  }>;
+  response_time?: Array<{
+    bucket?: 'under_1h' | '1h_6h' | '6h_24h' | '1d_3d' | 'over_3d';
+    count?: number;
+  }>;
+  heatmap?: Array<{ weekday?: number; hour?: number; count?: number }>;
+  time_zone?: string;
+};
+
+export type AnalyticsCollectResult = {
+  accounts: number;
+  posts: number;
+  demographics: number;
+  errors: number;
+  error_details: Array<{
+    account_id?: string;
+    platform?: string;
+    username?: string;
+    stage?: 'account' | 'demographics' | 'timeline' | 'post';
+    message?: string;
+    action?: 'reconnect' | 'grant' | 'fund';
+  }>;
+};
+
+// ─── Automations ─────────────────────────────────────────────────
+
+export type AutomationTriggerType =
+  | 'content_created'
+  | 'cross_post'
+  | 'rss_feed'
+  | 'api_webhook'
+  | 'schedule'
+  | 'competitor_post'
+  | 'post_outperformed'
+  | 'inbox_topic'
+  | 'inbox_message'
+  | 'radar_mention';
+
+export type AutomationActionType =
+  | 'generate'
+  | 'transform'
+  | 'delay'
+  | 'publish'
+  | 'condition'
+  | 'set_variable'
+  | 'webhook'
+  | 'ab_split'
+  | 'ai'
+  | 'send_message'
+  | 'wait_for_reply'
+  | 'handoff'
+  | 'add_label'
+  | 'remove_label'
+  | 'end';
+
+export type AutomationNodeKind = 'trigger' | AutomationActionType;
+
+export type AutomationNode = {
+  id?: string;
+  kind?: AutomationNodeKind;
+  label?: string | null;
+  config?: Record<string, unknown>;
+  position?: number;
+  layout?: { x?: number; y?: number };
+};
+
+export type AutomationEdge = {
+  id?: string;
+  source?: string;
+  source_handle?: string | null;
+  target?: string;
+};
+
+export type AutomationGraph = { nodes?: AutomationNode[]; edges?: AutomationEdge[] };
+
+export type AutomationStep = {
+  position?: number;
+  node_id?: string;
+  action_type?: AutomationActionType;
+  action_config?: Record<string, unknown>;
+};
+
+export type Automation = {
+  id?: string;
+  workspace_id?: string | null;
+  name?: string;
+  description?: string | null;
+  trigger_type?: AutomationTriggerType;
+  trigger_config?: Record<string, unknown>;
+  active?: boolean;
+  schedule_window?: { days?: number[]; start?: string; end?: string };
+  max_per_day?: Record<string, unknown> | null;
+  credit_ceiling?: number | null;
+  approval_mode?: boolean;
+  last_triggered_at?: string | null;
+  run_count?: number;
+  graph?: AutomationGraph;
+  steps?: AutomationStep[];
+  /** Only on create: the token an `api_webhook` trigger is called with. */
+  secret?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AutomationNodeInput = {
+  id: string;
+  kind: AutomationNodeKind;
+  label?: string | null;
+  config?: Record<string, unknown>;
+  layout?: { x: number; y: number };
+};
+
+export type AutomationEdgeInput = {
+  id: string;
+  source: string;
+  sourceHandle?: string | null;
+  target: string;
+};
+
+export type AutomationGraphInput = { nodes: AutomationNodeInput[]; edges: AutomationEdgeInput[] };
+
+export type AutomationStepInput = {
+  actionType: AutomationActionType;
+  actionConfig?: Record<string, unknown>;
+};
+
+export type CreateAutomationInput = {
+  workspaceId: string;
+  name: string;
+  description?: string | null;
+  triggerType: AutomationTriggerType;
+  triggerConfig?: Record<string, unknown>;
+  /** A linear pipeline; `graph` takes precedence when both are sent. */
+  steps?: AutomationStepInput[];
+  graph?: AutomationGraphInput;
+  active?: boolean;
+};
+
+export type UpdateAutomationInput = Partial<Omit<CreateAutomationInput, 'workspaceId'>>;
+
+export type AutomationToggle = { id: string; active: boolean };
+
+export type AutomationStats = {
+  total_automations: number;
+  active_automations: number;
+  total_runs_24h: number;
+  runs_by_status: Record<string, number>;
+  recent_runs: Array<{
+    id?: number;
+    automation_id?: string | null;
+    status?: string;
+    started_at?: string;
+    completed_at?: string | null;
+  }>;
+};
+
+export type PageParams = { page?: number; perPage?: number };
+
+export type PagedMeta = { page: number; per_page: number; total: number; total_pages: number };
+
+export type AutomationVersion = {
+  version?: number;
+  note?: string | null;
+  created_by?: { name: string };
+  created_at?: string;
+  node_count?: number;
+  nodes_added?: Array<{ id: string; kind: string; label?: string | null }>;
+  nodes_removed?: Array<{ id: string; kind: string; label?: string | null }>;
+};
+
+export type AutomationVersionPage = { data: AutomationVersion[]; meta: PagedMeta };
+
+export type AutomationVersionDetail = {
+  version?: number;
+  note?: string | null;
+  created_by?: { name: string };
+  created_at?: string;
+  graph?: AutomationGraph;
+};
+
+export type AutomationRestore = {
+  version: number;
+  graph: AutomationGraph;
+  steps: AutomationStep[];
+};
+
+export type AutomationRun = {
+  id?: number;
+  status?: string;
+  current_step?: number | null;
+  trigger_event?: Record<string, unknown> | null;
+  started_at?: string;
+  completed_at?: string | null;
+  error_message?: string | null;
+  deferred_until?: string | null;
+  defer_reason?: string | null;
+  defer_detail?: string | null;
+  defer_count?: number;
+  replay_of_run_id?: number | null;
+};
+
+export type AutomationRunPage = { data: AutomationRun[]; meta: PagedMeta };
+
+export type AutomationRunLog = {
+  id?: number;
+  step_position?: number;
+  node_id?: string | null;
+  handle?: string | null;
+  status?: string;
+  input_snapshot?: Record<string, unknown> | null;
+  output_snapshot?: Record<string, unknown> | null;
+  started_at?: string;
+  completed_at?: string | null;
+  duration_ms?: number | null;
+  error_message?: string | null;
+};
+
+export type AutomationRunDetail = AutomationRun & {
+  automation_id?: string;
+  current_node_id?: string | null;
+  waiting_until?: string | null;
+  context?: Record<string, unknown> | null;
+  initial_context?: Record<string, unknown> | null;
+  logs?: AutomationRunLog[];
+};
+
+export type AutomationTriggerResult = { run_id: number; triggered: boolean };
+
+// ─── Media upload ────────────────────────────────────────────────
+
+export type UploadMediaInput = {
+  workspaceId?: string;
+  files: PostFileInput[];
+};
+
+export type UploadedMediaFile = {
+  id?: string;
+  type: 'image' | 'video' | 'gif' | 'document';
+  name: string;
+  url: string;
+  preview_url?: string;
+  size: number;
+};
+
+// ─── Media library ───────────────────────────────────────────────
+
+export type MediaBrandRole = 'logo' | 'product' | 'person' | 'background';
+
+export type ListMediaParams = {
+  workspaceId?: string;
+  folderId?: string;
+  search?: string;
+  tag?: string;
+  type?: 'image' | 'video' | 'gif' | 'document';
+  /** Exact stored url. */
+  url?: string;
+  brandRole?: MediaBrandRole;
+  brandVoiceId?: string;
+  generationRunId?: string;
+  origin?: string;
+  shared?: boolean;
+  page?: number;
+  perPage?: number;
+};
+
+export type MediaLibraryItem = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  url: string;
+  visibility?: 'private' | 'public';
+  type: 'image' | 'video' | 'gif' | 'document';
+  mime_type?: string;
+  size: number;
+  alt_text?: string | null;
+  alt_text_source?: string | null;
+  tags?: string[];
+  folder_id?: string | null;
+  origin?: string | null;
+  source_url?: string | null;
+  synced_at?: string | null;
+  brand_role?: MediaBrandRole | '';
+  brand_voice_id?: string | null;
+  generation_run_id?: string | null;
+  has_person_consent?: boolean;
+  created_at: string;
+  preview_url: string;
+  share?: { url?: string; created_at?: string; created_by_name?: string | null; source?: string };
+};
+
+export type MediaLibraryPage = { data: MediaLibraryItem[]; meta: PagedMeta };

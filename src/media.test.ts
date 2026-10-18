@@ -104,3 +104,33 @@ describe('media.uploadDirect', () => {
     expect(calls[1].headers['Content-Length']).toBe('8');
   });
 });
+
+describe('media.list', () => {
+  it('maps filters to snake_case and keeps the page whole', async () => {
+    const page = {
+      data: [{ id: 'm1', workspace_id: 'ws', name: 'logo.png', type: 'image', size: 4 }],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    };
+    const calls: string[] = [];
+    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+      calls.push(`${init?.method ?? 'GET'} ${String(input)}`);
+      return new Response(JSON.stringify(page), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+    const client = new FoPost({ apiKey: 'test-key', fetch: fetchImpl });
+    const res = await client.media.list({
+      workspaceId: 'ws',
+      type: 'image',
+      brandRole: 'logo',
+      shared: false,
+      page: 1,
+      perPage: 20,
+    });
+    expect(res).toEqual(page);
+    expect(calls).toEqual([
+      'GET https://api.fopost.com/v1/media?workspace_id=ws&type=image&brand_role=logo&shared=false&page=1&per_page=20',
+    ]);
+  });
+});

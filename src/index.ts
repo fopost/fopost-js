@@ -18,7 +18,74 @@
 import { HttpClient, FoPostError, type HttpClientOptions } from './client.js';
 import type {
   Account,
+  AccountAnalyticsHistory,
+  AccountCredentialCheck,
+  AccountPrimary,
+  AccountTokenRefresh,
   AddBlogKeywordInput,
+  AddCommunityInput,
+  AnalyticsCollectResult,
+  AnalyticsOverview,
+  AnalyticsRangeParams,
+  AnalyticsTimeSeries,
+  AudienceDemographics,
+  Automation,
+  AutomationRestore,
+  AutomationRunDetail,
+  AutomationRunPage,
+  AutomationStats,
+  AutomationToggle,
+  AutomationTriggerResult,
+  AutomationVersionDetail,
+  AutomationVersionPage,
+  BulkImportInput,
+  BulkImportResult,
+  BulkImportValidation,
+  Community,
+  CommunitySearchResult,
+  ConnectSession,
+  CreateAutomationInput,
+  CreateConnectSessionInput,
+  CreateLabelInput,
+  CreateQueueSlotInput,
+  CreateWebhookInput,
+  CreateWorkspaceInput,
+  DemographicsParams,
+  InboxAnalytics,
+  InboxAnalyticsParams,
+  LabelAnalytics,
+  LabelDetail,
+  ListLogsParams,
+  ListMediaParams,
+  MediaLibraryPage,
+  ListWebhookDeliveriesParams,
+  PageParams,
+  PostAnalytics,
+  PostingStreak,
+  PostsTable,
+  PostsTableParams,
+  PublishRun,
+  QueueNextParams,
+  QueuePreviewParams,
+  QueueSlot,
+  QueueSlotDeleted,
+  QueueSlotUpdate,
+  RequestLogPage,
+  TopPost,
+  TopPostsParams,
+  UnpublishResult,
+  UpdateAutomationInput,
+  UpdateLabelInput,
+  UpdateQueueSlotInput,
+  UpdateWebhookInput,
+  UpdateWorkspaceInput,
+  UploadMediaInput,
+  UploadedMediaFile,
+  Webhook,
+  WebhookDelivery,
+  WebhookDeliveryDetail,
+  WorkspaceAnalytics,
+  WorkspaceDetail,
   BlogArticle,
   BlogArticleFull,
   BlogKeyword,
@@ -371,6 +438,12 @@ export class FoPost {
   readonly googleBusiness: GoogleBusinessResource;
   readonly blog: BlogResource;
   readonly blogs: BlogsResource;
+  readonly queue: QueueResource;
+  readonly connectSessions: ConnectSessionsResource;
+  readonly logs: LogsResource;
+  /** The REST side of webhooks; signature checks are the `webhooks.verify` export. */
+  readonly webhooks: WebhooksResource;
+  readonly automations: AutomationsResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -394,6 +467,11 @@ export class FoPost {
     this.googleBusiness = new GoogleBusinessResource(this.http);
     this.blog = new BlogResource(this.http);
     this.blogs = new BlogsResource(this.http);
+    this.queue = new QueueResource(this.http);
+    this.connectSessions = new ConnectSessionsResource(this.http);
+    this.logs = new LogsResource(this.http);
+    this.webhooks = new WebhooksResource(this.http);
+    this.automations = new AutomationsResource(this.http);
   }
 }
 
@@ -500,6 +578,7 @@ class PostsResource {
       status: input.status ?? 'draft',
       content: input.content,
       schedule_at: input.scheduleAt,
+      schedule: input.schedule,
       accounts: input.accounts === undefined ? undefined : accountIds(input.accounts),
       account_group_id: input.accountGroupId,
       labels: input.labels,
@@ -521,6 +600,7 @@ class PostsResource {
     if (input.status !== undefined) body.status = input.status;
     if (input.content !== undefined) body.content = input.content;
     if (input.scheduleAt !== undefined) body.schedule_at = input.scheduleAt;
+    if (input.schedule !== undefined) body.schedule = input.schedule;
     if (input.accounts !== undefined) body.accounts = accountIds(input.accounts);
     if (input.labels !== undefined) body.labels = input.labels;
     if (input.title !== undefined) body.title = input.title;
@@ -589,6 +669,44 @@ class PostsResource {
   deliveries(id: string): Promise<unknown[]> {
     return this.http.get<unknown[]>(`/v1/posts/${id}/deliveries`);
   }
+
+  /** Copies content, accounts, settings and labels into a new draft; schedule and delivery state are not carried over. */
+  duplicate(id: string): Promise<{ id: string; status: string }> {
+    return this.http.post<{ id: string; status: string }>(`/v1/posts/${id}/duplicate`);
+  }
+
+  /** Takes a published post down from every network it is live on. */
+  unpublish(id: string): Promise<UnpublishResult> {
+    return this.http.post<UnpublishResult>(`/v1/posts/${id}/unpublish`);
+  }
+
+  /** Every publish attempt for the post, with its per-account deliveries. */
+  publishRuns(id: string): Promise<PublishRun[]> {
+    return this.http.get<PublishRun[]>(`/v1/posts/${id}/publish-runs`);
+  }
+
+  analytics(id: string): Promise<PostAnalytics> {
+    return this.http.get<PostAnalytics>(`/v1/posts/${id}/analytics`);
+  }
+
+  /** Checks a CSV row by row without creating anything. */
+  bulkImportValidate(input: BulkImportInput): Promise<BulkImportValidation> {
+    return this.http.post<BulkImportValidation>('/v1/posts/bulk-import/validate', bulkForm(input));
+  }
+
+  /** Creates a post per valid CSV row. */
+  bulkImportCommit(input: BulkImportInput): Promise<BulkImportResult> {
+    return this.http.post<BulkImportResult>('/v1/posts/bulk-import/commit', bulkForm(input));
+  }
+}
+
+function bulkForm(input: BulkImportInput): FormData {
+  const f = normalizeFile(input.file);
+  const form = new FormData();
+  form.append('workspace_id', input.workspaceId);
+  const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.mimeType });
+  form.append('file', blob, f.filename);
+  return form;
 }
 
 /** The wire shape of the per-network metric set, before the camelCase mapping. */
@@ -658,6 +776,56 @@ class AccountsResource {
     return this.http.post<MovedAccount>(`/v1/accounts/${id}/move`, {
       workspace_id: input.workspaceId,
     });
+  }
+
+  /** Flips whether this is the primary account for its network in the workspace. */
+  togglePrimary(id: string): Promise<AccountPrimary> {
+    return this.http.post<AccountPrimary>(`/v1/accounts/${id}/primary`);
+  }
+
+  /** Asks the network whether the stored credentials still work. */
+  validateCredentials(id: string): Promise<AccountCredentialCheck> {
+    return this.http.post<AccountCredentialCheck>(`/v1/accounts/${id}/validate`);
+  }
+
+  refreshToken(id: string): Promise<AccountTokenRefresh> {
+    return this.http.post<AccountTokenRefresh>(`/v1/accounts/${id}/refresh-token`);
+  }
+
+  /** Follower and reach snapshots over time, newest first. */
+  analyticsHistory(id: string, params: { limit?: number } = {}): Promise<AccountAnalyticsHistory> {
+    return this.http.get<AccountAnalyticsHistory>(`/v1/accounts/${id}/analytics`, {
+      limit: params.limit,
+    });
+  }
+
+  listCommunities(accountId: string): Promise<Community[]> {
+    return this.http.get<Community[]>(`/v1/accounts/${accountId}/communities`);
+  }
+
+  /** Re-reads the account's communities from the network. */
+  syncCommunities(accountId: string): Promise<{ data: Community[]; note?: string }> {
+    return this.http.post<{ data: Community[]; note?: string }>(
+      `/v1/accounts/${accountId}/communities/sync`,
+    );
+  }
+
+  searchCommunities(accountId: string, q: string): Promise<CommunitySearchResult[]> {
+    return this.http.get<CommunitySearchResult[]>(`/v1/accounts/${accountId}/communities/search`, {
+      q,
+    });
+  }
+
+  addCommunity(accountId: string, input: AddCommunityInput): Promise<Community> {
+    return this.http.post<Community>(`/v1/accounts/${accountId}/communities/manual`, {
+      communityId: input.communityId,
+      name: input.name,
+    });
+  }
+
+  /** `communityId` is the row id from `listCommunities`, not the network's id. */
+  removeCommunity(accountId: string, communityId: number): Promise<void> {
+    return this.http.delete(`/v1/accounts/${accountId}/communities/${communityId}`);
   }
 
   /** Mints a one-time code; send `/connect <code>` to the bot in a chat to connect it. */
@@ -1260,6 +1428,48 @@ class WorkspacesResource {
   get(id: string): Promise<Workspace> {
     return this.http.get<Workspace>(`/v1/workspaces/${id}`);
   }
+
+  create(input: CreateWorkspaceInput): Promise<WorkspaceDetail> {
+    return this.http.post<WorkspaceDetail>('/v1/workspaces', {
+      name: input.name,
+      type: input.type,
+      logo: input.logo,
+      website: input.website,
+      timezone: input.timezone,
+      country: input.country,
+      description: input.description,
+      language: input.language,
+    });
+  }
+
+  update(id: string, input: UpdateWorkspaceInput): Promise<WorkspaceDetail> {
+    const body: Record<string, unknown> = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.type !== undefined) body.type = input.type;
+    if (input.logo !== undefined) body.logo = input.logo;
+    if (input.website !== undefined) body.website = input.website;
+    if (input.timezone !== undefined) body.timezone = input.timezone;
+    if (input.country !== undefined) body.country = input.country;
+    if (input.description !== undefined) body.description = input.description;
+    if (input.language !== undefined) body.language = input.language;
+    if (input.requireApproval !== undefined) body.requireApproval = input.requireApproval;
+    if (input.aiAltTextEnabled !== undefined) body.aiAltTextEnabled = input.aiAltTextEnabled;
+    if (input.brandColor !== undefined) body.brandColor = input.brandColor;
+    if (input.connectRedirectDomains !== undefined) {
+      body.connectRedirectDomains = input.connectRedirectDomains;
+    }
+    return this.http.put<WorkspaceDetail>(`/v1/workspaces/${id}`, body);
+  }
+
+  /** Deletes the workspace and everything in it. */
+  delete(id: string): Promise<void> {
+    return this.http.delete(`/v1/workspaces/${id}`);
+  }
+
+  /** Follower totals per connected account. */
+  analytics(id: string): Promise<WorkspaceAnalytics> {
+    return this.http.get<WorkspaceAnalytics>(`/v1/workspaces/${id}/analytics`);
+  }
 }
 
 class LabelsResource {
@@ -1267,6 +1477,26 @@ class LabelsResource {
 
   list(params: { workspaceId: string }): Promise<Label[]> {
     return this.http.get<Label[]>('/v1/labels', { workspace_id: params.workspaceId });
+  }
+
+  get(id: string): Promise<LabelDetail> {
+    return this.http.get<LabelDetail>(`/v1/labels/${id}`);
+  }
+
+  create(input: CreateLabelInput): Promise<LabelDetail> {
+    return this.http.post<LabelDetail>('/v1/labels', {
+      workspace_id: input.workspaceId,
+      name: input.name,
+      color: input.color,
+    });
+  }
+
+  update(id: string, input: UpdateLabelInput): Promise<LabelDetail> {
+    return this.http.put<LabelDetail>(`/v1/labels/${id}`, { name: input.name, color: input.color });
+  }
+
+  delete(id: string): Promise<void> {
+    return this.http.delete(`/v1/labels/${id}`);
   }
 }
 
@@ -2816,10 +3046,106 @@ class AnalyticsResource {
       days: params.days,
     });
   }
+
+  private range(params: AnalyticsRangeParams) {
+    return {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+      days: params.days,
+      from: params.from,
+      to: params.to,
+    };
+  }
+
+  /** Totals, deltas against the previous period, and a per-account breakdown. */
+  overview(params: AnalyticsRangeParams = {}): Promise<AnalyticsOverview> {
+    return this.http.get<AnalyticsOverview>('/v1/analytics/overview', {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+      days: params.days,
+    });
+  }
+
+  timeSeries(params: AnalyticsRangeParams = {}): Promise<AnalyticsTimeSeries> {
+    return this.http.get<AnalyticsTimeSeries>('/v1/analytics/time-series', this.range(params));
+  }
+
+  topPosts(params: TopPostsParams = {}): Promise<TopPost[]> {
+    return this.http.get<TopPost[]>('/v1/analytics/top-posts', {
+      ...this.range(params),
+      limit: params.limit,
+      sort: params.sort,
+      label: params.label,
+    });
+  }
+
+  /** Engagement rolled up per label. */
+  labels(params: AnalyticsRangeParams = {}): Promise<LabelAnalytics[]> {
+    return this.http.get<LabelAnalytics[]>('/v1/analytics/labels', this.range(params));
+  }
+
+  postsTable(params: PostsTableParams = {}): Promise<PostsTable> {
+    return this.http.get<PostsTable>('/v1/analytics/posts-table', {
+      ...this.range(params),
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  postingStreak(params: { workspaceId?: string } = {}): Promise<PostingStreak> {
+    return this.http.get<PostingStreak>('/v1/analytics/posting-streak', {
+      workspace_id: params.workspaceId,
+    });
+  }
+
+  /** Age, gender, country and city of the chosen audience, where the network reports them. */
+  demographics(params: DemographicsParams = {}): Promise<AudienceDemographics> {
+    return this.http.get<AudienceDemographics>('/v1/analytics/demographics', {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+      audience: params.audience,
+    });
+  }
+
+  inbox(params: InboxAnalyticsParams = {}): Promise<InboxAnalytics> {
+    return this.http.get<InboxAnalytics>('/v1/analytics/inbox', {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+      days: params.days,
+      tz: params.tz,
+    });
+  }
+
+  /** Re-reads every account and post from the networks now. */
+  collect(params: AnalyticsScopeParams = {}): Promise<AnalyticsCollectResult> {
+    return this.http.request<AnalyticsCollectResult>('POST', '/v1/analytics/collect', undefined, {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+    });
+  }
 }
 
 class MediaResource {
   constructor(private http: HttpClient) {}
+
+  /** The workspace media library, filtered and paged. */
+  list(params: ListMediaParams = {}): Promise<MediaLibraryPage> {
+    return this.http.get<MediaLibraryPage>('/v1/media', {
+      workspace_id: params.workspaceId,
+      folder_id: params.folderId,
+      search: params.search,
+      tag: params.tag,
+      type: params.type,
+      url: params.url,
+      brand_role: params.brandRole,
+      brand_voice_id: params.brandVoiceId,
+      generation_run_id: params.generationRunId,
+      origin: params.origin,
+      shared: params.shared,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
 
   /** The per-file ceiling for this account, what set it, and the multipart ceiling. */
   limits(workspaceId?: string): Promise<UploadLimits> {
@@ -2828,6 +3154,17 @@ class MediaResource {
 
   presign(input: PresignUploadInput): Promise<PresignedUpload> {
     return this.http.post<PresignedUpload>('/v1/media/presign', input);
+  }
+
+  /** Multipart upload into the workspace library; use `uploadDirect` past the multipart ceiling. */
+  upload(input: UploadMediaInput): Promise<UploadedMediaFile[]> {
+    const form = new FormData();
+    if (input.workspaceId !== undefined) form.append('workspaceId', input.workspaceId);
+    for (const f of input.files.map(normalizeFile)) {
+      const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.mimeType });
+      form.append('files', blob, f.filename);
+    }
+    return this.http.post<UploadedMediaFile[]>('/v1/media/upload', form);
   }
 
   complete(uploadId: string): Promise<UploadedMedia> {
@@ -3842,4 +4179,254 @@ class WhatsappResource {
       phoneNumber: input.phoneNumber,
     });
   }
+}
+
+/** Posting-queue slots: the weekly times `schedule: 'queue'` posts fall into. */
+class QueueResource {
+  constructor(private http: HttpClient) {}
+
+  listSlots(params: { workspaceId: string }): Promise<QueueSlot[]> {
+    return this.http.get<QueueSlot[]>('/v1/queue/slots', { workspace_id: params.workspaceId });
+  }
+
+  createSlot(input: CreateQueueSlotInput): Promise<QueueSlot> {
+    return this.http.post<QueueSlot>('/v1/queue/slots', {
+      workspace_id: input.workspaceId,
+      account_id: input.accountId,
+      weekday: input.weekday,
+      time: input.time,
+      timezone: input.timezone,
+    });
+  }
+
+  /** Posts already in the slot move with it and come back in `moved`. */
+  updateSlot(id: string, input: UpdateQueueSlotInput): Promise<QueueSlotUpdate> {
+    const body: Record<string, unknown> = {};
+    if (input.accountId !== undefined) body.account_id = input.accountId;
+    if (input.weekday !== undefined) body.weekday = input.weekday;
+    if (input.time !== undefined) body.time = input.time;
+    if (input.timezone !== undefined) body.timezone = input.timezone;
+    return this.http.put<QueueSlotUpdate>(`/v1/queue/slots/${id}`, body);
+  }
+
+  deleteSlot(id: string): Promise<QueueSlotDeleted> {
+    return this.http.delete<QueueSlotDeleted>(`/v1/queue/slots/${id}`);
+  }
+
+  /** The next free slot, or null when no slot applies. */
+  next(params: QueueNextParams): Promise<{ next: string | null }> {
+    return this.http.get<{ next: string | null }>('/v1/queue/next', {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+    });
+  }
+
+  /** The upcoming free slots as ISO timestamps. */
+  preview(params: QueuePreviewParams): Promise<string[]> {
+    return this.http.get<string[]>('/v1/queue/preview', {
+      workspace_id: params.workspaceId,
+      account_id: params.accountId,
+      count: params.count,
+    });
+  }
+}
+
+/** Hosted connect links: a one-time page where someone else connects an account into your workspace. */
+class ConnectSessionsResource {
+  constructor(private http: HttpClient) {}
+
+  create(input: CreateConnectSessionInput): Promise<ConnectSession> {
+    return this.http.post<ConnectSession>('/v1/connect-sessions', {
+      workspaceId: input.workspaceId,
+      externalUserId: input.externalUserId,
+      platforms: input.platforms,
+      redirectUrl: input.redirectUrl,
+      branding:
+        input.branding === undefined
+          ? undefined
+          : { name: input.branding.name, logoUrl: input.branding.logoUrl },
+    });
+  }
+
+  get(id: string): Promise<ConnectSession> {
+    return this.http.get<ConnectSession>(`/v1/connect-sessions/${id}`);
+  }
+}
+
+class LogsResource {
+  constructor(private http: HttpClient) {}
+
+  /** API request log, newest first, with an error summary over the window. */
+  list(params: ListLogsParams = {}): Promise<RequestLogPage> {
+    return this.http.get<RequestLogPage>('/v1/logs', {
+      workspace_id: params.workspaceId,
+      days: params.days,
+      status: params.status,
+      method: params.method,
+      status_code: params.statusCode,
+      platform: params.platform,
+      route: params.route,
+      q: params.q,
+      limit: params.limit,
+      before: params.before,
+    });
+  }
+}
+
+class WebhooksResource {
+  constructor(private http: HttpClient) {}
+
+  list(): Promise<Webhook[]> {
+    return this.http.get<Webhook[]>('/v1/webhooks');
+  }
+
+  /** The answer carries `secret` once; verify deliveries with `webhooks.verify`. */
+  create(input: CreateWebhookInput): Promise<Webhook> {
+    return this.http.post<Webhook>('/v1/webhooks', {
+      workspaceId: input.workspaceId,
+      name: input.name,
+      url: input.url,
+      events: input.events,
+      secret: input.secret,
+      headers: input.headers,
+    });
+  }
+
+  update(id: string, input: UpdateWebhookInput): Promise<Webhook> {
+    const body: Record<string, unknown> = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.url !== undefined) body.url = input.url;
+    if (input.events !== undefined) body.events = input.events;
+    if (input.active !== undefined) body.active = input.active;
+    if (input.secret !== undefined) body.secret = input.secret;
+    if (input.headers !== undefined) body.headers = input.headers;
+    return this.http.put<Webhook>(`/v1/webhooks/${id}`, body);
+  }
+
+  delete(id: string): Promise<void> {
+    return this.http.delete(`/v1/webhooks/${id}`);
+  }
+
+  /** Sends a test event to the endpoint. */
+  test(id: string): Promise<void> {
+    return this.http.post(`/v1/webhooks/${id}/test`);
+  }
+
+  deliveries(id: string, params: ListWebhookDeliveriesParams = {}): Promise<WebhookDelivery[]> {
+    return this.http.get<WebhookDelivery[]>(`/v1/webhooks/${id}/deliveries`, {
+      status: params.status,
+      limit: params.limit,
+    });
+  }
+
+  /** One delivery with the payload that was sent. */
+  getDelivery(id: string, deliveryId: string): Promise<WebhookDeliveryDetail> {
+    return this.http.get<WebhookDeliveryDetail>(`/v1/webhooks/${id}/deliveries/${deliveryId}`);
+  }
+
+  /** Sends the same payload again under the same delivery key. */
+  redeliver(id: string, deliveryId: string): Promise<void> {
+    return this.http.post(`/v1/webhooks/${id}/deliveries/${deliveryId}/redeliver`);
+  }
+}
+
+class AutomationsResource {
+  constructor(private http: HttpClient) {}
+
+  list(): Promise<Automation[]> {
+    return this.http.get<Automation[]>('/v1/automations');
+  }
+
+  get(id: string): Promise<Automation> {
+    return this.http.get<Automation>(`/v1/automations/${id}`);
+  }
+
+  /** An `api_webhook` automation answers with `secret` once. */
+  create(input: CreateAutomationInput): Promise<Automation> {
+    return this.http.post<Automation>('/v1/automations', {
+      workspaceId: input.workspaceId,
+      ...automationBody(input),
+    });
+  }
+
+  update(id: string, input: UpdateAutomationInput): Promise<Automation> {
+    return this.http.put<Automation>(`/v1/automations/${id}`, automationBody(input));
+  }
+
+  delete(id: string): Promise<void> {
+    return this.http.delete(`/v1/automations/${id}`);
+  }
+
+  toggle(id: string): Promise<AutomationToggle> {
+    return this.http.post<AutomationToggle>(`/v1/automations/${id}/toggle`);
+  }
+
+  stats(): Promise<AutomationStats> {
+    return this.http.get<AutomationStats>('/v1/automations/stats');
+  }
+
+  /** Fires an `api_webhook` trigger with this payload as the event. */
+  trigger(id: string, payload: Record<string, unknown> = {}): Promise<AutomationTriggerResult> {
+    return this.http.post<AutomationTriggerResult>(`/v1/automations/${id}/trigger`, payload);
+  }
+
+  listVersions(id: string, params: PageParams = {}): Promise<AutomationVersionPage> {
+    return this.http.get<AutomationVersionPage>(`/v1/automations/${id}/versions`, {
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  getVersion(id: string, version: number): Promise<AutomationVersionDetail> {
+    return this.http.get<AutomationVersionDetail>(`/v1/automations/${id}/versions/${version}`);
+  }
+
+  /** Makes that version's graph the current one, as a new version. */
+  restoreVersion(id: string, version: number): Promise<AutomationRestore> {
+    return this.http.post<AutomationRestore>(`/v1/automations/${id}/versions/${version}/restore`);
+  }
+
+  listRuns(id: string, params: PageParams = {}): Promise<AutomationRunPage> {
+    return this.http.get<AutomationRunPage>(`/v1/automations/${id}/runs`, {
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
+
+  getRun(id: string, runId: number): Promise<AutomationRunDetail> {
+    return this.http.get<AutomationRunDetail>(`/v1/automations/${id}/runs/${runId}`);
+  }
+}
+
+function automationBody(input: UpdateAutomationInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (input.name !== undefined) body.name = input.name;
+  if (input.description !== undefined) body.description = input.description;
+  if (input.triggerType !== undefined) body.triggerType = input.triggerType;
+  if (input.triggerConfig !== undefined) body.triggerConfig = input.triggerConfig;
+  if (input.active !== undefined) body.active = input.active;
+  if (input.steps !== undefined) {
+    body.steps = input.steps.map((s) => ({
+      actionType: s.actionType,
+      actionConfig: s.actionConfig,
+    }));
+  }
+  if (input.graph !== undefined) {
+    body.graph = {
+      nodes: input.graph.nodes.map((n) => ({
+        id: n.id,
+        kind: n.kind,
+        label: n.label,
+        config: n.config,
+        layout: n.layout,
+      })),
+      edges: input.graph.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        sourceHandle: e.sourceHandle,
+        target: e.target,
+      })),
+    };
+  }
+  return body;
 }
