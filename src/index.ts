@@ -340,6 +340,9 @@ import type {
   WhatsappEncryptionKeyStatus,
   WhatsappSandboxSession,
   XFollowResult,
+  XPost,
+  XSearchPage,
+  XSearchParams,
 } from './types.js';
 
 export { FoPostError };
@@ -370,6 +373,7 @@ export class FoPost {
   readonly knowledge: KnowledgeResource;
   readonly activity: ActivityResource;
   readonly googleBusiness: GoogleBusinessResource;
+  readonly x: XResource;
   readonly blog: BlogResource;
   readonly blogs: BlogsResource;
 
@@ -393,6 +397,7 @@ export class FoPost {
     this.knowledge = new KnowledgeResource(this.http);
     this.activity = new ActivityResource(this.http);
     this.googleBusiness = new GoogleBusinessResource(this.http);
+    this.x = new XResource(this.http);
     this.blog = new BlogResource(this.http);
     this.blogs = new BlogsResource(this.http);
   }
@@ -3540,6 +3545,31 @@ class BlogResource {
   deleteArticle(workspaceId: string, id: string): Promise<void> {
     return this.http.request<void>('DELETE', `/v1/blog/articles/${id}`, undefined, {
       workspace_id: workspaceId,
+    });
+  }
+}
+
+/**
+ * Live reads from X with a connected account's own token. Every call is an X API
+ * call metered to the workspace; a spent X balance answers 402 `platform_balance_spent`.
+ */
+class XResource {
+  constructor(private http: HttpClient) {}
+
+  /** One X post by its numeric id; 404 when X has no such post. */
+  getPost(postId: string, accountId: string): Promise<XPost> {
+    return this.http.get<XPost>(`/v1/x/posts/${encodeURIComponent(postId)}`, {
+      account_id: accountId,
+    });
+  }
+
+  /** Recent search; page with `meta.nextToken`. */
+  search(params: XSearchParams): Promise<XSearchPage> {
+    return this.http.get<XSearchPage>('/v1/x/search', {
+      account_id: params.accountId,
+      q: params.q,
+      max_results: params.maxResults,
+      next_token: params.nextToken,
     });
   }
 }

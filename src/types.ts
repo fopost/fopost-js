@@ -2766,11 +2766,48 @@ export type ActivityPage = {
 
 // ─── X ─────────────────────────────────────────────────────────────
 
+/** A post read live from X with the account's own token. */
+export type XPost = {
+  /** The X post id. */
+  id: string;
+  text: string | null;
+  permalink: string | null;
+  authorName: string | null;
+  authorHandle: string | null;
+  authorAvatarUrl: string | null;
+  authorFollowers: number | null;
+  /** Thread root id. */
+  conversationId: string | null;
+  /** The post this one replied to. */
+  parentExternalId: string | null;
+  likes: number | null;
+  replies: number | null;
+  reposts: number | null;
+  quotes: number | null;
+  platformCreatedAt: string | null;
+};
+
 export type XFollowResult = {
   accountId: string;
   /** The X user id that was followed or unfollowed. */
   userId: string;
   following: boolean;
+};
+
+export type XSearchParams = {
+  /** The X account whose token does the read. */
+  accountId: string;
+  /** X search query, up to 512 characters. */
+  q: string;
+  /** 10 to 100, default 10. */
+  maxResults?: number;
+  /** Cursor from the previous page. */
+  nextToken?: string;
+};
+
+export type XSearchPage = {
+  data: XPost[];
+  meta: { nextToken: string | null };
 };
 
 // ─── Google Business Profile ───────────────────────────────────────
