@@ -2,7 +2,7 @@
 
 All notable changes to `@fopost/sdk` are documented here.
 
-## Unreleased
+## 0.6.0
 
 ### Removed
 
@@ -187,25 +187,6 @@ All notable changes to `@fopost/sdk` are documented here.
   `deleteArticle`, plus `listProducts` and `updateProduct` for a Shopify store.
   `updateArticle` changes the live article in place and never creates a second post.
   Reads need the `posts` scope; the writes need `publish` as well.
-
-### Changed
-
-- Direct uploads are no longer documented as capped at 50 MB; the ceiling is the
-  account's `maxFileBytes`, and an oversize file is a `413 file_too_large` whose body
-  carries `max_file_bytes`, `file_bytes` and `upgrade_url`.
-
-### Fixed
-
-- A `204` response no longer throws `Unexpected response`; it resolves to `undefined`.
-
-### Deprecated
-
-- `ads.authorizeMeta` — use `ads.authorize('meta', input)`. It still works.
-
-## 0.6.0
-
-### Added
-
 - Campaign tree on `ads`, by Meta id and `connectionId`: `accountTree`, and create,
   get, update, delete and duplicate for campaigns (`createCampaign`…), ad sets
   (`createAdSet`…) and ads inside an ad set (`createNetworkAd`…), plus
@@ -225,6 +206,20 @@ All notable changes to `@fopost/sdk` are documented here.
 - `accounts.getTelegramBotCommands`, `setTelegramBotCommands` and
   `deleteTelegramBotCommands` manage the bot's command menu in a connected chat.
   All need the `accounts` scope.
+
+### Changed
+
+- Direct uploads are no longer documented as capped at 50 MB; the ceiling is the
+  account's `maxFileBytes`, and an oversize file is a `413 file_too_large` whose body
+  carries `max_file_bytes`, `file_bytes` and `upgrade_url`.
+
+### Fixed
+
+- A `204` response no longer throws `Unexpected response`; it resolves to `undefined`.
+
+### Deprecated
+
+- `ads.authorizeMeta` — use `ads.authorize('meta', input)`. It still works.
 
 ## 0.5.0
 
