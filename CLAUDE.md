@@ -5,8 +5,8 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 ## What This Is
 
 `@fopost/sdk` on npm — the official TypeScript/Node.js client for the FoPost REST API
-(`fopost.com`). Current version `0.6.0`. It wraps the API's HTTP surface in a namespaced
-client (`posts`, `accounts`, `accountGroups`, `workspaces`, `labels`, `ai`, `inbox`, `contacts`, `ads`) with hand-written DTOs.
+(`fopost.com`). Current version `0.7.0`. It wraps the API's HTTP surface in a namespaced
+client (`posts`, `accounts`, `accountGroups`, `workspaces`, `labels`, `ai`, `inbox`, `contacts`, `ads`, `queue`, `webhooks`, `automations`, `analytics`, `logs`, `connectSessions`, …) with hand-written DTOs.
 
 Requires Node >= 18 (`globalThis.fetch`). Source is ESM TypeScript; `tsup` emits ESM +
 CJS + `.d.ts`/`.d.cts` into `dist/`. Zero runtime dependencies.
@@ -104,13 +104,15 @@ is already public and is the right thing to expose.
 - Non-JSON responses throw `FoPostError` too (body text as the message when not ok).
 - Rate-limit headers (`X-RateLimit-*`) are **not surfaced**. Only the Go SDK reads them.
 
-Resource coverage is a subset of the API: posts (list/get/create/update/delete/publish/
-cancel/retry/preflight/deliveries), accounts (list/get/health/update/move, Telegram connect code and bot commands), accountGroups
-(list/get/create/update/delete/setMembers), workspaces (list/get),
-labels (list), ai (credits/generateCaption/rewrite/repurposeUrl), inbox (the `/v1/inbox`
-family except the X Chat routes), ads (the `/v1/ads` family), validate (post/length/media). `communities`, `webhooks`,
-`analytics`, `automations`, and `media` are **not wrapped here** — the Go and Rust SDKs have
-them. Adding one is a public-surface change: see the Downstream Packages rule.
+Resource coverage matches the public API (`fopost-api-collections/openapi.json`): posts
+(including `unpublish`, publish runs, analytics, bulk import and `schedule: 'queue'`), accounts
+(primary, validation, token refresh, history, communities, Telegram, Slack, …), accountGroups,
+workspaces and labels (full CRUD), queue, connectSessions, webhooks (the REST side; signature
+verification is the `webhooks.verify` export), automations (with versions and runs), analytics,
+logs, ai, inbox, contacts, broadcasts, sequences, ads, media (multipart `upload` and direct
+upload), knowledge, activity, googleBusiness, blog, blogs, whatsapp, validate. Newer response
+DTOs are typed in the API's snake_case; inputs stay camelCase and are mapped explicitly in the
+method. Adding a resource is a public-surface change: see the Downstream Packages rule.
 
 ## Commands
 
@@ -144,8 +146,9 @@ every pull request. `release.yml` runs the same checks on a tag before publishin
 
 ## Testing
 
-Vitest, one suite so far: `src/api-path.test.ts`, which drives every resource method and
-asserts the request path starts with `/v1/` and never contains `/api/v1/`.
+Vitest. `src/api-path.test.ts` drives every resource method and asserts the request path starts
+with `/v1/` and never contains `/api/v1/` (bump its call count when adding a method); one
+`*.test.ts` beside the source per resource family asserts verb, path, body and decoded response.
 
 Any test added here **must stub the transport and must never reach the live API.**
 `HttpClientOptions.fetch` exists for exactly this: pass a fake `fetch` to
