@@ -1432,6 +1432,24 @@ class InboxResource {
     return this.http.post<InboxItem>(`/v1/inbox/${id}/unlike`);
   }
 
+  /** Reposts the item to the account's own timeline, where `canRepost` is true (X). Needs `publish`. */
+  repost(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/repost`);
+  }
+
+  unrepost(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unrepost`);
+  }
+
+  /** Bookmarks the item on the account, where `canBookmark` is true (X). Needs `publish`. */
+  bookmark(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/bookmark`);
+  }
+
+  unbookmark(id: string): Promise<InboxItem> {
+    return this.http.post<InboxItem>(`/v1/inbox/${id}/unbookmark`);
+  }
+
   /**
    * Votes the item up or down where the network ranks by votes (Reddit), or
    * takes an earlier vote back with `none`. An upvote is the same call a like

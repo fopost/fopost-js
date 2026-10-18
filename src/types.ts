@@ -831,6 +831,10 @@ export type InboxItem = {
   canReply: boolean;
   hidden: boolean;
   liked: boolean;
+  /** Reposted to the account's own timeline (X). */
+  reposted: boolean;
+  /** Bookmarked on the account (X). */
+  bookmarked: boolean;
   /** How the account voted where the network ranks by votes. */
   vote: RedditVoteDirection | null;
   pinned: boolean;
@@ -843,6 +847,10 @@ export type InboxItem = {
   /** Also true for our own replies. */
   canDelete: boolean;
   canLike: boolean;
+  /** The network has a repost (X). */
+  canRepost: boolean;
+  /** The network has bookmarks (X). */
+  canBookmark: boolean;
   /** The network ranks by votes, so a down vote exists. */
   canVote: boolean;
   canPin: boolean;
