@@ -3229,27 +3229,199 @@ export type SparkPost = {
   views: number | null;
 };
 
-/** One offline conversion. Identifiers are hashed before they leave FoPost. */
+export type ConversionActionSource =
+  | 'website'
+  | 'app'
+  | 'email'
+  | 'phone_call'
+  | 'chat'
+  | 'physical_store'
+  | 'system_generated'
+  | 'business_messaging'
+  | 'other';
+
+/** One conversion. Identifiers are hashed before they leave FoPost and never stored. */
 export type ConversionEvent = {
+  /** A standard event such as `Purchase`, or a custom one. */
   eventName: string;
   /** ISO 8601. */
   occurredAt: string;
+  /** Your own id for the event, so the network deduplicates a browser and server pair. */
+  eventId?: string;
+  /** `website` when omitted. */
+  actionSource?: ConversionActionSource;
+  /** The page the event fired on. */
+  sourceUrl?: string;
   email?: string;
   phone?: string;
+  /** Your own user id. */
+  externalId?: string;
+  clientIpAddress?: string;
+  clientUserAgent?: string;
+  /** The network's click id (`fbc`). */
+  clickId?: string;
+  /** The network's browser id (`fbp`). */
+  browserId?: string;
   /** Account currency, minor units. */
   valueMinor?: number;
   currency?: string;
   orderId?: string;
+  contentIds?: string[];
 };
 
 export type UploadConversionsInput = {
   workspaceId: string;
   connectionId: string;
   adAccountId: string;
-  /** A pixel the ad account owns, from `ads.audiences()`. */
+  /** A pixel the ad account owns, from `ads.pixels()`. */
   pixelId: string;
   /** Up to 1000 per call. */
   events: ConversionEvent[];
+};
+
+export type ConversionUploadResult = {
+  /** The stored batch. */
+  id: string;
+  /** How many events the network received. */
+  accepted: number;
+  eventCount: number;
+  /** True when the `Idempotency-Key` had been used before and nothing was sent. */
+  replayed: boolean;
+};
+
+/** A stored conversion as the API keeps it: hashes only, never the raw identifier. */
+export type HashedConversionEvent = {
+  eventName: string;
+  occurredAt: string;
+  eventId: string | null;
+  actionSource: string;
+  emailHash: string | null;
+  phoneHash: string | null;
+  externalIdHash: string | null;
+  valueMinor: number | null;
+  currency: string | null;
+  orderId: string | null;
+};
+
+export type ConversionBatch = {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  adAccountId: string;
+  pixelId: string;
+  idempotencyKey: string | null;
+  eventCount: number;
+  accepted: number;
+  events: HashedConversionEvent[];
+  createdAt: string;
+};
+
+export type ListConversionEventsParams = {
+  workspaceId?: string;
+  connectionId?: string;
+  limit?: number;
+};
+
+/** An ad account read inside a workspace. */
+export type AdAccountParams = AdObjectParams & { adAccountId: string };
+/** An ad account changed inside a workspace; the API requires the workspace here. */
+export type AdAccountMutationParams = AdObjectMutationParams & { adAccountId: string };
+
+export type AdPixel = { id: string; name: string };
+
+export type PixelDataUseSetting = 'advertising_and_analytics' | 'analytics_only';
+
+export type AdPixelDetail = AdPixel & {
+  /** The script to place on the site. */
+  code: string | null;
+  createdAt: string | null;
+  lastFiredAt: string | null;
+  isUnavailable: boolean;
+  dataUseSetting: PixelDataUseSetting | null;
+};
+
+export type CreatePixelInput = AdAccountMutationParams & { name: string };
+
+export type UpdatePixelInput = AdAccountMutationParams & {
+  name?: string;
+  dataUseSetting?: PixelDataUseSetting;
+};
+
+export type SharePixelInput = AdAccountMutationParams & {
+  /** Another ad account under the same business portfolio. */
+  targetAdAccountId: string;
+};
+
+/** Event counts over the last 28 days. */
+export type AdPixelStats = {
+  since: string;
+  until: string;
+  events: Array<{ eventName: string; count: number }>;
+};
+
+export type EventMatchQuality = {
+  eventName: string;
+  /** The network's match score out of 10. */
+  score: number | null;
+  matchKeys: Array<{ identifier: string; coveragePercent: number }>;
+};
+
+export type CustomConversionEventType =
+  | 'ADD_PAYMENT_INFO'
+  | 'ADD_TO_CART'
+  | 'ADD_TO_WISHLIST'
+  | 'COMPLETE_REGISTRATION'
+  | 'CONTENT_VIEW'
+  | 'INITIATED_CHECKOUT'
+  | 'LEAD'
+  | 'PURCHASE'
+  | 'SEARCH'
+  | 'CONTACT'
+  | 'CUSTOMIZE_PRODUCT'
+  | 'DONATE'
+  | 'FIND_LOCATION'
+  | 'SCHEDULE'
+  | 'START_TRIAL'
+  | 'SUBMIT_APPLICATION'
+  | 'SUBSCRIBE'
+  | 'OTHER';
+
+/** Pick one of `urlContains` and `urlEquals`. */
+export type CustomConversionRule = {
+  /** The pixel event the rule reads; `PageView` when omitted on create. */
+  eventName?: string;
+  urlContains?: string;
+  urlEquals?: string;
+};
+
+export type CustomConversion = {
+  id: string;
+  name: string;
+  pixelId: string | null;
+  eventType: string;
+  rule: CustomConversionRule | null;
+  description: string | null;
+  defaultValueMinor: number | null;
+  isArchived: boolean;
+  isUnavailable: boolean;
+  createdAt: string | null;
+  lastFiredAt: string | null;
+};
+
+export type CreateCustomConversionInput = AdAccountMutationParams & {
+  pixelId: string;
+  name: string;
+  eventType: CustomConversionEventType;
+  rule: CustomConversionRule;
+  description?: string;
+  /** Default value of one conversion, account currency, minor units. */
+  defaultValueMinor?: number;
+};
+
+export type UpdateCustomConversionInput = AdAccountMutationParams & {
+  name?: string;
+  description?: string;
+  defaultValueMinor?: number;
 };
 
 /** A comment on an ad, read live from the network and never stored. */
