@@ -2764,6 +2764,15 @@ export type ActivityPage = {
   meta: { nextCursor: string | null };
 };
 
+// ─── X ─────────────────────────────────────────────────────────────
+
+export type XFollowResult = {
+  accountId: string;
+  /** The X user id that was followed or unfollowed. */
+  userId: string;
+  following: boolean;
+};
+
 // ─── Google Business Profile ───────────────────────────────────────
 
 /**

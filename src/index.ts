@@ -339,6 +339,7 @@ import type {
   WhatsappFlowResponse,
   WhatsappEncryptionKeyStatus,
   WhatsappSandboxSession,
+  XFollowResult,
 } from './types.js';
 
 export { FoPostError };
@@ -710,6 +711,15 @@ class AccountsResource {
     return this.http.put<RedditDefaultSubreddit>(`/v1/accounts/${id}/reddit/default-subreddit`, {
       subreddit,
     });
+  }
+
+  /** Follows an X user from this account; `userId` is the numeric X user id. Needs `publish`. */
+  followXUser(id: string, userId: string): Promise<XFollowResult> {
+    return this.http.post<XFollowResult>(`/v1/accounts/${id}/x/follow`, { user_id: userId });
+  }
+
+  unfollowXUser(id: string, userId: string): Promise<XFollowResult> {
+    return this.http.post<XFollowResult>(`/v1/accounts/${id}/x/unfollow`, { user_id: userId });
   }
 
   /** Public channels, plus private ones the app was invited to. */
