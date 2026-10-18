@@ -41,4 +41,11 @@ describe('posts.unpublish', () => {
       '/v1/posts/p1/analytics',
     ]);
   });
+
+  it('duplicates into a new draft with no body', async () => {
+    const { calls, client } = recordingClient({ id: 'p2', status: 'draft' });
+    const copy = await client.posts.duplicate('p1');
+    expect(copy).toEqual({ id: 'p2', status: 'draft' });
+    expect(calls[0]).toEqual({ method: 'POST', path: '/v1/posts/p1/duplicate', body: undefined });
+  });
 });

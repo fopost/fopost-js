@@ -9,6 +9,7 @@ All notable changes to `@fopost/sdk` are documented here.
 - `queue` resource: `listSlots`, `createSlot`, `updateSlot`, `deleteSlot`, `next` and `preview`
   over `/v1/queue`. `CreatePostInput` and `UpdatePostInput` take `schedule: 'queue'`, sent as
   `schedule` on the wire, to drop a post into the next free slot instead of `scheduleAt`.
+- `posts.duplicate` copies a post into a new draft in the same workspace.
 - `posts.unpublish` takes a live post down from every network and answers `UnpublishResult`;
   `posts.publishRuns`, `posts.analytics`, `posts.bulkImportValidate` and `posts.bulkImportCommit`
   (multipart CSV with `workspace_id`).

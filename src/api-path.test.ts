@@ -31,6 +31,7 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.posts.preflight('p1');
   await fopost.posts.deliveries('p1');
   await fopost.posts.unpublish('p1');
+  await fopost.posts.duplicate('p1');
   await fopost.posts.publishRuns('p1');
   await fopost.posts.analytics('p1');
   await fopost.posts.bulkImportValidate({ workspaceId: 'ws', file: csv });
@@ -273,7 +274,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(205);
+    expect(urls.length).toBe(206);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');

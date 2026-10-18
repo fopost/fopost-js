@@ -670,6 +670,11 @@ class PostsResource {
     return this.http.get<unknown[]>(`/v1/posts/${id}/deliveries`);
   }
 
+  /** Copies content, accounts, settings and labels into a new draft; schedule and delivery state are not carried over. */
+  duplicate(id: string): Promise<{ id: string; status: string }> {
+    return this.http.post<{ id: string; status: string }>(`/v1/posts/${id}/duplicate`);
+  }
+
   /** Takes a published post down from every network it is live on. */
   unpublish(id: string): Promise<UnpublishResult> {
     return this.http.post<UnpublishResult>(`/v1/posts/${id}/unpublish`);
