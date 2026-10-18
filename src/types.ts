@@ -4598,3 +4598,51 @@ export type UploadedMediaFile = {
   preview_url?: string;
   size: number;
 };
+
+// ─── Media library ───────────────────────────────────────────────
+
+export type MediaBrandRole = 'logo' | 'product' | 'person' | 'background';
+
+export type ListMediaParams = {
+  workspaceId?: string;
+  folderId?: string;
+  search?: string;
+  tag?: string;
+  type?: 'image' | 'video' | 'gif' | 'document';
+  /** Exact stored url. */
+  url?: string;
+  brandRole?: MediaBrandRole;
+  brandVoiceId?: string;
+  generationRunId?: string;
+  origin?: string;
+  shared?: boolean;
+  page?: number;
+  perPage?: number;
+};
+
+export type MediaLibraryItem = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  url: string;
+  visibility?: 'private' | 'public';
+  type: 'image' | 'video' | 'gif' | 'document';
+  mime_type?: string;
+  size: number;
+  alt_text?: string | null;
+  alt_text_source?: string | null;
+  tags?: string[];
+  folder_id?: string | null;
+  origin?: string | null;
+  source_url?: string | null;
+  synced_at?: string | null;
+  brand_role?: MediaBrandRole | '';
+  brand_voice_id?: string | null;
+  generation_run_id?: string | null;
+  has_person_consent?: boolean;
+  created_at: string;
+  preview_url: string;
+  share?: { url?: string; created_at?: string; created_by_name?: string | null; source?: string };
+};
+
+export type MediaLibraryPage = { data: MediaLibraryItem[]; meta: PagedMeta };

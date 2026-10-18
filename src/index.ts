@@ -56,6 +56,8 @@ import type {
   LabelAnalytics,
   LabelDetail,
   ListLogsParams,
+  ListMediaParams,
+  MediaLibraryPage,
   ListWebhookDeliveriesParams,
   PageParams,
   PostAnalytics,
@@ -3120,6 +3122,25 @@ class AnalyticsResource {
 
 class MediaResource {
   constructor(private http: HttpClient) {}
+
+  /** The workspace media library, filtered and paged. */
+  list(params: ListMediaParams = {}): Promise<MediaLibraryPage> {
+    return this.http.get<MediaLibraryPage>('/v1/media', {
+      workspace_id: params.workspaceId,
+      folder_id: params.folderId,
+      search: params.search,
+      tag: params.tag,
+      type: params.type,
+      url: params.url,
+      brand_role: params.brandRole,
+      brand_voice_id: params.brandVoiceId,
+      generation_run_id: params.generationRunId,
+      origin: params.origin,
+      shared: params.shared,
+      page: params.page,
+      per_page: params.perPage,
+    });
+  }
 
   /** The per-file ceiling for this account, what set it, and the multipart ceiling. */
   limits(workspaceId?: string): Promise<UploadLimits> {

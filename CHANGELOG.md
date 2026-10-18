@@ -28,7 +28,8 @@ All notable changes to `@fopost/sdk` are documented here.
   `addCommunity`, `removeCommunity`).
 - `analytics.overview`, `timeSeries`, `topPosts`, `labels`, `postsTable`, `postingStreak`,
   `demographics`, `inbox` and `collect`.
-- `media.upload` sends files as multipart into the workspace library.
+- `media.list` reads the workspace media library with its filters and paging; `media.upload`
+  sends files as multipart into it.
 
 ## 0.6.0
 

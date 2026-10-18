@@ -62,6 +62,7 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.analytics.inbox({ workspaceId: 'ws' });
   await fopost.analytics.collect({ workspaceId: 'ws' });
   await fopost.media.upload({ workspaceId: 'ws', files: [csv] });
+  await fopost.media.list({ workspaceId: 'ws' });
   await fopost.queue.listSlots({ workspaceId: 'ws' });
   await fopost.queue.createSlot({ workspaceId: 'ws', weekday: 1, time: '09:00', timezone: 'UTC' });
   await fopost.queue.updateSlot('s1', { time: '10:00' });
@@ -272,7 +273,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(204);
+    expect(urls.length).toBe(205);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
