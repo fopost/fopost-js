@@ -48,6 +48,7 @@ export class HttpClient {
     path: string,
     body?: unknown,
     query?: Record<string, QueryValue>,
+    extraHeaders?: Record<string, string>,
   ): Promise<T> {
     const url = new URL(this.baseUrl + path);
     if (query) {
@@ -70,6 +71,7 @@ export class HttpClient {
       'User-Agent': '@fopost/sdk',
     };
     if (!isForm) headers['Content-Type'] = 'application/json';
+    Object.assign(headers, extraHeaders);
     const res = await this.fetchImpl(url.toString(), {
       method,
       headers,

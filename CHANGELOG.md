@@ -6,6 +6,15 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `ads` resource: Conversions API, pixels and custom conversions (`ads` scope only).
+  `uploadConversions` takes an optional idempotency key and now returns
+  `ConversionUploadResult` (`id`, `accepted`, `eventCount`, `replayed`); `sendConversions`
+  requires the key and sends it as `Idempotency-Key`. `ConversionEvent` gains `eventId`,
+  `actionSource`, `sourceUrl`, `externalId`, `clientIpAddress`, `clientUserAgent`,
+  `clickId`, `browserId` and `contentIds`. New: `conversionEvents`, `pixels`, `createPixel`,
+  `getPixel`, `updatePixel`, `sharePixel`, `pixelStats`, `eventMatchQuality`,
+  `customConversions`, `createCustomConversion`, `getCustomConversion`,
+  `updateCustomConversion`, `deleteCustomConversion`.
 - `inbox.repost`, `inbox.unrepost`, `inbox.bookmark` and `inbox.unbookmark` act on an X item
   where `InboxItem.canRepost` or `canBookmark` is true (`inbox` + `publish`); `InboxItem`
   gains `reposted`, `bookmarked`, `canRepost` and `canBookmark`.
@@ -16,6 +25,36 @@ All notable changes to `@fopost/sdk` are documented here.
 - A spent X balance answers `402 platform_balance_spent`. Existing X accounts must be
   reconnected before repost, bookmark and follow work: an older grant answers
   `409 reconnect_required`. Every one of these calls is an X API call metered to the workspace.
+
+## 0.7.0
+
+### Added
+
+- `queue` resource: `listSlots`, `createSlot`, `updateSlot`, `deleteSlot`, `next` and `preview`
+  over `/v1/queue`. `CreatePostInput` and `UpdatePostInput` take `schedule: 'queue'`, sent as
+  `schedule` on the wire, to drop a post into the next free slot instead of `scheduleAt`.
+- `posts.duplicate` copies a post into a new draft in the same workspace.
+- `posts.unpublish` takes a live post down from every network and answers `UnpublishResult`;
+  `posts.publishRuns`, `posts.analytics`, `posts.bulkImportValidate` and `posts.bulkImportCommit`
+  (multipart CSV with `workspace_id`).
+- `connectSessions` resource: `create` and `get` for hosted connect links.
+- `webhooks` namespace on the client: `list`, `create` (answers `secret` once), `update`,
+  `delete`, `test`, `deliveries`, `getDelivery` and `redeliver`. The `webhooks.verify` export
+  is unchanged; `client.webhooks` is the REST side.
+- `automations` resource: `list`, `get`, `create`, `update`, `delete`, `toggle`, `stats`,
+  `trigger`, `listVersions`, `getVersion`, `restoreVersion`, `listRuns` and `getRun`. Inputs are
+  camelCase (`triggerType`, `steps[].actionType`, `graph.edges[].sourceHandle`) as the API
+  reads them; responses are typed in the API's snake_case.
+- `logs.list` reads the API request log with its error summary and `before` cursor.
+- `workspaces.create`, `update`, `delete` and `analytics`; `labels.get`, `create`, `update`
+  and `delete`.
+- `accounts.togglePrimary`, `validateCredentials`, `refreshToken`, `analyticsHistory`, and the
+  communities family (`listCommunities`, `syncCommunities`, `searchCommunities`,
+  `addCommunity`, `removeCommunity`).
+- `analytics.overview`, `timeSeries`, `topPosts`, `labels`, `postsTable`, `postingStreak`,
+  `demographics`, `inbox` and `collect`.
+- `media.list` reads the workspace media library with its filters and paging; `media.upload`
+  sends files as multipart into it.
 
 ## 0.6.0
 
