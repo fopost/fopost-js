@@ -19,6 +19,7 @@ function recordingClient(opts: Partial<FoPostOptions> = {}) {
 }
 
 async function callEveryEndpoint(fopost: FoPost) {
+  const csv = { data: new Uint8Array([1]), filename: 'posts.csv', mimeType: 'text/csv' };
   await fopost.posts.list({ workspaceId: 'ws' });
   await fopost.posts.get('p1');
   await fopost.posts.create({ workspaceId: 'ws', content: [{ text: 'hi' }], accounts: ['a1'] });
@@ -29,6 +30,68 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.posts.retry('p1');
   await fopost.posts.preflight('p1');
   await fopost.posts.deliveries('p1');
+  await fopost.posts.unpublish('p1');
+  await fopost.posts.publishRuns('p1');
+  await fopost.posts.analytics('p1');
+  await fopost.posts.bulkImportValidate({ workspaceId: 'ws', file: csv });
+  await fopost.posts.bulkImportCommit({ workspaceId: 'ws', file: csv });
+  await fopost.accounts.togglePrimary('a1');
+  await fopost.accounts.validateCredentials('a1');
+  await fopost.accounts.refreshToken('a1');
+  await fopost.accounts.analyticsHistory('a1', { limit: 5 });
+  await fopost.accounts.listCommunities('a1');
+  await fopost.accounts.syncCommunities('a1');
+  await fopost.accounts.searchCommunities('a1', 'design');
+  await fopost.accounts.addCommunity('a1', { communityId: 'c1' });
+  await fopost.accounts.removeCommunity('a1', 1);
+  await fopost.workspaces.create({ name: 'ws' });
+  await fopost.workspaces.update('ws', { name: 'ws2' });
+  await fopost.workspaces.delete('ws');
+  await fopost.workspaces.analytics('ws');
+  await fopost.labels.get('l1');
+  await fopost.labels.create({ workspaceId: 'ws', name: 'l', color: '#000000' });
+  await fopost.labels.update('l1', { name: 'l', color: '#000000' });
+  await fopost.labels.delete('l1');
+  await fopost.analytics.overview({ workspaceId: 'ws' });
+  await fopost.analytics.timeSeries({ workspaceId: 'ws' });
+  await fopost.analytics.topPosts({ workspaceId: 'ws' });
+  await fopost.analytics.labels({ workspaceId: 'ws' });
+  await fopost.analytics.postsTable({ workspaceId: 'ws' });
+  await fopost.analytics.postingStreak({ workspaceId: 'ws' });
+  await fopost.analytics.demographics({ workspaceId: 'ws' });
+  await fopost.analytics.inbox({ workspaceId: 'ws' });
+  await fopost.analytics.collect({ workspaceId: 'ws' });
+  await fopost.media.upload({ workspaceId: 'ws', files: [csv] });
+  await fopost.queue.listSlots({ workspaceId: 'ws' });
+  await fopost.queue.createSlot({ workspaceId: 'ws', weekday: 1, time: '09:00', timezone: 'UTC' });
+  await fopost.queue.updateSlot('s1', { time: '10:00' });
+  await fopost.queue.deleteSlot('s1');
+  await fopost.queue.next({ workspaceId: 'ws' });
+  await fopost.queue.preview({ workspaceId: 'ws' });
+  await fopost.connectSessions.create({ externalUserId: 'u1', platforms: ['twitter'] });
+  await fopost.connectSessions.get('cs1');
+  await fopost.logs.list();
+  await fopost.webhooks.list();
+  await fopost.webhooks.create({ workspaceId: 'ws', url: 'https://example.com', events: [] });
+  await fopost.webhooks.update('wh1', { active: false });
+  await fopost.webhooks.delete('wh1');
+  await fopost.webhooks.test('wh1');
+  await fopost.webhooks.deliveries('wh1');
+  await fopost.webhooks.getDelivery('wh1', 'd1');
+  await fopost.webhooks.redeliver('wh1', 'd1');
+  await fopost.automations.list();
+  await fopost.automations.get('au1');
+  await fopost.automations.create({ workspaceId: 'ws', name: 'a', triggerType: 'schedule' });
+  await fopost.automations.update('au1', { name: 'b' });
+  await fopost.automations.delete('au1');
+  await fopost.automations.toggle('au1');
+  await fopost.automations.stats();
+  await fopost.automations.trigger('au1');
+  await fopost.automations.listVersions('au1');
+  await fopost.automations.getVersion('au1', 1);
+  await fopost.automations.restoreVersion('au1', 1);
+  await fopost.automations.listRuns('au1');
+  await fopost.automations.getRun('au1', 1);
   await fopost.accounts.list({ workspaceId: 'ws' });
   await fopost.accounts.get('a1');
   await fopost.accounts.health('a1');
@@ -209,7 +272,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(142);
+    expect(urls.length).toBe(204);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
