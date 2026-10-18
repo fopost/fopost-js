@@ -3114,10 +3114,18 @@ export type AdComment = {
 export type AdCommentsPage = { comments: AdComment[]; nextCursor: string | null };
 
 // ─── Blog ──────────────────────────────────────────────────────────
-// Wire fields are camelCase on these routes, so the shapes are the wire shapes.
+// Responses are snake_case and request bodies camelCase, as the API defines them.
 
 export type BlogArticleStatus =
-  'queued' | 'writing' | 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'rejected';
+  | 'queued'
+  | 'writing'
+  | 'draft'
+  | 'in_review'
+  | 'scheduled'
+  | 'publishing'
+  | 'published'
+  | 'failed'
+  | 'rejected';
 
 export type BlogKeywordStatus = 'suggested' | 'planned' | 'written' | 'dismissed';
 
@@ -3130,43 +3138,63 @@ export type BlogTargetKind = 'product_blog' | 'account' | 'website';
 
 export type BlogImageTier = 'draft' | 'standard' | 'best';
 
+/** What the blog is for; steers suggested terms and keyword ranking. */
+export type BlogGoal = 'traffic' | 'leads' | 'sales' | 'signups' | 'authority';
+
+/** The last keyword research run. */
+export type BlogPlanRun = {
+  status: 'queued' | 'running' | 'done' | 'failed';
+  error: string | null;
+  /** New keywords the run found. */
+  added: number | null;
+  finished_at: string | null;
+};
+
 export type BlogSettings = {
-  siteUrl?: string | null;
+  site_url?: string | null;
   topic?: string | null;
   audience?: string | null;
+  goal?: BlogGoal | null;
+  /** What the blog wants to write about. */
+  focus_topics?: string | null;
+  /** What the blog never writes about. */
+  avoid_topics?: string | null;
   language: string;
-  locationCode?: number;
+  location_code?: number;
   /** Articles planned per week; 0 turns planning off. */
-  cadencePerWeek: number;
-  /** Days a draft waits for review before it may auto-publish. */
-  reviewHoldDays: number;
-  autoPublish: boolean;
-  imageTier?: BlogImageTier;
-  inBodyImages?: number;
-  minWords?: number;
-  maxWords?: number;
-  brandVoiceId?: string | null;
-  targetKind?: BlogTargetKind | null;
-  targetAccountId?: string | null;
-  targetPlatform?: string | null;
-  websiteUrl?: string | null;
-  hasWebsiteSecret: boolean;
-  /** Whether search volume and difficulty can be fetched on this deployment. */
-  keywordDataAvailable?: boolean;
-  updatedAt?: string;
+  cadence_per_week: number;
+  /** Days before its planned date that a picked keyword starts being written. */
+  review_hold_days: number;
+  image_tier?: BlogImageTier;
+  in_body_images?: number;
+  min_words?: number;
+  max_words?: number;
+  brand_voice_id?: string | null;
+  target_kind?: BlogTargetKind | null;
+  target_account_id?: string | null;
+  target_platform?: string | null;
+  website_url?: string | null;
+  has_website_secret: boolean;
+  /** The last keyword research run; null before the first. */
+  plan_run?: BlogPlanRun | null;
+  /** Whether search volume and difficulty can be fetched on this deployment; on GET only. */
+  keyword_data_available?: boolean;
+  updated_at?: string;
 };
 
 export type UpdateBlogSettingsInput = {
   siteUrl?: string | null;
   topic?: string | null;
   audience?: string | null;
+  goal?: BlogGoal | null;
+  focusTopics?: string | null;
+  avoidTopics?: string | null;
   language?: string;
   locationCode?: number;
   /** 0 to 7. */
   cadencePerWeek?: number;
   /** 0 to 14. */
   reviewHoldDays?: number;
-  autoPublish?: boolean;
   imageTier?: BlogImageTier;
   /** 0 to 3. */
   inBodyImages?: number;
@@ -3179,15 +3207,16 @@ export type UpdateBlogSettingsInput = {
   websiteUrl?: string | null;
 };
 
-/** `websiteSecret` is set only on the call that first sets `websiteUrl`. Store it then. */
-export type BlogSettingsUpdate = { data: BlogSettings; websiteSecret: string | null };
+/** `website_secret` is set only on the update that issued it. Store it then. */
+export type BlogSettingsUpdate = BlogSettings & { website_secret?: string | null };
 
-export type BlogWebsiteTest = { ok: boolean; status: number | null; error: string | null };
+/** What the website answered a test delivery. A refusal throws a 502 `website_test_failed`. */
+export type BlogWebsiteTest = { http_status: number };
 
 export type BlogKeyword = {
   id: string;
   keyword: string;
-  searchVolume?: number | null;
+  search_volume?: number | null;
   /** 0 to 100. */
   difficulty?: number | null;
   cpc?: number | null;
@@ -3195,8 +3224,10 @@ export type BlogKeyword = {
   source: BlogKeywordSource;
   status: BlogKeywordStatus;
   /** YYYY-MM-DD. */
-  plannedFor?: string | null;
-  createdAt: string;
+  planned_for?: string | null;
+  /** Why the keyword serves the blog goal. */
+  fit_reason?: string | null;
+  created_at: string;
 };
 
 export type ListBlogKeywordsParams = {
@@ -3206,6 +3237,13 @@ export type ListBlogKeywordsParams = {
 };
 
 export type PlanBlogKeywordsInput = { seeds?: string[] };
+
+export type SuggestBlogSeedsInput = {
+  /** Current terms to refine; up to 20. */
+  seeds?: string[];
+  /** Steers the suggestions; up to 500 characters. */
+  prompt?: string;
+};
 
 export type AddBlogKeywordInput = {
   keyword: string;
@@ -3219,7 +3257,7 @@ export type UpdateBlogKeywordInput = {
 };
 
 export type BlogArticleImage = {
-  mediaId: string;
+  media_id: string;
   url: string;
   alt: string;
   /** Index of the outline heading the image sits under; absent on the featured image. */
@@ -3232,29 +3270,36 @@ export type BlogArticle = {
   slug: string;
   keyword?: string | null;
   excerpt?: string | null;
-  metaTitle?: string | null;
-  metaDescription?: string | null;
-  featuredImage?: BlogArticleImage | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  featured_image?: BlogArticleImage | null;
   tags: string[];
-  wordCount: number;
+  word_count: number;
   status: BlogArticleStatus;
   origin: BlogArticleOrigin;
-  reviewUntil?: string | null;
-  publishAt?: string | null;
-  publishedAt?: string | null;
-  publishedUrl?: string | null;
+  review_until?: string | null;
+  publish_at?: string | null;
+  published_at?: string | null;
+  published_url?: string | null;
   error?: string | null;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** The research the writer worked from. */
+export type BlogArticleBrief = {
+  competitors?: Array<{ title?: string; url?: string; description?: string }>;
+  questions?: string[];
+  search_volume?: number | null;
+  difficulty?: number | null;
 };
 
 export type BlogArticleFull = BlogArticle & {
   instructions?: string | null;
   outline?: string[];
-  /** The research the writer worked from. */
-  brief?: Record<string, unknown> | null;
-  bodyMarkdown?: string;
-  bodyHtml?: string;
+  brief?: BlogArticleBrief | null;
+  body_markdown?: string;
+  body_html?: string;
   images?: BlogArticleImage[];
 };
 
@@ -3283,8 +3328,16 @@ export type UpdateBlogArticleInput = {
   metaDescription?: string | null;
   bodyMarkdown?: string;
   tags?: string[];
-  /** Puts the draft on the calendar; null returns it to review. */
+  /** Puts an `in_review` article on the calendar; null returns it to review. A draft answers 409. */
   publishAt?: string | null;
+};
+
+/** An image in a webhook delivery; webhook payloads keep camelCase keys. */
+export type BlogArticleWebhookImage = {
+  mediaId: string;
+  url: string;
+  alt: string;
+  position?: number;
 };
 
 /** `data` of an `article.published` or `article.test` delivery. Image URLs are fetchable for 6 hours. */
@@ -3297,8 +3350,8 @@ export type BlogArticleWebhookPayload = {
   metaDescription: string | null;
   bodyMarkdown: string;
   bodyHtml: string;
-  featuredImage: BlogArticleImage | null;
-  images: BlogArticleImage[];
+  featuredImage: BlogArticleWebhookImage | null;
+  images: BlogArticleWebhookImage[];
   tags: string[];
   keyword: string | null;
   wordCount: number;
