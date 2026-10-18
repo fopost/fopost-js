@@ -204,6 +204,21 @@ import type {
   AdIdentity,
   SparkPost,
   UploadConversionsInput,
+  ConversionUploadResult,
+  ConversionBatch,
+  ListConversionEventsParams,
+  AdAccountParams,
+  AdPixel,
+  AdPixelDetail,
+  AdPixelStats,
+  CreatePixelInput,
+  UpdatePixelInput,
+  SharePixelInput,
+  EventMatchQuality,
+  CustomConversion,
+  CreateCustomConversionInput,
+  UpdateCustomConversionInput,
+  AdAccountMutationParams,
   ListInboxConversationsParams,
   ListInboxParams,
   ListAccountsParams,
@@ -1738,9 +1753,110 @@ class AdsResource {
     });
   }
 
-  /** Offline conversions. Emails and phone numbers are hashed before they leave FoPost. */
-  uploadConversions(input: UploadConversionsInput): Promise<{ accepted: number }> {
-    return this.http.post<{ accepted: number }>('/v1/ads/conversions', input);
+  /**
+   * Conversions API. Identifiers are hashed before they leave FoPost. Pass an
+   * `idempotencyKey` to make a retry safe; `sendConversions` requires one.
+   */
+  uploadConversions(
+    input: UploadConversionsInput,
+    idempotencyKey?: string,
+  ): Promise<ConversionUploadResult> {
+    return this.http.request<ConversionUploadResult>(
+      'POST',
+      '/v1/ads/conversions',
+      input,
+      undefined,
+      idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+    );
+  }
+
+  /**
+   * Same send, but the key is required; a replay answers `replayed: true` and
+   * sends nothing. (`sendConversionEvents` is the LinkedIn conversion-rule send.)
+   */
+  sendConversions(
+    input: UploadConversionsInput,
+    idempotencyKey: string,
+  ): Promise<ConversionUploadResult> {
+    if (!idempotencyKey) throw new Error('FoPost: idempotencyKey is required');
+    return this.http.request<ConversionUploadResult>(
+      'POST',
+      '/v1/ads/conversions/events',
+      input,
+      undefined,
+      { 'Idempotency-Key': idempotencyKey },
+    );
+  }
+
+  /** Stored batches, newest first, with hashed identifiers only. */
+  conversionEvents(params: ListConversionEventsParams = {}): Promise<ConversionBatch[]> {
+    return this.http.get<ConversionBatch[]>('/v1/ads/conversions/events', {
+      workspace_id: params.workspaceId,
+      connection_id: params.connectionId,
+      limit: params.limit,
+    });
+  }
+
+  pixels(params: AdAccountParams): Promise<AdPixel[]> {
+    return this.http.get<AdPixel[]>('/v1/ads/pixels', adAccountQuery(params));
+  }
+
+  createPixel(input: CreatePixelInput): Promise<AdPixelDetail> {
+    return this.http.post<AdPixelDetail>('/v1/ads/pixels', input);
+  }
+
+  /** `code` is the install script. */
+  getPixel(id: string, params: AdAccountParams): Promise<AdPixelDetail> {
+    return this.http.get<AdPixelDetail>(`/v1/ads/pixels/${id}`, adAccountQuery(params));
+  }
+
+  updatePixel(id: string, input: UpdatePixelInput): Promise<AdPixelDetail> {
+    return this.http.patch<AdPixelDetail>(`/v1/ads/pixels/${id}`, input);
+  }
+
+  /** Shares the pixel with another ad account under the same business portfolio. */
+  sharePixel(id: string, input: SharePixelInput): Promise<void> {
+    return this.http.post(`/v1/ads/pixels/${id}/share`, input);
+  }
+
+  /** Event counts over the last 28 days. */
+  pixelStats(id: string, params: AdAccountParams): Promise<AdPixelStats> {
+    return this.http.get<AdPixelStats>(`/v1/ads/pixels/${id}/stats`, adAccountQuery(params));
+  }
+
+  /** Per-event match score and which identifiers reached the network. */
+  eventMatchQuality(id: string, params: AdAccountParams): Promise<EventMatchQuality[]> {
+    return this.http.get<EventMatchQuality[]>(
+      `/v1/ads/pixels/${id}/match-quality`,
+      adAccountQuery(params),
+    );
+  }
+
+  customConversions(params: AdAccountParams): Promise<CustomConversion[]> {
+    return this.http.get<CustomConversion[]>('/v1/ads/custom-conversions', adAccountQuery(params));
+  }
+
+  createCustomConversion(input: CreateCustomConversionInput): Promise<CustomConversion> {
+    return this.http.post<CustomConversion>('/v1/ads/custom-conversions', input);
+  }
+
+  getCustomConversion(id: string, params: AdAccountParams): Promise<CustomConversion> {
+    return this.http.get<CustomConversion>(
+      `/v1/ads/custom-conversions/${id}`,
+      adAccountQuery(params),
+    );
+  }
+
+  updateCustomConversion(
+    id: string,
+    input: UpdateCustomConversionInput,
+  ): Promise<CustomConversion> {
+    return this.http.patch<CustomConversion>(`/v1/ads/custom-conversions/${id}`, input);
+  }
+
+  /** The ad account travels in the body, because the path already carries the conversion. */
+  deleteCustomConversion(id: string, input: AdAccountMutationParams): Promise<void> {
+    return this.http.delete(`/v1/ads/custom-conversions/${id}`, input);
   }
 
   /** Comments on an ad, read live. Pass `nextCursor` back as `after`. */
@@ -2699,6 +2815,10 @@ function googleQuery(scope: GoogleAdsScope) {
 
 function metaQuery(params: { workspaceId?: string; connectionId: string }) {
   return { workspace_id: params.workspaceId, connection_id: params.connectionId };
+}
+
+function adAccountQuery(params: AdAccountParams) {
+  return { ...metaQuery(params), ad_account_id: params.adAccountId };
 }
 
 function insightsRange(params: {
