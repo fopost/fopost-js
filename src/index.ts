@@ -22,7 +22,6 @@ import type {
   AccountCredentialCheck,
   AccountPrimary,
   AccountTokenRefresh,
-  AddBlogKeywordInput,
   AddCommunityInput,
   AnalyticsCollectResult,
   AnalyticsOverview,
@@ -86,20 +85,6 @@ import type {
   WebhookDeliveryDetail,
   WorkspaceAnalytics,
   WorkspaceDetail,
-  BlogArticle,
-  BlogArticleFull,
-  BlogKeyword,
-  BlogSettings,
-  BlogSettingsUpdate,
-  BlogWebsiteTest,
-  ListBlogArticlesParams,
-  ListBlogKeywordsParams,
-  PlanBlogKeywordsInput,
-  RequestBlogArticleInput,
-  SuggestBlogSeedsInput,
-  UpdateBlogArticleInput,
-  UpdateBlogKeywordInput,
-  UpdateBlogSettingsInput,
   AnalyticsScopeParams,
   CollectPostResult,
   ContentDecay,
@@ -456,7 +441,6 @@ export class FoPost {
   readonly activity: ActivityResource;
   readonly googleBusiness: GoogleBusinessResource;
   readonly x: XResource;
-  readonly blog: BlogResource;
   readonly blogs: BlogsResource;
   readonly queue: QueueResource;
   readonly connectSessions: ConnectSessionsResource;
@@ -486,7 +470,6 @@ export class FoPost {
     this.activity = new ActivityResource(this.http);
     this.googleBusiness = new GoogleBusinessResource(this.http);
     this.x = new XResource(this.http);
-    this.blog = new BlogResource(this.http);
     this.blogs = new BlogsResource(this.http);
     this.queue = new QueueResource(this.http);
     this.connectSessions = new ConnectSessionsResource(this.http);
@@ -3831,177 +3814,6 @@ class GoogleBusinessResource {
   assign(accountId: string, input: { workspaceId: string }): Promise<MovedAccount> {
     return this.http.post<MovedAccount>(`/v1/accounts/${accountId}/gbp/assign`, {
       workspace_id: input.workspaceId,
-    });
-  }
-}
-
-/**
- * Articles for a website, planned from keywords and written on a cadence.
- * Reads, settings, keyword edits and `submitArticle` need the `posts` scope;
- * `suggestSeeds`, `planKeywords`, `requestArticle` and `regenerateArticle`
- * spend credits and need `ai`; `publishArticle` needs `publish`.
- */
-class BlogResource {
-  constructor(private http: HttpClient) {}
-
-  getSettings(workspaceId: string): Promise<BlogSettings> {
-    return this.http.get<BlogSettings>('/v1/blog/settings', { workspace_id: workspaceId });
-  }
-
-  /** `website_secret` is set only on the call that first sets `websiteUrl`. */
-  updateSettings(workspaceId: string, patch: UpdateBlogSettingsInput): Promise<BlogSettingsUpdate> {
-    return this.http.patch<BlogSettingsUpdate>('/v1/blog/settings', { workspaceId, ...patch });
-  }
-
-  /** Issues a new website secret; the old one stops verifying at once. */
-  rotateWebsiteSecret(workspaceId: string): Promise<{ website_secret: string }> {
-    return this.http.post<{ website_secret: string }>('/v1/blog/settings/website-secret', {
-      workspaceId,
-    });
-  }
-
-  /** Sends a signed `article.test` delivery to `websiteUrl`. A refusal throws a 502 `website_test_failed`. */
-  testWebsite(workspaceId: string): Promise<BlogWebsiteTest> {
-    return this.http.post<BlogWebsiteTest>('/v1/blog/settings/website-test', { workspaceId });
-  }
-
-  listKeywords(workspaceId: string, params: ListBlogKeywordsParams = {}): Promise<BlogKeyword[]> {
-    return this.http.get<BlogKeyword[]>('/v1/blog/keywords', {
-      workspace_id: workspaceId,
-      status: Array.isArray(params.status) ? params.status.join(',') : params.status,
-      limit: params.limit,
-    });
-  }
-
-  /** About 10 search terms from the blog goal and topics; pass `seeds` to refine them. 402 on an empty balance. */
-  suggestSeeds(
-    workspaceId: string,
-    input: SuggestBlogSeedsInput = {},
-  ): Promise<{ seeds: string[] }> {
-    return this.http.post<{ seeds: string[] }>('/v1/blog/keywords/suggest', {
-      workspaceId,
-      seeds: input.seeds,
-      prompt: input.prompt,
-    });
-  }
-
-  /**
-   * Queues keyword research; results land as `suggested` keywords and the calendar is untouched.
-   * Follow the run in `plan_run` on the settings. 402 on an empty balance.
-   */
-  planKeywords(
-    workspaceId: string,
-    input: PlanBlogKeywordsInput = {},
-  ): Promise<{ status: 'queued' }> {
-    return this.http.post<{ status: 'queued' }>('/v1/blog/keywords/plan', {
-      workspaceId,
-      seeds: input.seeds,
-    });
-  }
-
-  addKeyword(workspaceId: string, input: AddBlogKeywordInput): Promise<BlogKeyword> {
-    return this.http.post<BlogKeyword>('/v1/blog/keywords', {
-      workspaceId,
-      keyword: input.keyword,
-      plannedFor: input.plannedFor,
-    });
-  }
-
-  /** Setting `status: 'planned'` picks the keyword; it takes the next free date. */
-  updateKeyword(
-    workspaceId: string,
-    id: string,
-    patch: UpdateBlogKeywordInput,
-  ): Promise<BlogKeyword> {
-    return this.http.request<BlogKeyword>(
-      'PATCH',
-      `/v1/blog/keywords/${id}`,
-      { status: patch.status, plannedFor: patch.plannedFor },
-      { workspace_id: workspaceId },
-    );
-  }
-
-  deleteKeyword(workspaceId: string, id: string): Promise<void> {
-    return this.http.request<void>('DELETE', `/v1/blog/keywords/${id}`, undefined, {
-      workspace_id: workspaceId,
-    });
-  }
-
-  listArticles(workspaceId: string, params: ListBlogArticlesParams = {}): Promise<BlogArticle[]> {
-    return this.http.get<BlogArticle[]>('/v1/blog/articles', {
-      workspace_id: workspaceId,
-      status: Array.isArray(params.status) ? params.status.join(',') : params.status,
-      limit: params.limit,
-    });
-  }
-
-  /** Queues the writer; poll `getArticle` until `status` leaves `queued`/`writing`. 402 on an empty balance. */
-  requestArticle(workspaceId: string, input: RequestBlogArticleInput): Promise<BlogArticle> {
-    return this.http.post<BlogArticle>('/v1/blog/articles', {
-      workspaceId,
-      title: input.title,
-      keyword: input.keyword,
-      keywordId: input.keywordId,
-      instructions: input.instructions,
-    });
-  }
-
-  getArticle(workspaceId: string, id: string): Promise<BlogArticleFull> {
-    return this.http.get<BlogArticleFull>(`/v1/blog/articles/${id}`, { workspace_id: workspaceId });
-  }
-
-  /** Only a draft, in-review, scheduled, failed or rejected article can be edited; anything else answers 409 `invalid_state`. */
-  updateArticle(
-    workspaceId: string,
-    id: string,
-    patch: UpdateBlogArticleInput,
-  ): Promise<BlogArticleFull> {
-    return this.http.request<BlogArticleFull>(
-      'PATCH',
-      `/v1/blog/articles/${id}`,
-      {
-        title: patch.title,
-        slug: patch.slug,
-        excerpt: patch.excerpt,
-        metaTitle: patch.metaTitle,
-        metaDescription: patch.metaDescription,
-        bodyMarkdown: patch.bodyMarkdown,
-        tags: patch.tags,
-        publishAt: patch.publishAt,
-      },
-      { workspace_id: workspaceId },
-    );
-  }
-
-  regenerateArticle(workspaceId: string, id: string): Promise<BlogArticle> {
-    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/regenerate`, undefined, {
-      workspace_id: workspaceId,
-    });
-  }
-
-  /** Moves a draft, failed or rejected article to `in_review`; 409 from any other state. */
-  submitArticle(workspaceId: string, id: string): Promise<BlogArticle> {
-    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/submit`, undefined, {
-      workspace_id: workspaceId,
-    });
-  }
-
-  /** The article must be `in_review` (a draft answers 409 until submitted); 409 `no_target` when the settings name nowhere to publish. */
-  publishArticle(workspaceId: string, id: string): Promise<BlogArticle> {
-    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/publish`, undefined, {
-      workspace_id: workspaceId,
-    });
-  }
-
-  rejectArticle(workspaceId: string, id: string): Promise<BlogArticle> {
-    return this.http.request<BlogArticle>('POST', `/v1/blog/articles/${id}/reject`, undefined, {
-      workspace_id: workspaceId,
-    });
-  }
-
-  deleteArticle(workspaceId: string, id: string): Promise<void> {
-    return this.http.request<void>('DELETE', `/v1/blog/articles/${id}`, undefined, {
-      workspace_id: workspaceId,
     });
   }
 }

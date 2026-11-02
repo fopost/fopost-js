@@ -26,6 +26,13 @@ All notable changes to `@fopost/sdk` are documented here.
   reconnected before repost, bookmark and follow work: an older grant answers
   `409 reconnect_required`. Every one of these calls is an X API call metered to the workspace.
 
+### Removed
+
+- **Breaking:** the `blog` resource (`/v1/blog/*`: settings, website secret and test, keywords
+  and articles), its `Blog*` types, `ArticlePublishedPayload`, `ArticlePublishedEvent` and the
+  `article.published` webhook event name. The API no longer serves them; articles are ordinary
+  posts. `blogs` is unchanged.
+
 ## 0.7.0
 
 ### Added

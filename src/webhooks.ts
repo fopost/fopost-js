@@ -14,8 +14,6 @@
  * Web Crypto only, so this runs on Node, Deno and workers without a dependency.
  */
 
-import type { BlogArticleWebhookPayload } from './types.js';
-
 /** Refuse a delivery signed longer ago than this. Matches the API's own tolerance. */
 export const SIGNATURE_TOLERANCE_SECONDS = 300;
 
@@ -37,13 +35,6 @@ export type WebhookEvent<T = unknown> = {
   event: string;
   data: T;
   timestamp: string | null;
-};
-
-/** `data` of an `article.published` delivery. */
-export type ArticlePublishedPayload = BlogArticleWebhookPayload & { publishedUrl: string };
-
-export type ArticlePublishedEvent = WebhookEvent<ArticlePublishedPayload> & {
-  event: 'article.published';
 };
 
 export type WebhookErrorCode =
