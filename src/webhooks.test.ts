@@ -1,37 +1,21 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { WebhookError, verifyWebhook, webhooks, type ArticlePublishedPayload } from './index.js';
+import { WebhookError, verifyWebhook, webhooks } from './index.js';
 
 const SECRET = 'whsec_test';
 
-const payload: ArticlePublishedPayload = {
-  id: 'art_1',
-  title: 'Planning a month of articles',
-  slug: 'planning-a-month-of-articles',
-  excerpt: null,
-  metaTitle: null,
-  metaDescription: null,
-  bodyMarkdown: '# Planning',
-  bodyHtml: '<h1>Planning</h1>',
-  featuredImage: null,
-  images: [],
-  tags: ['planning'],
-  keyword: 'content calendar',
-  wordCount: 2,
-  publishedAt: '2026-10-11T09:00:00.000Z',
-  publishedUrl: 'https://yourbrand.com/blog/planning-a-month-of-articles',
-};
+const payload = { id: 'post_1', status: 'published' };
 
 function delivery(timestamp = Math.floor(Date.now() / 1000)) {
   const body = JSON.stringify({
-    event: 'article.published',
+    event: 'post.published',
     data: payload,
     timestamp: '2026-10-11T09:00:01.000Z',
   });
   const sign = (message: string) =>
     `sha256=${createHmac('sha256', SECRET).update(message).digest('hex')}`;
   const headers: Record<string, string> = {
-    'X-FoPost-Event': 'article.published',
+    'X-FoPost-Event': 'post.published',
     'X-FoPost-Delivery': 'dlv_1',
     'X-FoPost-Timestamp': String(timestamp),
     'X-FoPost-Signature-256': sign(`${timestamp}.${body}`),
@@ -43,11 +27,11 @@ function delivery(timestamp = Math.floor(Date.now() / 1000)) {
 describe('verifyWebhook', () => {
   it('accepts a timestamped signature and returns the envelope', async () => {
     const { body, headers } = delivery();
-    const event = await verifyWebhook<ArticlePublishedPayload>(body, headers, SECRET);
-    expect(event.event).toBe('article.published');
+    const event = await verifyWebhook<typeof payload>(body, headers, SECRET);
+    expect(event.event).toBe('post.published');
     expect(event.timestamp).toBe('2026-10-11T09:00:01.000Z');
-    expect(event.data.publishedUrl).toBe(payload.publishedUrl);
-    expect(event.data.slug).toBe(payload.slug);
+    expect(event.data.id).toBe(payload.id);
+    expect(event.data.status).toBe(payload.status);
   });
 
   it('verifies raw bytes and Headers instances the same way', async () => {
@@ -57,12 +41,12 @@ describe('verifyWebhook', () => {
       new Headers(headers),
       SECRET,
     );
-    expect(event.event).toBe('article.published');
+    expect(event.event).toBe('post.published');
   });
 
   it('refuses a tampered body', async () => {
     const { body, headers } = delivery();
-    const forged = body.replace('planning-a-month', 'planning-a-year');
+    const forged = body.replace('post_1', 'post_2');
     await expect(verifyWebhook(forged, headers, SECRET)).rejects.toMatchObject({
       code: 'invalid_signature',
     });
@@ -84,7 +68,7 @@ describe('verifyWebhook', () => {
       ...legacy
     } = headers;
     const event = await verifyWebhook(body, legacy, SECRET);
-    expect(event.event).toBe('article.published');
+    expect(event.event).toBe('post.published');
   });
 
   it('refuses a body-only signature over a different body', async () => {
