@@ -1153,6 +1153,15 @@ export type ListInboxThreadsParams = InboxListFilters & {
 
 export type ListInboxConversationsParams = Omit<ListInboxThreadsParams, 'kind'>;
 
+export type ResolveInboxInput = {
+  workspaceId: string;
+  type: InboxItemType;
+  /** Only these connected accounts. */
+  accountId?: string | string[];
+  /** ISO 8601. Only items the platform dates before it. */
+  before?: string;
+};
+
 export type MarkInboxThreadReadInput = {
   workspaceId: string;
   accountId: string;

@@ -70,6 +70,27 @@ describe('inbox', () => {
     });
   });
 
+  it('resolves in bulk with the accounts as an array', async () => {
+    const { calls, client } = recordingClient({ data: { resolved: 4 } });
+    const result = await client.inbox.resolve({
+      workspaceId: 'ws',
+      type: 'comment',
+      accountId: 'a1',
+      before: '2026-10-27T00:00:00Z',
+    });
+    expect(result).toEqual({ resolved: 4 });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/inbox/resolve',
+      body: {
+        workspace_id: 'ws',
+        type: 'comment',
+        account_id: ['a1'],
+        before: '2026-10-27T00:00:00Z',
+      },
+    });
+  });
+
   it('replies, patches state, moderates and decides approvals on the right paths', async () => {
     const { calls, client } = recordingClient();
     await client.inbox.reply('i1', 'Thanks!');

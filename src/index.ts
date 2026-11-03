@@ -290,6 +290,7 @@ import type {
   UploadLimits,
   RenamedAccount,
   RepurposeUrlInput,
+  ResolveInboxInput,
   RewriteInput,
   CreateDiscordEventInput,
   CreateDiscordRoleInput,
@@ -1627,6 +1628,14 @@ class InboxResource {
       post_external_id: input.postExternalId,
       conversation_id: input.conversationId,
     });
+  }
+
+  /** Resolves every unanswered item of one type. Nothing reaches a platform. */
+  resolve(input: ResolveInboxInput): Promise<{ resolved: number }> {
+    const body: Record<string, unknown> = { workspace_id: input.workspaceId, type: input.type };
+    if (input.accountId !== undefined) body.account_id = toArray(input.accountId);
+    if (input.before !== undefined) body.before = input.before;
+    return this.http.post<{ resolved: number }>('/v1/inbox/resolve', body);
   }
 
   /** Poll every inbox-capable account in the workspace now. */

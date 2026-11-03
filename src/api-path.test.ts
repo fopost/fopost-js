@@ -178,6 +178,7 @@ async function callEveryEndpoint(fopost: FoPost) {
     platforms: ['twitter'],
   });
   await fopost.inbox.list();
+  await fopost.inbox.resolve({ workspaceId: 'ws', type: 'comment' });
   await fopost.inbox.reply('i1', 'hi');
   await fopost.inbox.like('i1');
   await fopost.inbox.startConversation({ commentId: 'i1', text: 'hi' });
@@ -274,7 +275,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(206);
+    expect(urls.length).toBe(207);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
