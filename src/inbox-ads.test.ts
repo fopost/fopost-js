@@ -33,7 +33,8 @@ describe('inbox', () => {
     });
     const page = await client.inbox.list({
       workspaceId: 'ws',
-      state: 'unread',
+      status: 'unanswered',
+      since: '2026-10-01T00:00:00Z',
       postExternalId: '17895',
       perPage: 10,
       page: 2,
@@ -44,10 +45,49 @@ describe('inbox', () => {
     expect(req.path).toBe('/v1/inbox');
     expect(req.query).toEqual({
       workspace_id: 'ws',
-      state: 'unread',
+      status: 'unanswered',
+      since: '2026-10-01T00:00:00Z',
       post_external_id: '17895',
       per_page: '10',
       page: '2',
+    });
+  });
+
+  it('joins several accounts with commas on every list', async () => {
+    const { calls, client } = recordingClient({
+      data: [],
+      meta: { page: 1, perPage: 25, total: 0 },
+    });
+    await client.inbox.threads({ kind: 'reviews', accountId: ['a1', 'a2'], sort: 'oldest' });
+    expect(last(calls)).toMatchObject({
+      path: '/v1/inbox/posts',
+      query: { kind: 'reviews', account_id: 'a1,a2', sort: 'oldest' },
+    });
+    await client.inbox.conversations({ accountId: 'a1', status: 'replied' });
+    expect(last(calls)).toMatchObject({
+      path: '/v1/inbox/conversations',
+      query: { account_id: 'a1', status: 'replied' },
+    });
+  });
+
+  it('resolves in bulk with the accounts as an array', async () => {
+    const { calls, client } = recordingClient({ data: { resolved: 4 } });
+    const result = await client.inbox.resolve({
+      workspaceId: 'ws',
+      type: 'comment',
+      accountId: 'a1',
+      before: '2026-10-27T00:00:00Z',
+    });
+    expect(result).toEqual({ resolved: 4 });
+    expect(last(calls)).toMatchObject({
+      method: 'POST',
+      path: '/v1/inbox/resolve',
+      body: {
+        workspace_id: 'ws',
+        type: 'comment',
+        account_id: ['a1'],
+        before: '2026-10-27T00:00:00Z',
+      },
     });
   });
 

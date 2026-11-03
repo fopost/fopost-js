@@ -1113,12 +1113,22 @@ export type InboxPage<T> = {
   meta: { page: number; perPage: number; total: number };
 };
 
-export type ListInboxParams = {
+/** Exclusive buckets: a reply also resolves the item. */
+export type InboxStatus = 'unanswered' | 'replied' | 'resolved';
+
+/** The filters every inbox list shares. */
+export type InboxListFilters = {
+  /** One connected account id, or several. */
+  accountId?: string | string[];
+  status?: InboxStatus;
+  /** ISO 8601. Only items the platform dates at or after it. */
+  since?: string;
+  sort?: 'newest' | 'oldest';
+};
+
+export type ListInboxParams = InboxListFilters & {
   workspaceId?: string;
   type?: InboxItemType;
-  state?: InboxItemState;
-  platform?: Platform;
-  accountId?: string;
   /** Comments under one FoPost post. */
   postId?: string;
   /** Comments under one platform post, including posts not published through FoPost. */
@@ -1126,29 +1136,31 @@ export type ListInboxParams = {
   /** One DM thread. */
   conversationId?: string;
   direction?: 'inbound' | 'outbound';
-  q?: string;
-  sort?: 'newest' | 'oldest' | 'unanswered';
   page?: number;
   perPage?: number;
 };
 
-export type ListInboxThreadsParams = {
+export type ListInboxThreadsParams = InboxListFilters & {
   workspaceId?: string;
   /**
    * `comments` (default) for threads under our posts, `mentions` for posts we
    * were tagged in, `reviews` for ratings left on the business.
    */
   kind?: 'comments' | 'mentions' | 'reviews';
-  platform?: Platform;
-  accountId?: string;
-  state?: InboxItemState;
-  q?: string;
-  sort?: 'newest' | 'oldest' | 'unanswered';
   page?: number;
   perPage?: number;
 };
 
 export type ListInboxConversationsParams = Omit<ListInboxThreadsParams, 'kind'>;
+
+export type ResolveInboxInput = {
+  workspaceId: string;
+  type: InboxItemType;
+  /** Only these connected accounts. */
+  accountId?: string | string[];
+  /** ISO 8601. Only items the platform dates before it. */
+  before?: string;
+};
 
 export type MarkInboxThreadReadInput = {
   workspaceId: string;

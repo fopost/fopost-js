@@ -25,8 +25,15 @@ All notable changes to `@fopost/sdk` are documented here.
 - A spent X balance answers `402 platform_balance_spent`. Existing X accounts must be
   reconnected before repost, bookmark and follow work: an older grant answers
   `409 reconnect_required`. Every one of these calls is an X API call metered to the workspace.
+- `inbox.list`, `inbox.threads` and `inbox.conversations` take `status` (`unanswered`,
+  `replied`, `resolved`), `since`, and `accountId` as one id or an array (sent comma-separated).
+- `inbox.resolve` resolves every unanswered item of one type, optionally only on some accounts
+  or before a date, and returns `{ resolved }`.
 
 ### Removed
+
+- **Breaking:** `platform`, `q`, `state` and the `unanswered` sort on the inbox lists. The chat
+  adapter's `receive` takes `status` (default `unanswered`) in place of `state` and `platform`.
 
 - **Breaking:** the `blog` resource (`/v1/blog/*`: settings, website secret and test, keywords
   and articles), its `Blog*` types, `ArticlePublishedPayload`, `ArticlePublishedEvent` and the
