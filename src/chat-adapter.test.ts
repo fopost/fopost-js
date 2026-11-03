@@ -168,7 +168,7 @@ describe('chat adapter round trip', () => {
     expect(calls[2].body).toEqual({ state: 'read' });
   });
 
-  it('receives unread inbound DMs and nothing else', async () => {
+  it('receives unanswered inbound DMs and nothing else', async () => {
     const { calls, fetchImpl } = mockApi({
       'GET /v1/inbox': () => ({ data: [item()], meta: { page: 1, perPage: 25, total: 1 } }),
     });
@@ -176,7 +176,7 @@ describe('chat adapter round trip', () => {
     expect(messages).toHaveLength(1);
     expect(calls[0].query.get('type')).toBe('dm');
     expect(calls[0].query.get('direction')).toBe('inbound');
-    expect(calls[0].query.get('state')).toBe('unread');
+    expect(calls[0].query.get('status')).toBe('unanswered');
   });
 
   it('replies into a conversation through its newest message', async () => {

@@ -30,6 +30,7 @@ import type {
   InboxAttachment,
   InboxItem,
   InboxItemType,
+  InboxStatus,
   ListInboxParams,
   Platform,
 } from './types.js';
@@ -106,9 +107,8 @@ export type ChatAdapterOptions = {
 export type ReceiveParams = {
   accountId?: string;
   conversationId?: string;
-  platform?: Platform;
-  /** Default `unread`. Pass null to read every state. */
-  state?: 'unread' | 'read' | 'resolved' | 'snoozed' | null;
+  /** Default `unanswered`. Pass null to read every status. */
+  status?: InboxStatus | null;
   /** Default the adapter's page size. */
   limit?: number;
 };
@@ -219,17 +219,16 @@ export class ChatAdapter {
     }
   }
 
-  /** Inbound direct messages, newest first. Unread by default. */
+  /** Inbound direct messages, newest first. Unanswered by default. */
   async receive(params: ReceiveParams = {}): Promise<ChatMessage[]> {
-    const state = params.state === undefined ? 'unread' : params.state;
+    const status = params.status === undefined ? 'unanswered' : params.status;
     const page = await this.client.inbox.list({
       ...this.scope(),
       type: 'dm',
       direction: 'inbound',
-      ...(state === null ? {} : { state }),
+      ...(status === null ? {} : { status }),
       accountId: params.accountId,
       conversationId: params.conversationId,
-      platform: params.platform,
       perPage: params.limit ?? this.pageSize,
     });
     return page.data.map(toChatMessage);
@@ -307,7 +306,7 @@ export class ChatAdapter {
     await this.client.inbox.setTyping(conversationId, accountId, on);
   }
 
-  /** Marks one message read, so `receive()` stops returning it. */
+  /** Marks one message read. */
   async markRead(message: ChatMessage | string): Promise<void> {
     await this.client.inbox.update(typeof message === 'string' ? message : message.id, {
       state: 'read',

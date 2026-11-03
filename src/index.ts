@@ -234,6 +234,7 @@ import type {
   InboxApproval,
   InboxConversation,
   InboxItem,
+  InboxListFilters,
   KnowledgeSource,
   KnowledgeSourceStatus,
   KnowledgeMatch,
@@ -1551,6 +1552,19 @@ class AiResource {
   }
 }
 
+function toArray(value: string | string[]): string[] {
+  return Array.isArray(value) ? value : [value];
+}
+
+function listFilters(f: InboxListFilters): Record<string, string | undefined> {
+  return {
+    account_id: f.accountId === undefined ? undefined : toArray(f.accountId).join(','),
+    status: f.status,
+    since: f.since,
+    sort: f.sort,
+  };
+}
+
 class InboxResource {
   constructor(private http: HttpClient) {}
 
@@ -1559,15 +1573,11 @@ class InboxResource {
     return this.http.get<InboxPage<InboxItem>>('/v1/inbox', {
       workspace_id: params.workspaceId,
       type: params.type,
-      state: params.state,
-      platform: params.platform,
-      account_id: params.accountId,
+      ...listFilters(params),
       post_id: params.postId,
       post_external_id: params.postExternalId,
       conversation_id: params.conversationId,
       direction: params.direction,
-      q: params.q,
-      sort: params.sort,
       page: params.page,
       per_page: params.perPage,
     });
@@ -1578,11 +1588,7 @@ class InboxResource {
     return this.http.get<InboxPage<InboxThread>>('/v1/inbox/posts', {
       workspace_id: params.workspaceId,
       kind: params.kind,
-      platform: params.platform,
-      account_id: params.accountId,
-      state: params.state,
-      q: params.q,
-      sort: params.sort,
+      ...listFilters(params),
       page: params.page,
       per_page: params.perPage,
     });
@@ -1592,11 +1598,7 @@ class InboxResource {
   conversations(params: ListInboxConversationsParams = {}): Promise<InboxPage<InboxConversation>> {
     return this.http.get<InboxPage<InboxConversation>>('/v1/inbox/conversations', {
       workspace_id: params.workspaceId,
-      platform: params.platform,
-      account_id: params.accountId,
-      state: params.state,
-      q: params.q,
-      sort: params.sort,
+      ...listFilters(params),
       page: params.page,
       per_page: params.perPage,
     });

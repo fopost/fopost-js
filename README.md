@@ -311,7 +311,7 @@ await chat.send({ accountId: 'acc_...', handle: 'samrivera', text: 'Following up
 | ---------------------------------------- | ---------------------------------------------------------------- |
 | `parseWebhook(body, headers)`            | Verifies a delivery and returns the `ChatEvent`                  |
 | `verifyWebhook(body, headers)`           | Signature check on its own; throws on a forged or stale delivery |
-| `receive(params?)`                       | Inbound DMs, unread by default                                   |
+| `receive(params?)`                       | Inbound DMs, unanswered by default                               |
 | `receiveOne(event \| id)`                | The full message behind an event id, or `null`                   |
 | `send(message)`                          | Reply, reply into a thread, or open one                          |
 | `typing(conversationId, accountId, on?)` | Typing indicator                                                 |
