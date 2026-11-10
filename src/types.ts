@@ -3803,6 +3803,8 @@ export type BulkImportInput = {
   workspaceId: string;
   /** The CSV file. */
   file: PostFileInput;
+  /** Account ids or platform names for rows whose `accounts` cell is empty. */
+  accounts?: string[];
 };
 
 export type BulkImportRow = {

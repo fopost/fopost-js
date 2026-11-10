@@ -203,3 +203,25 @@ describe('posts.update with files', () => {
     });
   });
 });
+
+describe('posts.bulkImport', () => {
+  const csv = { data: new Uint8Array([1]), filename: 'posts.csv', mimeType: 'text/csv' };
+
+  it('sends default accounts comma-separated when given', async () => {
+    const { calls, client } = recordingClient();
+    await client.posts.bulkImportValidate({
+      workspaceId: 'ws',
+      file: csv,
+      accounts: ['twitter', 'linkedin'],
+    });
+    const form = calls[0].body as FormData;
+    expect(form.get('accounts')).toBe('twitter,linkedin');
+  });
+
+  it('omits accounts when not given', async () => {
+    const { calls, client } = recordingClient();
+    await client.posts.bulkImportCommit({ workspaceId: 'ws', file: csv, accounts: [] });
+    const form = calls[0].body as FormData;
+    expect(form.has('accounts')).toBe(false);
+  });
+});
