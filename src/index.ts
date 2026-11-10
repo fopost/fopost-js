@@ -710,6 +710,7 @@ function bulkForm(input: BulkImportInput): FormData {
   const f = normalizeFile(input.file);
   const form = new FormData();
   form.append('workspace_id', input.workspaceId);
+  if (input.accounts?.length) form.append('accounts', input.accounts.join(','));
   const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.mimeType });
   form.append('file', blob, f.filename);
   return form;

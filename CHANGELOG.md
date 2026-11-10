@@ -6,6 +6,9 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ### Added
 
+- `posts.bulkImportValidate` and `posts.bulkImportCommit` take an optional `accounts` list
+  (account ids or platform names), sent comma-separated and applied to every CSV row whose
+  own `accounts` cell is empty.
 - `ads` resource: Conversions API, pixels and custom conversions (`ads` scope only).
   `uploadConversions` takes an optional idempotency key and now returns
   `ConversionUploadResult` (`id`, `accepted`, `eventCount`, `replayed`); `sendConversions`
