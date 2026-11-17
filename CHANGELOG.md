@@ -4,6 +4,8 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ## Unreleased
 
+## 0.8.0
+
 ### Added
 
 - `posts.bulkImportValidate` and `posts.bulkImportCommit` take an optional `accounts` list
