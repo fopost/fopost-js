@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 ## What This Is
 
 `@fopost/sdk` on npm — the official TypeScript/Node.js client for the FoPost REST API
-(`fopost.com`). Current version `0.7.0`. It wraps the API's HTTP surface in a namespaced
+(`fopost.com`). Current version `0.8.0`. It wraps the API's HTTP surface in a namespaced
 client (`posts`, `accounts`, `accountGroups`, `workspaces`, `labels`, `ai`, `inbox`, `contacts`, `ads`, `queue`, `webhooks`, `automations`, `analytics`, `logs`, `connectSessions`, …) with hand-written DTOs.
 
 Requires Node >= 18 (`globalThis.fetch`). Source is ESM TypeScript; `tsup` emits ESM +
