@@ -110,7 +110,7 @@ Resource coverage matches the public API (`fopost-api-collections/openapi.json`)
 workspaces and labels (full CRUD), queue, connectSessions, webhooks (the REST side; signature
 verification is the `webhooks.verify` export), automations (with versions and runs), analytics,
 logs, ai, inbox, contacts, broadcasts, sequences, ads, media (multipart `upload` and direct
-upload), knowledge, activity, googleBusiness, blog, blogs, whatsapp, validate. Newer response
+upload), knowledge, activity, googleBusiness, blog, blogs, whatsapp, validate, designs, fonts, videoEdits. Newer response
 DTOs are typed in the API's snake_case; inputs stay camelCase and are mapped explicitly in the
 method. Adding a resource is a public-surface change: see the Downstream Packages rule.
 
