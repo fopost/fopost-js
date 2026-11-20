@@ -4,6 +4,19 @@ All notable changes to `@fopost/sdk` are documented here.
 
 ## Unreleased
 
+### Added
+
+- `designs` resource: `list`, `get`, `create`, `update`, `delete`, `listVersions`,
+  `restoreVersion`, `duplicate`, `export`, `bulk`, `posts`, `textToSlides` and `fromPost` over
+  `/v1/designs`. The design document travels as a plain object (`DesignDocument`); `update` and
+  `restoreVersion` answer `{ data, version }`.
+- `fonts` resource: `list` (library plus workspace uploads), `upload` (multipart, one file up to
+  5 MB, taking a `Blob` or `{ data, filename, mimeType }` like `media.upload`) and `delete`.
+- `videoEdits` resource: `ops`, `list`, `create` with `operations: [{ op, params }]`, and `get`.
+  A job is queued; poll `get` until `status` is `succeeded` or `failed`.
+- `media.generateAltText` describes a library image and answers `GeneratedAltText`. Uses AI
+  credits; an empty balance answers `402`.
+
 ## 0.8.0
 
 ### Added

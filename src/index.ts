@@ -412,6 +412,27 @@ import type {
   XPost,
   XSearchPage,
   XSearchParams,
+  BulkCreateDesignsInput,
+  CreateDesignInput,
+  CreateVideoEditInput,
+  Design,
+  DesignExport,
+  DesignFromPostInput,
+  DesignPost,
+  DesignVersion,
+  DesignWithVersion,
+  ExportDesignInput,
+  FontList,
+  GeneratedAltText,
+  ListDesignsParams,
+  ListVideoEditsParams,
+  TextToSlides,
+  TextToSlidesInput,
+  UpdateDesignInput,
+  UploadFontInput,
+  UploadedFont,
+  VideoEdit,
+  VideoEditOp,
 } from './types.js';
 
 export { FoPostError };
@@ -450,6 +471,9 @@ export class FoPost {
   /** The REST side of webhooks; signature checks are the `webhooks.verify` export. */
   readonly webhooks: WebhooksResource;
   readonly automations: AutomationsResource;
+  readonly designs: DesignsResource;
+  readonly fonts: FontsResource;
+  readonly videoEdits: VideoEditsResource;
 
   constructor(opts: FoPostOptions) {
     this.http = new HttpClient(opts);
@@ -478,6 +502,9 @@ export class FoPost {
     this.logs = new LogsResource(this.http);
     this.webhooks = new WebhooksResource(this.http);
     this.automations = new AutomationsResource(this.http);
+    this.designs = new DesignsResource(this.http);
+    this.fonts = new FontsResource(this.http);
+    this.videoEdits = new VideoEditsResource(this.http);
   }
 }
 
@@ -3334,6 +3361,174 @@ class MediaResource {
       throw new FoPostError(text || `Upload failed: HTTP ${res.status}`, res.status);
     }
     return this.complete(presigned.uploadId);
+  }
+
+  /** Describes a library image and stores the result as its alt text. Uses AI credits. */
+  generateAltText(id: string): Promise<GeneratedAltText> {
+    return this.http.post<GeneratedAltText>(`/v1/media/${id}/alt-text`);
+  }
+}
+
+/** Designs: stories, posts, carousels and other canvases, with versions and exports. */
+class DesignsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Newest first; list results omit `document`. */
+  list(params: ListDesignsParams): Promise<Design[]> {
+    return this.http.get<Design[]>('/v1/designs', {
+      workspace_id: params.workspaceId,
+      kind: params.kind,
+      limit: params.limit,
+      offset: params.offset,
+    });
+  }
+
+  get(id: string): Promise<Design> {
+    return this.http.get<Design>(`/v1/designs/${id}`);
+  }
+
+  create(input: CreateDesignInput): Promise<Design> {
+    return this.http.post<Design>('/v1/designs', {
+      workspace_id: input.workspaceId,
+      kind: input.kind,
+      name: input.name,
+      document: input.document,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+
+  update(id: string, input: UpdateDesignInput): Promise<DesignWithVersion> {
+    const body: Record<string, unknown> = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.kind !== undefined) body.kind = input.kind;
+    if (input.document !== undefined) body.document = input.document;
+    if (input.createVersion !== undefined) body.create_version = input.createVersion;
+    return this.http.patch<DesignWithVersion>(`/v1/designs/${id}`, body);
+  }
+
+  delete(id: string): Promise<{ id: string; deleted: boolean }> {
+    return this.http.delete<{ id: string; deleted: boolean }>(`/v1/designs/${id}`);
+  }
+
+  listVersions(id: string, params: { includeDocument?: boolean } = {}): Promise<DesignVersion[]> {
+    return this.http.get<DesignVersion[]>(`/v1/designs/${id}/versions`, {
+      include: params.includeDocument ? 'document' : undefined,
+    });
+  }
+
+  restoreVersion(id: string, versionId: string): Promise<DesignWithVersion> {
+    return this.http.post<DesignWithVersion>(`/v1/designs/${id}/versions/${versionId}/restore`);
+  }
+
+  duplicate(id: string, input: { name?: string } = {}): Promise<Design> {
+    return this.http.post<Design>(`/v1/designs/${id}/duplicate`, { name: input.name });
+  }
+
+  /** Renders pages into the media library and answers the stored files. */
+  export(id: string, input: ExportDesignInput): Promise<DesignExport> {
+    return this.http.post<DesignExport>(`/v1/designs/${id}/export`, {
+      format: input.format,
+      page_indexes: input.pageIndexes,
+      duration_sec: input.durationSec,
+    });
+  }
+
+  /** One new design per row, filled from this design as a template. */
+  bulk(id: string, input: BulkCreateDesignsInput): Promise<Design[]> {
+    return this.http.post<Design[]>(`/v1/designs/${id}/bulk`, {
+      rows: input.rows,
+      name_column: input.nameColumn,
+    });
+  }
+
+  /** Posts that use this design's exports. */
+  posts(id: string): Promise<DesignPost[]> {
+    return this.http.get<DesignPost[]>(`/v1/designs/${id}/posts`);
+  }
+
+  /** Splits text into slide copy; nothing is saved. Uses AI credits. */
+  textToSlides(input: TextToSlidesInput): Promise<TextToSlides> {
+    return this.http.post<TextToSlides>('/v1/designs/text-to-slides', {
+      workspace_id: input.workspaceId,
+      text: input.text,
+      post_id: input.postId,
+      max_slides: input.maxSlides,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+
+  fromPost(input: DesignFromPostInput): Promise<Design> {
+    return this.http.post<Design>('/v1/designs/from-post', {
+      workspace_id: input.workspaceId,
+      text: input.text,
+      post_id: input.postId,
+      style: input.style,
+      preset: input.preset,
+      account_id: input.accountId,
+      carousel: input.carousel,
+      name: input.name,
+      brand_voice_id: input.brandVoiceId,
+    });
+  }
+}
+
+/** The font library plus fonts uploaded to a workspace. */
+class FontsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Without a workspace, `uploaded` is empty. */
+  list(params: { workspaceId?: string } = {}): Promise<FontList> {
+    return this.http.get<FontList>('/v1/fonts', { workspace_id: params.workspaceId });
+  }
+
+  /** Multipart upload of one font file, up to 5 MB. */
+  upload(input: UploadFontInput): Promise<UploadedFont> {
+    const form = new FormData();
+    form.append('workspace_id', input.workspaceId);
+    const f = normalizeFile(input.file);
+    const blob = f.data instanceof Blob ? f.data : new Blob([f.data], { type: f.mimeType });
+    form.append('file', blob, f.filename);
+    if (input.family !== undefined) form.append('family', input.family);
+    if (input.weight !== undefined) form.append('weight', String(input.weight));
+    if (input.style !== undefined) form.append('style', input.style);
+    return this.http.post<UploadedFont>('/v1/fonts', form);
+  }
+
+  delete(id: string): Promise<void> {
+    return this.http.delete<void>(`/v1/fonts/${id}`);
+  }
+}
+
+/** Video edits: queued jobs that run operations over a library video. */
+class VideoEditsResource {
+  constructor(private http: HttpClient) {}
+
+  /** Every operation and whether it can run on this deployment. */
+  ops(): Promise<VideoEditOp[]> {
+    return this.http.get<VideoEditOp[]>('/v1/video-edits/ops');
+  }
+
+  list(params: ListVideoEditsParams = {}): Promise<VideoEdit[]> {
+    return this.http.get<VideoEdit[]>('/v1/video-edits', {
+      workspace_id: params.workspaceId,
+      media_id: params.mediaId,
+      limit: params.limit,
+    });
+  }
+
+  /** Queues the job; poll `get` until `status` is `succeeded` or `failed`. */
+  create(input: CreateVideoEditInput): Promise<VideoEdit> {
+    return this.http.post<VideoEdit>('/v1/video-edits', {
+      workspace_id: input.workspaceId,
+      media_id: input.mediaId,
+      operations: input.operations,
+    });
+  }
+
+  get(id: string, params: { workspaceId?: string } = {}): Promise<VideoEdit> {
+    return this.http.get<VideoEdit>(`/v1/video-edits/${id}`, {
+      workspace_id: params.workspaceId,
+    });
   }
 }
 
