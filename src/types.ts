@@ -4640,3 +4640,227 @@ export type MediaLibraryItem = {
 };
 
 export type MediaLibraryPage = { data: MediaLibraryItem[]; meta: PagedMeta };
+
+export type DesignKind = 'story' | 'post' | 'carousel' | 'thumbnail' | 'card' | 'collage';
+
+/** A design document (pages and layers), passed through as the API stores it. */
+export type DesignDocument = {
+  version?: number;
+  width?: number;
+  height?: number;
+  preset?: string;
+  pages?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+export type Design = {
+  id: string;
+  name: string;
+  kind: DesignKind;
+  width: number;
+  height: number;
+  /** Omitted on list results. */
+  document?: DesignDocument;
+  thumbnail_media_id: string | null;
+  thumbnail_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DesignVersion = {
+  id: string;
+  version: number;
+  /** Present when listed with `includeDocument`. */
+  document?: DesignDocument;
+  created_at: string;
+};
+
+/** An update or restore: the design plus the version it saved, if any. */
+export type DesignWithVersion = { data: Design; version: DesignVersion | null };
+
+export type ListDesignsParams = {
+  workspaceId: string;
+  kind?: DesignKind;
+  limit?: number;
+  offset?: number;
+};
+
+export type CreateDesignInput = {
+  workspaceId: string;
+  kind: DesignKind;
+  name?: string;
+  document?: DesignDocument;
+  brandVoiceId?: string | null;
+};
+
+export type UpdateDesignInput = {
+  name?: string;
+  kind?: DesignKind;
+  document?: DesignDocument;
+  /** Save the previous document as a version first. */
+  createVersion?: boolean;
+};
+
+export type DesignExportFormat = 'png' | 'jpg' | 'pdf' | 'mp4' | 'gif';
+
+export type ExportDesignInput = {
+  format: DesignExportFormat;
+  /** Zero-based; omit for every page. */
+  pageIndexes?: number[];
+  /** Video formats only. */
+  durationSec?: 5 | 10 | 15;
+};
+
+export type DesignExport = {
+  format: DesignExportFormat;
+  files: Array<{ media_id: string; page_index: number; mime_type: string; preview_url: string }>;
+};
+
+export type BulkCreateDesignsInput = {
+  /** One design per row; keys are the template's placeholder names. */
+  rows: Array<Record<string, string>>;
+  /** Row key whose value names each design. */
+  nameColumn?: string;
+};
+
+export type DesignPost = {
+  id: string;
+  status: PostStatus | 'partially_failed' | 'unpublished';
+  title: string | null;
+  text: string | null;
+  schedule_at: string | null;
+  published_at: string | null;
+  platforms: string[];
+  engagement: number | null;
+  views: number | null;
+};
+
+export type TextToSlidesInput = {
+  workspaceId: string;
+  /** Source text; or name a post with `postId`. */
+  text?: string;
+  postId?: string;
+  maxSlides?: number;
+  brandVoiceId?: string | null;
+};
+
+export type TextToSlides = {
+  cover: { title: string; subtitle: string };
+  slides: Array<{ heading: string; body: string }>;
+  cta: { heading: string; body: string };
+  brand: {
+    colors: string[];
+    fonts: { heading?: string; body?: string };
+    logo_media_id: string | null;
+  };
+};
+
+export type DesignFromPostInput = {
+  workspaceId: string;
+  text?: string;
+  postId?: string;
+  style?: 'quote' | 'post' | 'plain';
+  preset?: string;
+  accountId?: string;
+  carousel?: boolean;
+  name?: string;
+  brandVoiceId?: string | null;
+};
+
+export type LibraryFont = {
+  slug: string;
+  family: string;
+  category: string;
+  scripts: string[];
+  weights: number[];
+  files: Array<{
+    path: string;
+    subset: string;
+    weight: number;
+    style: string;
+    unicode_range: string;
+  }>;
+};
+
+export type UploadedFont = {
+  id: string;
+  family: string;
+  style: 'normal' | 'italic';
+  weight: number;
+  format: string;
+  file_url: string;
+  created_at: string;
+};
+
+export type FontList = { library: LibraryFont[]; uploaded: UploadedFont[] };
+
+export type UploadFontInput = {
+  workspaceId: string;
+  file: PostFileInput;
+  /** Defaults to the file name. */
+  family?: string;
+  /** 100 to 1000; defaults to 400. */
+  weight?: number;
+  style?: 'normal' | 'italic';
+};
+
+export type VideoEditOpName =
+  | 'trim'
+  | 'cut'
+  | 'speed'
+  | 'merge'
+  | 'volume'
+  | 'remove_silence'
+  | 'denoise'
+  | 'subtitles'
+  | 'translate_subtitles'
+  | 'clips'
+  | 'music'
+  | 'voiceover'
+  | 'watermark'
+  | 'cover'
+  | 'reframe'
+  | 'audiogram';
+
+export type VideoEditOperation = { op: VideoEditOpName; params?: Record<string, unknown> };
+
+export type VideoEditOp = { name: VideoEditOpName; available: boolean; uses_ai: boolean };
+
+export type VideoEditStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+export type VideoEdit = {
+  id: string;
+  status: VideoEditStatus;
+  progress: number;
+  source_media_id: string;
+  operations: VideoEditOperation[];
+  result_media_id: string | null;
+  result_media: { id: string; preview_url: string | null; mime_type: string | null } | null;
+  extra_outputs: Array<{
+    media_id: string;
+    label: string;
+    mime: string;
+    preview_url: string | null;
+  }>;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+export type ListVideoEditsParams = {
+  workspaceId?: string;
+  /** Only edits of this video. */
+  mediaId?: string;
+  limit?: number;
+};
+
+export type CreateVideoEditInput = {
+  workspaceId?: string;
+  mediaId: string;
+  /** Applied in order, at most 10. */
+  operations: VideoEditOperation[];
+};
+
+export type GeneratedAltText = { alt_text: string; alt_text_source: 'ai'; tags: string[] };
