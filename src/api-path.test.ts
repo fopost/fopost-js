@@ -268,6 +268,27 @@ async function callEveryEndpoint(fopost: FoPost) {
   await fopost.whatsapp.getAccountEvents('a1');
   await fopost.whatsapp.listSandboxSessions({ workspaceId: 'ws' });
   await fopost.whatsapp.createSandboxSession({ workspaceId: 'ws', phoneNumber: '+15551234567' });
+  await fopost.media.generateAltText('m1');
+  await fopost.designs.list({ workspaceId: 'ws' });
+  await fopost.designs.get('d1');
+  await fopost.designs.create({ workspaceId: 'ws', kind: 'post' });
+  await fopost.designs.update('d1', { name: 'x' });
+  await fopost.designs.delete('d1');
+  await fopost.designs.listVersions('d1');
+  await fopost.designs.restoreVersion('d1', 'v1');
+  await fopost.designs.duplicate('d1');
+  await fopost.designs.export('d1', { format: 'png' });
+  await fopost.designs.bulk('d1', { rows: [{ title: 'a' }] });
+  await fopost.designs.posts('d1');
+  await fopost.designs.textToSlides({ workspaceId: 'ws', text: 'x' });
+  await fopost.designs.fromPost({ workspaceId: 'ws', text: 'x' });
+  await fopost.fonts.list();
+  await fopost.fonts.upload({ workspaceId: 'ws', file: csv });
+  await fopost.fonts.delete('f1');
+  await fopost.videoEdits.ops();
+  await fopost.videoEdits.list();
+  await fopost.videoEdits.create({ mediaId: 'm1', operations: [{ op: 'trim' }] });
+  await fopost.videoEdits.get('v1');
 }
 
 describe('request paths', () => {
@@ -275,7 +296,7 @@ describe('request paths', () => {
     const { urls, client } = recordingClient();
     await callEveryEndpoint(client);
 
-    expect(urls.length).toBe(207);
+    expect(urls.length).toBe(228);
     for (const url of urls) {
       const path = new URL(url).pathname;
       expect(path).not.toContain('/api/v1');
