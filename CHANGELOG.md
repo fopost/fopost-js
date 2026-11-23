@@ -17,6 +17,22 @@ All notable changes to `@fopost/sdk` are documented here.
 - `media.generateAltText` describes a library image and answers `GeneratedAltText`. Uses AI
   credits; an empty balance answers `402`.
 
+### Removed
+
+- `ads`: the account tree (`accountTree`), campaign, ad set and network ad methods
+  (`createCampaign`, `getCampaign`, `updateCampaign`, `deleteCampaign`, `duplicateCampaign`,
+  `createAdSet`, `getAdSet`, `updateAdSet`, `deleteAdSet`, `duplicateAdSet`,
+  `createNetworkAd`, `getNetworkAd`, `updateNetworkAd`, `deleteNetworkAd`,
+  `duplicateNetworkAd`), creatives (`creatives`, `createCreative`, `getCreative`,
+  `deleteCreative`), product catalogs, feeds and product sets (`catalogs` through
+  `deleteProductSet`) and the Ad Library (`adLibrary`), with their types. The API no longer
+  serves these routes.
+- `ads.google`: keywords, keyword ideas and metrics, search terms, negative keyword lists,
+  assets, asset groups, recommendations and the optimization score, with their types.
+- Standalone ads (`ads.create`, `ads.list`, `ads.setStatus`, `ads.delete`), boosting,
+  `bulkSetStatus`, audiences, lead forms, insights, pixels, conversions and the rest of
+  `ads` and `ads.google` are unchanged.
+
 ## 0.8.0
 
 ### Added

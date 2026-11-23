@@ -56,18 +56,8 @@ describe('ads: identities, Spark posts and Smart+', () => {
     expect(req.query.identity_id).toBe('idt_1');
   });
 
-  it('sends sparkPostId and smartPlus through unchanged', async () => {
+  it('sends sparkPostId through unchanged', async () => {
     const { calls, client } = recordingClient({ data: {} });
-    await client.ads.createCampaign({
-      workspaceId: 'ws',
-      connectionId: 'c1',
-      adAccountId: '7011',
-      name: 'Smart',
-      goal: 'traffic',
-      smartPlus: true,
-    });
-    expect(last(calls).body).toMatchObject({ smartPlus: true });
-
     await client.ads.create({
       workspaceId: 'ws',
       connectionId: 'c1',
