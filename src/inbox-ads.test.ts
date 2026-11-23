@@ -291,36 +291,11 @@ describe('ads', () => {
   });
 });
 
-describe('ads campaign tree, insights and leads', () => {
+describe('ads status, insights and leads', () => {
   const ref = { workspaceId: 'ws', connectionId: 'c1' };
 
-  it('reads the account tree and changes campaigns by Meta id with connection_id', async () => {
-    const { calls, client } = recordingClient({
-      data: { adAccountId: 'act_1', currency: 'USD', workspaceId: 'ws', campaigns: [] },
-    });
-    const tree = await client.ads.accountTree('act_1', { connectionId: 'c1' });
-    expect(tree.adAccountId).toBe('act_1');
-    expect(last(calls)).toMatchObject({
-      method: 'GET',
-      path: '/v1/ads/accounts/act_1/tree',
-      query: { connection_id: 'c1' },
-    });
-
-    await client.ads.updateCampaign('123', ref, { status: 'paused' });
-    expect(last(calls)).toMatchObject({
-      method: 'PATCH',
-      path: '/v1/ads/campaigns/123',
-      query: { workspace_id: 'ws', connection_id: 'c1' },
-      body: { status: 'paused' },
-    });
-    await client.ads.duplicateAdSet('456', ref, { paused: false });
-    expect(last(calls)).toMatchObject({
-      method: 'POST',
-      path: '/v1/ads/ad-sets/456/duplicate',
-      body: { paused: false },
-    });
-    await client.ads.deleteNetworkAd('789', ref);
-    expect(last(calls)).toMatchObject({ method: 'DELETE', path: '/v1/ads/ads/789' });
+  it('pauses or resumes objects by network id in one call', async () => {
+    const { calls, client } = recordingClient();
     await client.ads.bulkSetStatus({
       ...ref,
       status: 'active',

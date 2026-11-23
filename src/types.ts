@@ -1537,7 +1537,7 @@ export type AdProvider = {
   trackingMacros: Array<{ token: string; description: string }>;
 };
 
-// ─── Ads: forecasts, conversions and the public ad library ─────────
+// ─── Ads: forecasts and conversions ────────────────────────────────
 
 export type AdForecastInput = {
   workspaceId: string;
@@ -1640,7 +1640,7 @@ export type ConversionApiEvent = {
   clickId?: string;
 };
 
-// ─── Ads: campaign tree, creatives, insights, leads ────────────────
+// ─── Ads: insights and leads ───────────────────────────────────────
 
 /** A Meta object read inside a workspace. */
 export type AdObjectParams = { workspaceId?: string; connectionId: string };
@@ -1649,106 +1649,6 @@ export type AdObjectMutationParams = { workspaceId: string; connectionId: string
 
 export type AdObjectStatus = 'active' | 'paused';
 export type AdObjectLevel = 'campaign' | 'ad_set' | 'ad';
-
-export type AdCampaign = {
-  /** Meta's campaign id. */
-  id: string;
-  name: string;
-  /** `ACTIVE`, `PAUSED`, `DELETED` or `ARCHIVED`. */
-  status: string;
-  effectiveStatus: string | null;
-  objective: string | null;
-  /** Null when the budget lives on the ad sets. */
-  budgetMinor: number | null;
-  budgetType: AdBudgetType | null;
-  createdAt: string | null;
-};
-
-export type AdSet = {
-  /** Meta's ad set id. */
-  id: string;
-  name: string;
-  campaignId: string | null;
-  status: string;
-  effectiveStatus: string | null;
-  budgetMinor: number | null;
-  budgetType: AdBudgetType | null;
-  endAt: string | null;
-  optimizationGoal: string | null;
-  createdAt: string | null;
-};
-
-/** An ad inside an ad set, by Meta id. */
-export type NetworkAd = {
-  id: string;
-  name: string;
-  campaignId: string | null;
-  adSetId: string | null;
-  creativeId: string | null;
-  status: string;
-  effectiveStatus: string | null;
-  createdAt: string | null;
-};
-
-export type AdAccountTree = {
-  adAccountId: string;
-  currency: string;
-  workspaceId: string;
-  campaigns: Array<AdCampaign & { adSets: Array<AdSet & { ads: NetworkAd[] }> }>;
-};
-
-export type CreateAdCampaignInput = {
-  workspaceId: string;
-  connectionId: string;
-  /** `act_…` */
-  adAccountId: string;
-  name: string;
-  goal: AdGoal;
-  /** Default true. */
-  paused?: boolean;
-  /**
-   * Hands targeting and creative rotation to the network. Needs the network's
-   * `smartPlus` capability.
-   */
-  smartPlus?: boolean;
-};
-
-export type UpdateAdCampaignInput = { name?: string; status?: AdObjectStatus };
-
-export type CreateAdSetInput = {
-  workspaceId: string;
-  connectionId: string;
-  campaignId: string;
-  /** The Page the ads in this set run as. */
-  pageId: string;
-  name: string;
-  goal: AdGoal;
-  budget: AdBudget;
-  targeting: AdTargeting;
-  /** Default true. */
-  paused?: boolean;
-} & AdGoalExtras;
-
-export type UpdateAdSetInput = {
-  name?: string;
-  status?: AdObjectStatus;
-  /** The budget type set at creation stays. */
-  budgetMinor?: number;
-  endAt?: string;
-  targeting?: AdTargeting;
-};
-
-export type CreateNetworkAdInput = {
-  workspaceId: string;
-  connectionId: string;
-  adSetId: string;
-  creativeId: string;
-  name: string;
-  /** Default true. */
-  paused?: boolean;
-};
-
-export type UpdateNetworkAdInput = { name?: string; status?: AdObjectStatus; creativeId?: string };
 
 export type BulkAdStatusInput = {
   workspaceId: string;
@@ -1765,168 +1665,7 @@ export type BulkAdStatusResult = {
   error: string | null;
 };
 
-export type AdCallToAction =
-  | 'LEARN_MORE'
-  | 'SHOP_NOW'
-  | 'SIGN_UP'
-  | 'SUBSCRIBE'
-  | 'CONTACT_US'
-  | 'DOWNLOAD'
-  | 'GET_OFFER'
-  | 'BOOK_NOW'
-  | 'APPLY_NOW'
-  | 'WATCH_MORE';
-
-export type AdCreative = {
-  id: string;
-  name: string;
-  format: 'image' | 'video' | 'carousel' | 'post' | 'other';
-  status: string | null;
-  title: string | null;
-  body: string | null;
-  link: string | null;
-  thumbnailUrl: string | null;
-  callToAction: string | null;
-  urlTags: string | null;
-};
-
-export type AdCreativesResult = { creatives: AdCreative[]; workspaceId: string };
-
-export type CreateAdCreativeInput = {
-  workspaceId: string;
-  connectionId: string;
-  /** `act_…` */
-  adAccountId: string;
-  pageId: string;
-  name: string;
-  format: 'image' | 'video' | 'carousel' | 'catalog' | 'partnership';
-  /** Primary text. Required except on `partnership`, which runs the creator's own post. */
-  text?: string;
-  headline?: string;
-  destinationUrl?: string;
-  /** Defaults to `LEARN_MORE`. */
-  callToAction?: AdCallToAction;
-  /** Query string appended to every link in the ad. */
-  urlTags?: string;
-  /** A media library asset url: the image, or the video. Required for `video`. */
-  mediaUrl?: string;
-  /** A video's poster frame, as a library image. */
-  thumbnailMediaUrl?: string;
-  /** 2 to 10 cards; required for `carousel`. */
-  cards?: Array<{
-    mediaUrl: string;
-    destinationUrl?: string;
-    headline?: string;
-    description?: string;
-  }>;
-  /** Required for `catalog`: the network fills the cards from this product set. */
-  productSetId?: string;
-  /** `catalog` only: the per-product line under the headline. */
-  description?: string;
-  /** Required for `partnership`: the creator's media id, or their Page post as `{page}_{post}`. */
-  creatorPostId?: string;
-  /** `partnership` only: the creator's Instagram account. */
-  creatorInstagramUserId?: string;
-};
-
 export type UpdateAudienceInput = { name?: string; description?: string };
-
-// ─── Product catalogs ──────────────────────────────────────────────
-
-export type ProductCatalog = {
-  id: string;
-  name: string;
-  vertical: string | null;
-  productCount: number | null;
-};
-
-export type ProductCatalogsResult = { catalogs: ProductCatalog[]; workspaceId: string };
-
-export type CatalogProduct = {
-  id: string;
-  /** Your own key for the product. */
-  retailerId: string;
-  name: string;
-  description: string | null;
-  availability: string | null;
-  condition: string | null;
-  /** Minor units of `currency`. */
-  priceMinor: number | null;
-  currency: string | null;
-  imageUrl: string | null;
-  url: string | null;
-};
-
-export type CatalogProductsPage = { products: CatalogProduct[]; nextCursor: string | null };
-
-export type CatalogProductWrite =
-  | {
-      op: 'upsert';
-      retailerId: string;
-      name: string;
-      description?: string;
-      url: string;
-      imageUrl: string;
-      /** Minor units of `currency`. */
-      priceMinor: number;
-      currency: string;
-      availability?:
-        'in stock' | 'out of stock' | 'preorder' | 'available for order' | 'discontinued';
-      condition?: 'new' | 'refurbished' | 'used';
-      brand?: string;
-    }
-  | { op: 'delete'; retailerId: string };
-
-export type CatalogBatchResult = { handles: string[]; accepted: number };
-
-export type CreateCatalogInput = {
-  workspaceId: string;
-  connectionId: string;
-  name: string;
-  /** The network's catalog vertical; `commerce` when omitted. */
-  vertical?: string;
-};
-
-export type ProductFeed = {
-  id: string;
-  name: string;
-  url: string | null;
-  schedule: string | null;
-  createdAt: string | null;
-};
-
-export type CreateProductFeedInput = {
-  workspaceId: string;
-  connectionId: string;
-  name: string;
-  /** Where the network fetches the file; omit for manual uploads. */
-  url?: string;
-  schedule?: 'HOURLY' | 'DAILY' | 'WEEKLY';
-};
-
-export type ProductFeedUpload = {
-  id: string;
-  startedAt: string | null;
-  endedAt: string | null;
-  status: string | null;
-  errorCount: number | null;
-  warningCount: number | null;
-};
-
-export type ProductSet = {
-  id: string;
-  name: string;
-  productCount: number | null;
-  /** The network's own product-set filter. */
-  filter: Record<string, unknown> | null;
-};
-
-export type ProductSetInput = {
-  workspaceId: string;
-  connectionId: string;
-  name: string;
-  filter?: Record<string, unknown>;
-};
 
 // ─── Reach and frequency ───────────────────────────────────────────
 
@@ -1970,43 +1709,6 @@ export type ReachFrequencyActionInput = {
   connectionId: string;
   /** `act_…` */
   adAccountId: string;
-};
-
-// ─── Ad Library ────────────────────────────────────────────────────
-
-/** One public archive entry. Read live on every search and stored nowhere. */
-export type AdLibraryEntry = {
-  id: string;
-  pageId: string | null;
-  pageName: string | null;
-  bodies: string[];
-  titles: string[];
-  linkUrls: string[];
-  snapshotUrl: string | null;
-  publisherPlatforms: string[];
-  startedAt: string | null;
-  endedAt: string | null;
-  /** Only on the archive's disclosure entries. */
-  currency: string | null;
-  spendLower: number | null;
-  spendUpper: number | null;
-  impressionsLower: number | null;
-  impressionsUpper: number | null;
-};
-
-export type AdLibraryPage = { entries: AdLibraryEntry[]; nextCursor: string | null };
-
-export type AdLibraryParams = {
-  workspaceId?: string;
-  connectionId: string;
-  /** ISO 3166-1 alpha-2 codes the ad reached; at least one is required. */
-  countries: string[];
-  /** Keyword or Page name; required unless `pageIds` is set. */
-  q?: string;
-  pageIds?: string[];
-  activeStatus?: 'ACTIVE' | 'INACTIVE' | 'ALL';
-  limit?: number;
-  after?: string;
 };
 
 // ─── Partnership ads ───────────────────────────────────────────────
@@ -2963,56 +2665,6 @@ export type GoogleAdsScope = {
 /** A write also names the workspace, which a read may leave out. */
 export type GoogleAdsWriteScope = GoogleAdsScope & { workspaceId: string };
 
-export type GoogleMatchType = 'EXACT' | 'PHRASE' | 'BROAD';
-
-export type GoogleKeyword = {
-  /** `<customerId>~keyword~<adGroupId>~<criterionId>` */
-  id: string;
-  adGroupId: string;
-  text: string;
-  matchType: string;
-  status: string;
-  /** Account currency, minor units. */
-  cpcBidMinor: number | null;
-  negative: boolean;
-};
-
-export type CreateGoogleKeywordInput = GoogleAdsWriteScope & {
-  adGroupId: string;
-  text: string;
-  matchType: GoogleMatchType;
-  cpcBidMinor?: number;
-};
-
-export type UpdateGoogleKeywordInput = GoogleAdsWriteScope & {
-  status?: 'active' | 'paused';
-  cpcBidMinor?: number;
-};
-
-export type GoogleKeywordIdea = {
-  text: string;
-  avgMonthlySearches: number;
-  competition: string | null;
-  lowTopOfPageBidMinor: number | null;
-  highTopOfPageBidMinor: number | null;
-};
-
-export type GoogleKeywordIdeasInput = GoogleAdsWriteScope & {
-  seeds?: string[];
-  url?: string;
-  languageId?: string;
-  geoTargetIds?: string[];
-};
-
-export type GoogleKeywordMetricsInput = GoogleAdsWriteScope & { keywords: string[] };
-
-export type GoogleSearchTerm = {
-  term: string;
-  adGroupId: string | null;
-  status: string | null;
-  metrics: InsightsMetrics;
-};
-
 export type GoogleBidStrategy = {
   id: string;
   name: string;
@@ -3053,86 +2705,6 @@ export type SetGoogleAdScheduleInput = GoogleAdsWriteScope & {
     endHour: number;
     bidModifier?: number;
   }>;
-};
-
-export type GoogleSharedSet = {
-  id: string;
-  name: string;
-  type: string;
-  memberCount: number;
-};
-
-export type CreateGoogleNegativeKeywordListInput = GoogleAdsWriteScope & { name: string };
-
-export type AddGoogleNegativeKeywordsInput = GoogleAdsWriteScope & {
-  sharedSetId: string;
-  keywords: Array<{ text: string; matchType: GoogleMatchType }>;
-};
-
-export type AttachGoogleNegativeKeywordListInput = GoogleAdsWriteScope & {
-  sharedSetId: string;
-  campaignId: string;
-};
-
-export type GoogleAsset = {
-  id: string;
-  name: string | null;
-  type: string;
-  /** What a sitelink, callout or snippet renders. */
-  text: string | null;
-  finalUrl: string | null;
-};
-
-/** Where an asset is attached; an asset with no links is in the library only. */
-export type GoogleAssetLink = {
-  id: string;
-  assetId: string;
-  level: 'customer' | 'campaign';
-  ownerId: string | null;
-  fieldType: string;
-  status: string;
-};
-
-export type GoogleAssetsResult = { assets: GoogleAsset[]; links: GoogleAssetLink[] };
-
-export type GoogleAssetSpec =
-  | {
-      kind: 'sitelink';
-      text: string;
-      description1?: string;
-      description2?: string;
-      finalUrl: string;
-    }
-  | { kind: 'callout'; text: string }
-  | { kind: 'snippet'; header: string; values: string[] };
-
-export type CreateGoogleAssetInput = GoogleAdsWriteScope & { spec: GoogleAssetSpec };
-
-export type AttachGoogleAssetInput = GoogleAdsWriteScope & {
-  assetId: string;
-  fieldType: 'SITELINK' | 'CALLOUT' | 'STRUCTURED_SNIPPET';
-  /** Attaches to the account when left out. */
-  campaignId?: string;
-};
-
-export type GoogleAssetGroup = {
-  id: string;
-  campaignId: string;
-  name: string;
-  status: string;
-  finalUrls: string[];
-};
-
-export type CreateGoogleAssetGroupInput = GoogleAdsWriteScope & {
-  campaignId: string;
-  name: string;
-  finalUrls: string[];
-  status?: 'active' | 'paused';
-};
-
-export type UpdateGoogleAssetGroupInput = GoogleAdsWriteScope & {
-  name?: string;
-  status?: 'active' | 'paused';
 };
 
 export type GoogleLocalServicesLead = {
@@ -3211,40 +2783,6 @@ export type GoogleQueryInput = GoogleAdsScope & {
 
 /** Rows exactly as Google returns them. */
 export type GoogleQueryResult = { rows: Array<Record<string, unknown>> };
-
-/**
- * One of Google's own recommendations for the account. `id` is the Google
- * resource name rather than the `~` form other objects use, because a
- * recommendation is not an object you address again: it is what apply and
- * dismiss take.
- */
-export type GoogleRecommendation = {
-  id: string;
-  type: string;
-  campaignId: string | null;
-  adGroupId: string | null;
-  dismissed: boolean;
-  /** What Google projects applying it would change; null where it does not estimate. */
-  impact: {
-    baseClicks: number | null;
-    potentialClicks: number | null;
-    /** The account's currency, in minor units. */
-    baseCostMinor: number | null;
-    potentialCostMinor: number | null;
-    baseConversions: number | null;
-    potentialConversions: number | null;
-  } | null;
-};
-
-export type GoogleOptimizationScore = {
-  /** 0 to 1, Google's estimate of how well the account is set up. */
-  score: number | null;
-  /** How much this account's score counts against others under the same manager. */
-  weight: number | null;
-  campaigns: Array<{ id: string; name: string; score: number | null }>;
-};
-
-export type GoogleRecommendationsInput = GoogleAdsWriteScope & { ids: string[] };
 
 /** A date range in the account's time zone, `YYYY-MM-DD` and inclusive. */
 export type GoogleDateRange = { since: string; until: string };

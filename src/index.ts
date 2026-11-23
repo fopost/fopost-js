@@ -101,61 +101,38 @@ import type {
   ActivityPage,
   AccountPlatformMetrics,
   Ad,
-  AdAccountTree,
-  AdCampaign,
   AdConnection,
-  AdCreative,
-  AdCreativesResult,
   AdInsightsParams,
   AdInsightsReport,
   AdActivityResult,
   AdGoal,
   AdLabel,
   AdLabelInput,
-  AdLibraryPage,
-  AdLibraryParams,
   AdStudy,
   ApplyAdLabelInput,
-  CatalogBatchResult,
-  CatalogProductWrite,
-  CatalogProductsPage,
   CreateAdStudyInput,
-  CreateCatalogInput,
   CreateHighDemandPeriodInput,
-  CreateProductFeedInput,
   CreateReachFrequencyInput,
   CreateValueRuleSetInput,
   HighDemandPeriod,
   IosCampaignLimits,
   PartnershipCreator,
   PartnershipInput,
-  ProductCatalog,
-  ProductCatalogsResult,
-  ProductFeed,
-  ProductFeedUpload,
-  ProductSet,
-  ProductSetInput,
   ReachFrequencyActionInput,
   ReachFrequencyPrediction,
   ReachFrequencyResult,
   ValueRuleSet,
   AdObjectMutationParams,
   AdObjectParams,
-  AdSet,
   AdSource,
   BulkAdStatusInput,
   BulkAdStatusResult,
-  CreateAdCampaignInput,
-  CreateAdCreativeInput,
-  CreateAdSetInput,
-  CreateNetworkAdInput,
   FoPostAdInsightsParams,
   LeadFormDetail,
   LeadPage,
   LeadPageInput,
   LeadsFeedPage,
   LeadsFeedParams,
-  NetworkAd,
   ListRemoteArticlesParams,
   ListRemoteProductsParams,
   ReachEstimate,
@@ -165,10 +142,7 @@ import type {
   RemoteProduct,
   UpdateRemoteArticleInput,
   UpdateRemoteProductInput,
-  UpdateAdCampaignInput,
-  UpdateAdSetInput,
   UpdateAudienceInput,
-  UpdateNetworkAdInput,
   Audience,
   AiCreditBalance,
   AudiencesResult,
@@ -185,38 +159,17 @@ import type {
   SupplyForecastInput,
   UpdateConversionRuleInput,
   AuthorizeMetaAdsInput,
-  AddGoogleNegativeKeywordsInput,
-  AttachGoogleAssetInput,
-  AttachGoogleNegativeKeywordListInput,
-  CreateGoogleAssetGroupInput,
-  CreateGoogleAssetInput,
   CreateGoogleBidStrategyInput,
   CreateGoogleConversionActionInput,
-  CreateGoogleKeywordInput,
-  CreateGoogleNegativeKeywordListInput,
   GoogleAdScheduleSlot,
   GoogleAdsScope,
-  GoogleAdsWriteScope,
-  GoogleAssetGroup,
-  GoogleAssetsResult,
   GoogleBidStrategy,
   GoogleConversionAction,
   GoogleDateRange,
-  GoogleKeyword,
-  GoogleKeywordIdea,
-  GoogleKeywordIdeasInput,
-  GoogleKeywordMetricsInput,
   GoogleLocalServicesLead,
-  GoogleOptimizationScore,
   GoogleQueryInput,
   GoogleQueryResult,
-  GoogleRecommendation,
-  GoogleRecommendationsInput,
-  GoogleSearchTerm,
-  GoogleSharedSet,
   SetGoogleAdScheduleInput,
-  UpdateGoogleAssetGroupInput,
-  UpdateGoogleKeywordInput,
   UploadGoogleConversionAdjustmentsInput,
   UploadGoogleConversionsInput,
   BoostPostInput,
@@ -1864,7 +1817,7 @@ class KnowledgeResource {
 }
 
 class AdsResource {
-  /** The Search surface no other network has: keywords, assets, conversions, GAQL. */
+  /** The Search surface no other network has: bid strategies, ad schedule, conversions, GAQL. */
   readonly google: GoogleAdsResource;
 
   constructor(private http: HttpClient) {
@@ -2180,136 +2133,9 @@ class AdsResource {
     return this.http.request('DELETE', `/v1/ads/comments/${commentId}`, input);
   }
 
-  /** Campaigns, ad sets and ads on one ad account, read live from Meta. */
-  accountTree(adAccountId: string, params: AdObjectParams): Promise<AdAccountTree> {
-    return this.http.get<AdAccountTree>(`/v1/ads/accounts/${adAccountId}/tree`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
-  createCampaign(input: CreateAdCampaignInput): Promise<AdCampaign> {
-    return this.http.post<AdCampaign>('/v1/ads/campaigns', input);
-  }
-
-  getCampaign(id: string, params: AdObjectParams): Promise<AdCampaign> {
-    return this.http.get<AdCampaign>(`/v1/ads/campaigns/${id}`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateCampaign(
-    id: string,
-    params: AdObjectMutationParams,
-    input: UpdateAdCampaignInput,
-  ): Promise<AdCampaign> {
-    return this.http.request<AdCampaign>(
-      'PATCH',
-      `/v1/ads/campaigns/${id}`,
-      input,
-      metaQuery(params),
-    );
-  }
-
-  /** Deletes it and everything beneath it on Meta. Needs the `publish` scope as well as `ads`. */
-  deleteCampaign(id: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/campaigns/${id}`, undefined, metaQuery(params));
-  }
-
-  /** Copies it with everything beneath it, paused unless `paused` is false. Needs `publish`. */
-  duplicateCampaign(
-    id: string,
-    params: AdObjectMutationParams,
-    options: { paused?: boolean } = {},
-  ): Promise<{ id: string }> {
-    return this.http.request(
-      'POST',
-      `/v1/ads/campaigns/${id}/duplicate`,
-      options,
-      metaQuery(params),
-    );
-  }
-
-  /** Needs the `publish` scope as well as `ads`. Starts paused unless `paused` is false. */
-  createAdSet(input: CreateAdSetInput): Promise<AdSet> {
-    return this.http.post<AdSet>('/v1/ads/ad-sets', input);
-  }
-
-  getAdSet(id: string, params: AdObjectParams): Promise<AdSet> {
-    return this.http.get<AdSet>(`/v1/ads/ad-sets/${id}`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateAdSet(id: string, params: AdObjectMutationParams, input: UpdateAdSetInput): Promise<AdSet> {
-    return this.http.request<AdSet>('PATCH', `/v1/ads/ad-sets/${id}`, input, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteAdSet(id: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/ad-sets/${id}`, undefined, metaQuery(params));
-  }
-
-  /** Copies it with its ads, paused unless `paused` is false. Needs `publish`. */
-  duplicateAdSet(
-    id: string,
-    params: AdObjectMutationParams,
-    options: { paused?: boolean } = {},
-  ): Promise<{ id: string }> {
-    return this.http.request('POST', `/v1/ads/ad-sets/${id}/duplicate`, options, metaQuery(params));
-  }
-
-  /** An ad inside an ad set. Needs `publish` as well as `ads`. Starts paused unless `paused` is false. */
-  createNetworkAd(input: CreateNetworkAdInput): Promise<NetworkAd> {
-    return this.http.post<NetworkAd>('/v1/ads/ads', input);
-  }
-
-  getNetworkAd(id: string, params: AdObjectParams): Promise<NetworkAd> {
-    return this.http.get<NetworkAd>(`/v1/ads/ads/${id}`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateNetworkAd(
-    id: string,
-    params: AdObjectMutationParams,
-    input: UpdateNetworkAdInput,
-  ): Promise<NetworkAd> {
-    return this.http.request<NetworkAd>('PATCH', `/v1/ads/ads/${id}`, input, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteNetworkAd(id: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/ads/${id}`, undefined, metaQuery(params));
-  }
-
-  /** Paused unless `paused` is false. Needs the `publish` scope as well as `ads`. */
-  duplicateNetworkAd(
-    id: string,
-    params: AdObjectMutationParams,
-    options: { paused?: boolean } = {},
-  ): Promise<{ id: string }> {
-    return this.http.request('POST', `/v1/ads/ads/${id}/duplicate`, options, metaQuery(params));
-  }
-
   /** Pauses or resumes up to 50 objects; each reports its own outcome. Needs `publish`. */
   bulkSetStatus(input: BulkAdStatusInput): Promise<BulkAdStatusResult[]> {
     return this.http.post<BulkAdStatusResult[]>('/v1/ads/status', input);
-  }
-
-  creatives(params: AdObjectParams & { adAccountId: string }): Promise<AdCreativesResult> {
-    return this.http.get<AdCreativesResult>('/v1/ads/creatives', {
-      ...metaQuery(params),
-      ad_account_id: params.adAccountId,
-    });
-  }
-
-  /** Nothing runs until an ad uses it. */
-  createCreative(input: CreateAdCreativeInput): Promise<AdCreative> {
-    return this.http.post<AdCreative>('/v1/ads/creatives', input);
-  }
-
-  getCreative(id: string, params: AdObjectParams): Promise<AdCreative> {
-    return this.http.get<AdCreative>(`/v1/ads/creatives/${id}`, metaQuery(params));
-  }
-
-  deleteCreative(id: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/creatives/${id}`, undefined, metaQuery(params));
   }
 
   getAudience(id: string, params: AdObjectParams): Promise<Audience> {
@@ -2544,130 +2370,6 @@ class AdsResource {
     return this.http.get<AdGoal[]>('/v1/ads/goals', metaQuery(params));
   }
 
-  // ─── Product catalogs ───────────────────────────────────────────
-
-  /** Catalogs the connection's business portfolios reach. Read live, never stored. */
-  catalogs(params: AdObjectParams): Promise<ProductCatalogsResult> {
-    return this.http.get<ProductCatalogsResult>('/v1/ads/catalogs', metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  createCatalog(input: CreateCatalogInput): Promise<ProductCatalog> {
-    return this.http.post<ProductCatalog>('/v1/ads/catalogs', input);
-  }
-
-  getCatalog(id: string, params: AdObjectParams): Promise<ProductCatalog> {
-    return this.http.get<ProductCatalog>(`/v1/ads/catalogs/${id}`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateCatalog(
-    id: string,
-    params: AdObjectMutationParams,
-    input: { name: string },
-  ): Promise<ProductCatalog> {
-    return this.http.request<ProductCatalog>(
-      'PATCH',
-      `/v1/ads/catalogs/${id}`,
-      { ...input, ...params },
-      metaQuery(params),
-    );
-  }
-
-  /** Deletes every product, feed and set in it. Needs `publish` as well as `ads`. */
-  deleteCatalog(id: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/catalogs/${id}`, undefined, metaQuery(params));
-  }
-
-  /** One page of products; pass `nextCursor` back as `after`. */
-  catalogProducts(
-    id: string,
-    params: AdObjectParams & { after?: string },
-  ): Promise<CatalogProductsPage> {
-    return this.http.get<CatalogProductsPage>(`/v1/ads/catalogs/${id}/products`, {
-      ...metaQuery(params),
-      after: params.after,
-    });
-  }
-
-  /** Up to 500 upserts and deletes in one batch. Needs `publish` as well as `ads`. */
-  writeCatalogProducts(
-    id: string,
-    params: AdObjectMutationParams,
-    products: CatalogProductWrite[],
-  ): Promise<CatalogBatchResult> {
-    return this.http.post<CatalogBatchResult>(`/v1/ads/catalogs/${id}/products`, {
-      ...params,
-      products,
-    });
-  }
-
-  productFeeds(id: string, params: AdObjectParams): Promise<ProductFeed[]> {
-    return this.http.get<ProductFeed[]>(`/v1/ads/catalogs/${id}/feeds`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  createProductFeed(id: string, input: CreateProductFeedInput): Promise<ProductFeed> {
-    return this.http.post<ProductFeed>(`/v1/ads/catalogs/${id}/feeds`, input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteProductFeed(id: string, feedId: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request(
-      'DELETE',
-      `/v1/ads/catalogs/${id}/feeds/${feedId}`,
-      undefined,
-      metaQuery(params),
-    );
-  }
-
-  /** Each run the network made of the feed. */
-  feedUploads(id: string, feedId: string, params: AdObjectParams): Promise<ProductFeedUpload[]> {
-    return this.http.get<ProductFeedUpload[]>(
-      `/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`,
-      metaQuery(params),
-    );
-  }
-
-  /** Fetches the feed now. Needs the `publish` scope as well as `ads`. */
-  startFeedUpload(
-    id: string,
-    feedId: string,
-    params: AdObjectMutationParams & { url?: string },
-  ): Promise<{ id: string }> {
-    return this.http.post(`/v1/ads/catalogs/${id}/feeds/${feedId}/uploads`, params);
-  }
-
-  /** A catalog ad runs from a product set, not the whole catalog. */
-  productSets(id: string, params: AdObjectParams): Promise<ProductSet[]> {
-    return this.http.get<ProductSet[]>(`/v1/ads/catalogs/${id}/product-sets`, metaQuery(params));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  createProductSet(id: string, input: ProductSetInput): Promise<ProductSet> {
-    return this.http.post<ProductSet>(`/v1/ads/catalogs/${id}/product-sets`, input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateProductSet(id: string, setId: string, input: ProductSetInput): Promise<ProductSet> {
-    return this.http.request<ProductSet>(
-      'PATCH',
-      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
-      input,
-      metaQuery(input),
-    );
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteProductSet(id: string, setId: string, params: AdObjectMutationParams): Promise<unknown> {
-    return this.http.request(
-      'DELETE',
-      `/v1/ads/catalogs/${id}/product-sets/${setId}`,
-      undefined,
-      metaQuery(params),
-    );
-  }
-
   // ─── Reach and frequency ────────────────────────────────────────
 
   reachFrequency(params: AdObjectParams & { adAccountId: string }): Promise<ReachFrequencyResult> {
@@ -2706,25 +2408,6 @@ class AdsResource {
     input: ReachFrequencyActionInput,
   ): Promise<ReachFrequencyPrediction> {
     return this.http.post<ReachFrequencyPrediction>(`/v1/ads/reach-frequency/${id}/cancel`, input);
-  }
-
-  // ─── Ad Library ─────────────────────────────────────────────────
-
-  /**
-   * The public ad archive: ads anyone is running, by keyword or by Page.
-   * Read live on every call and stored nowhere, so an ad that stops running
-   * is simply absent from the next search.
-   */
-  adLibrary(params: AdLibraryParams): Promise<AdLibraryPage> {
-    return this.http.get<AdLibraryPage>('/v1/ads/library', {
-      ...metaQuery(params),
-      countries: params.countries.join(','),
-      q: params.q,
-      page_ids: params.pageIds?.join(','),
-      active_status: params.activeStatus,
-      limit: params.limit,
-      after: params.after,
-    });
   }
 
   // ─── Partnership ads ────────────────────────────────────────────
@@ -2881,52 +2564,12 @@ function accountQuery(params: { workspaceId?: string; connectionId: string; adAc
 }
 
 /**
- * Google Ads only. Campaigns, ad groups, ads, audiences and insights are on
- * `ads` itself and work across networks; what lives here has no equivalent
+ * Google Ads only. Audiences and insights are on `ads` itself and work
+ * across networks; what lives here has no equivalent
  * elsewhere. Every call names a `customerId` the connection's grant reaches.
  */
 class GoogleAdsResource {
   constructor(private http: HttpClient) {}
-
-  /** Keywords on the account, or on one ad group. */
-  keywords(scope: GoogleAdsScope, params: { adGroupId?: string } = {}): Promise<GoogleKeyword[]> {
-    return this.http.get<GoogleKeyword[]>('/v1/ads/google/keywords', {
-      ...googleQuery(scope),
-      ad_group_id: params.adGroupId,
-    });
-  }
-
-  /** Needs the `publish` scope as well as `ads`: the keyword goes live. */
-  createKeyword(input: CreateGoogleKeywordInput): Promise<{ id: string }> {
-    return this.http.post<{ id: string }>('/v1/ads/google/keywords', input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateKeyword(id: string, input: UpdateGoogleKeywordInput): Promise<{ id: string }> {
-    return this.http.request<{ id: string }>('PATCH', `/v1/ads/google/keywords/${id}`, input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteKeyword(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/google/keywords/${id}`, scope);
-  }
-
-  /** Ideas from seed keywords, a landing page, or both. */
-  keywordIdeas(input: GoogleKeywordIdeasInput): Promise<GoogleKeywordIdea[]> {
-    return this.http.post<GoogleKeywordIdea[]>('/v1/ads/google/keyword-ideas', input);
-  }
-
-  keywordMetrics(input: GoogleKeywordMetricsInput): Promise<GoogleKeywordIdea[]> {
-    return this.http.post<GoogleKeywordIdea[]>('/v1/ads/google/keyword-metrics', input);
-  }
-
-  /** What people actually searched, with the metrics each term earned. */
-  searchTerms(scope: GoogleAdsScope, range: GoogleDateRange): Promise<GoogleSearchTerm[]> {
-    return this.http.get<GoogleSearchTerm[]>('/v1/ads/google/search-terms', {
-      ...googleQuery(scope),
-      ...range,
-    });
-  }
 
   bidStrategies(scope: GoogleAdsScope): Promise<GoogleBidStrategy[]> {
     return this.http.get<GoogleBidStrategy[]>('/v1/ads/google/bid-strategies', googleQuery(scope));
@@ -2947,75 +2590,6 @@ class GoogleAdsResource {
   /** Replaces every slot on the campaign. Needs the `publish` scope as well as `ads`. */
   setAdSchedule(input: SetGoogleAdScheduleInput): Promise<{ slots: number }> {
     return this.http.request<{ slots: number }>('PUT', '/v1/ads/google/ad-schedule', input);
-  }
-
-  negativeKeywordLists(scope: GoogleAdsScope): Promise<GoogleSharedSet[]> {
-    return this.http.get<GoogleSharedSet[]>('/v1/ads/google/negative-keywords', googleQuery(scope));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  createNegativeKeywordList(input: CreateGoogleNegativeKeywordListInput): Promise<{ id: string }> {
-    return this.http.post<{ id: string }>('/v1/ads/google/negative-keywords', input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  addNegativeKeywords(input: AddGoogleNegativeKeywordsInput): Promise<{ added: number }> {
-    return this.http.post<{ added: number }>('/v1/ads/google/negative-keywords/keywords', input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  attachNegativeKeywordList(
-    input: AttachGoogleNegativeKeywordListInput,
-  ): Promise<{ campaignId: string; sharedSetId: string }> {
-    return this.http.post('/v1/ads/google/negative-keywords/attach', input);
-  }
-
-  /** Sitelinks, callouts and snippets, with the links that put each one under an ad. */
-  assets(scope: GoogleAdsScope): Promise<GoogleAssetsResult> {
-    return this.http.get<GoogleAssetsResult>('/v1/ads/google/assets', googleQuery(scope));
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  createAsset(input: CreateGoogleAssetInput): Promise<{ id: string }> {
-    return this.http.post<{ id: string }>('/v1/ads/google/assets', input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  attachAsset(input: AttachGoogleAssetInput): Promise<{ assetId: string }> {
-    return this.http.post<{ assetId: string }>('/v1/ads/google/assets/attach', input);
-  }
-
-  /**
-   * Removes the links that put the asset under an ad; the asset itself is
-   * permanent on Google. Needs the `publish` scope as well as `ads`.
-   */
-  deleteAsset(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/google/assets/${id}`, scope);
-  }
-
-  assetGroups(
-    scope: GoogleAdsScope,
-    params: { campaignId?: string } = {},
-  ): Promise<GoogleAssetGroup[]> {
-    return this.http.get<GoogleAssetGroup[]>('/v1/ads/google/asset-groups', {
-      ...googleQuery(scope),
-      campaign_id: params.campaignId,
-    });
-  }
-
-  /** Needs the `publish` scope as well as `ads`. Starts paused unless `status` says otherwise. */
-  createAssetGroup(input: CreateGoogleAssetGroupInput): Promise<{ id: string }> {
-    return this.http.post<{ id: string }>('/v1/ads/google/asset-groups', input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  updateAssetGroup(id: string, input: UpdateGoogleAssetGroupInput): Promise<{ id: string }> {
-    return this.http.request<{ id: string }>('PATCH', `/v1/ads/google/asset-groups/${id}`, input);
-  }
-
-  /** Needs the `publish` scope as well as `ads`. */
-  deleteAssetGroup(id: string, scope: GoogleAdsWriteScope): Promise<unknown> {
-    return this.http.request('DELETE', `/v1/ads/google/asset-groups/${id}`, scope);
   }
 
   /** Leads from Local Services Ads, read live and never stored. */
@@ -3051,37 +2625,6 @@ class GoogleAdsResource {
     input: UploadGoogleConversionAdjustmentsInput,
   ): Promise<{ uploaded: number }> {
     return this.http.post<{ uploaded: number }>('/v1/ads/google/conversions/adjustments', input);
-  }
-
-  /**
-   * Google's own read on what the account should change next. `types` narrows
-   * to the recommendation types you care about.
-   */
-  recommendations(scope: GoogleAdsScope, types?: string[]): Promise<GoogleRecommendation[]> {
-    return this.http.get<GoogleRecommendation[]>('/v1/ads/google/recommendations', {
-      ...googleQuery(scope),
-      ...(types?.length ? { types: types.join(',') } : {}),
-    });
-  }
-
-  optimizationScore(scope: GoogleAdsScope): Promise<GoogleOptimizationScore> {
-    return this.http.get<GoogleOptimizationScore>(
-      '/v1/ads/google/optimization-score',
-      googleQuery(scope),
-    );
-  }
-
-  /**
-   * Applies each recommendation, which changes what the live account serves or
-   * bids. Needs the `publish` scope as well as `ads`.
-   */
-  applyRecommendations(input: GoogleRecommendationsInput): Promise<{ applied: number }> {
-    return this.http.post<{ applied: number }>('/v1/ads/google/recommendations/apply', input);
-  }
-
-  /** Hides each recommendation. Needs the `publish` scope as well as `ads`. */
-  dismissRecommendations(input: GoogleRecommendationsInput): Promise<{ dismissed: number }> {
-    return this.http.post<{ dismissed: number }>('/v1/ads/google/recommendations/dismiss', input);
   }
 
   /** A raw read-only GAQL SELECT. Rows come back exactly as Google returns them. */

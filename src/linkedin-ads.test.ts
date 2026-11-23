@@ -40,10 +40,4 @@ describe('ads on a second network', () => {
       events: [{ happenedAt: 1_758_326_400_000, email: 'buyer@example.test', valueMinor: 2500 }],
     });
   });
-
-  it('flattens ad-library countries onto the query', async () => {
-    const s = spy();
-    await client().ads.adLibrary({ connectionId: 'c1', q: 'crm', countries: ['US', 'DE'] });
-    expect(lastCall(s)[0]).toContain('countries=US%2CDE');
-  });
 });
